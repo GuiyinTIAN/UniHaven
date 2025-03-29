@@ -133,6 +133,7 @@ def add_accommodation(request):
 
     return render(request, 'accommodation/add_accommodation.html', {'form': form})
 
-def accommodation_list(request):
+
+def list_accommodation(request):
     accommodations = Accommodation.objects.all()
     return render(request, 'accommodation/accommodation_list.html', {'accommodations': accommodations})
