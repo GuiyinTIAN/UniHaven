@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Accommodation List</title>
+</head>
+<body>
+    <h1>Accommodation List</h1>
+    <ul>
+        {% for accommodation in accommodations %}
+            <li>
+                <strong>{{ accommodation.title }}</strong><br>
+                Description: {{ accommodation.description }}<br>
+                Type: {{ accommodation.type }}<br>
+                Price: {{ accommodation.price }}<br>
+                Latitude: {{ accommodation.latitude }}<br>
+                Longitude: {{ accommodation.longitude }}<br>
+                GeoAddress: {{ accommodation.geo_address }}<br>
+                Address: {{ accommodation.formatted_address }}
+            </li>
+        {% endfor %}
+    </ul>
+</body>
+</html>

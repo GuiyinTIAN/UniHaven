@@ -19,4 +19,20 @@ class Accommodation(models.Model):
     rating = models.FloatField(default=0.0)  # Average rating (0-5 scale)
     region = models.CharField(max_length=100, default="")  # 新增字段存储地区信息
 
+    building_name = models.CharField(max_length=200, default="", blank=True)
+    estate_name = models.CharField(max_length=200, default="", blank=True)
+    street_name = models.CharField(max_length=200, default="", blank=True)
+    building_no = models.CharField(max_length=20, default="", blank=True)
+    district = models.CharField(max_length=200, default="", blank=True)
+
+    def formatted_address(self):
+        parts = [
+            self.building_name,
+            self.estate_name,
+            f"{self.building_no} {self.street_name}".strip(),
+            self.district,
+            self.region
+        ]
+        return ", ".join(filter(None, parts))
+
 
