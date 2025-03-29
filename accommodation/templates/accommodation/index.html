@@ -1,0 +1,150 @@
+{% extends 'accommodation/base.html' %}
+{% load static %}
+{% load i18n %}
+
+{% block title %}{% trans "UniHaven - 非本地学生住宿解决方案" %}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .hero-section {
+        background-color: var(--primary-color);
+        color: white;
+        padding: 60px 20px;
+        text-align: center;
+        margin-bottom: 30px;
+    }
+    
+    .hero-title {
+        font-size: 2.5em;
+        margin-bottom: 15px;
+        font-weight: 500;
+    }
+    
+    .hero-subtitle {
+        font-size: 1.2em;
+        margin-bottom: 30px;
+        opacity: 0.9;
+    }
+    
+    .feature-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 30px;
+        margin-bottom: 40px;
+    }
+    
+    .feature-item {
+        background-color: var(--card-bg);
+        border-radius: var(--border-radius);
+        padding: 25px;
+        box-shadow: var(--box-shadow);
+        text-align: center;
+        transition: var(--transition);
+        border-top: 4px solid var(--secondary-color);
+    }
+    
+    .feature-item:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 20px rgba(0,0,0,0.15);
+    }
+    
+    .feature-icon {
+        font-size: 2.5em;
+        color: var(--primary-color);
+        margin-bottom: 15px;
+    }
+    
+    .feature-title {
+        color: var(--primary-color);
+        font-size: 1.3em;
+        margin-bottom: 10px;
+    }
+    
+    .cta-section {
+        background-color: var(--light-bg);
+        border-radius: var(--border-radius);
+        padding: 40px;
+        text-align: center;
+        box-shadow: var(--box-shadow);
+        margin-bottom: 30px;
+    }
+    
+    .cta-title {
+        font-size: 1.8em;
+        color: var(--primary-color);
+        margin-bottom: 20px;
+    }
+    
+    .btn-group {
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+        max-width: 400px;
+        margin: 0 auto;
+    }
+    
+    .testimonial {
+        font-style: italic;
+        color: var(--text-light);
+        text-align: center;
+        max-width: 800px;
+        margin: 0 auto 40px;
+        padding: 20px;
+    }
+    
+    @media (min-width: 768px) {
+        .feature-grid {
+            grid-template-columns: repeat(3, 1fr);
+        }
+        
+        .btn-group {
+            flex-direction: row;
+            justify-content: center;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="hero-section">
+    <h1 class="hero-title">{% trans "寻找理想的校外住宿" %}</h1>
+    <p class="hero-subtitle">{% trans "为香港大学及其他大学的非本地学生提供便捷的租房服务" %}</p>
+    <a href="{% url 'search_accommodation' %}" class="btn btn-secondary">{% trans "开始寻找住宿" %}</a>
+</div>
+
+<div class="container">
+    <div class="feature-grid">
+        <div class="feature-item">
+            <div class="feature-icon">🔍</div>
+            <h3 class="feature-title">{% trans "智能搜索" %}</h3>
+            <p>{% trans "根据您的具体需求筛选房源，包括房型、预算和位置等多种条件。" %}</p>
+        </div>
+        
+        <div class="feature-item">
+            <div class="feature-icon">📍</div>
+            <h3 class="feature-title">{% trans "精确定位" %}</h3>
+            <p>{% trans "利用香港政府数据API，准确显示房源位置及距离校区的距离。" %}</p>
+        </div>
+        
+        <div class="feature-item">
+            <div class="feature-icon">📅</div>
+            <h3 class="feature-title">{% trans "灵活预订" %}</h3>
+            <p>{% trans "按照您的学期安排，轻松查找适合您日期范围的可用房源。" %}</p>
+        </div>
+    </div>
+    
+    <div class="cta-section">
+        <h2 class="cta-title">{% trans "开始您的校外住宿之旅" %}</h2>
+        <p>{% trans "无论您是需要寻找房源还是登记新房源，我们都能为您提供帮助。" %}</p>
+        <div class="btn-group">
+            <a href="{% url 'search_accommodation' %}" class="btn btn-primary">{% trans "搜索房源" %}</a>
+            <a href="{% url 'add_accommodation' %}" class="btn btn-secondary">{% trans "登记房源" %}</a>
+        </div>
+    </div>
+    
+    <div class="testimonial">
+        <p>{% trans "UniHaven帮助我在陌生的城市里找到了理想的住所，让我的留学生活更加便捷和舒适。" %}</p>
+        <p>{% trans "— 交换生 Jane" %}</p>
+    </div>
+</div>
+{% endblock %}

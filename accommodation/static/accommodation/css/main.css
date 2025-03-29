@@ -1,0 +1,534 @@
+/* General Styles */
+:root {
+    --primary-color: #003366;
+    --primary-dark: #004C99;
+    --secondary-color: #FF9800;
+    --secondary-dark: #F57C00;
+    --light-bg: #f5f7fa;
+    --card-bg: #ffffff;
+    --text-dark: #333333;
+    --text-light: #757575;
+    --success: #4caf50;
+    --error: #f44336;
+    --border-radius: 8px;
+    --box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+    --transition: all 0.3s ease;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: var(--light-bg);
+    color: var(--text-dark);
+    line-height: 1.6;
+    /* Remove background pattern */
+}
+
+.navbar {
+    background-color: var(--primary-color);
+    color: white;
+    padding: 15px 0;
+    text-align: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    position: relative;
+    z-index: 10;
+    display: flex;  /* 添加flex布局 */
+    justify-content: center;
+    align-items: center;
+}
+
+.navbar h1 {
+    margin: 0;
+    font-size: 1.8em;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+}
+
+.container {
+    max-width: 1140px;
+    margin: 20px auto;
+    padding: 0 20px;
+    position: relative;
+}
+
+/* Button Styles */
+.btn {
+    display: inline-block;
+    background-color: var(--primary-color);
+    color: white;
+    text-decoration: none;
+    padding: 10px 18px;
+    border-radius: var(--border-radius);
+    font-weight: 500;
+    text-align: center;
+    transition: var(--transition);
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.btn:hover {
+    background-color: var(--primary-dark);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    transform: translateY(-2px);
+}
+
+.btn-primary {
+    background-color: var(--primary-color);
+}
+
+.btn-secondary {
+    background-color: var(--secondary-color);
+}
+
+.btn-secondary:hover {
+    background-color: var(--secondary-dark);
+}
+
+.btn-full {
+    width: 100%;
+    font-size: 1em;
+    padding: 12px 20px;
+}
+
+/* Form Styles */
+.form-card {
+    background: var(--card-bg);
+    border-radius: var(--border-radius);
+    box-shadow: var(--box-shadow);
+    padding: 30px;
+    transition: var(--transition);
+}
+
+.form-card:hover {
+    box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+}
+
+.form-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 20px;
+}
+
+.form-group {
+    margin-bottom: 5px;
+}
+
+label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 500;
+    color: var(--text-dark);
+}
+
+input, textarea, select {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #e0e0e0;
+    border-radius: var(--border-radius);
+    box-sizing: border-box;
+    font-family: inherit;
+    font-size: 1em;
+    transition: var(--transition);
+    background-color: #f9f9f9;
+}
+
+textarea {
+    resize: vertical;
+    min-height: 100px;
+}
+
+input:focus, textarea:focus, select:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px rgba(26,115,232,0.2);
+    background-color: white;
+}
+
+.section-title {
+    font-size: 1.1em;
+    font-weight: bold;
+    margin: 20px 0 15px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid var(--primary-color);
+    color: var(--primary-color);
+    grid-column: 1 / -1;
+    position: relative;
+}
+
+.section-title::after {
+    content: "";
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    width: 60px;
+    height: 2px;
+    background-color: var(--secondary-color);
+}
+
+.errorlist {
+    color: var(--error);
+    list-style-type: none;
+    padding: 0;
+    margin: 5px 0 0 0;
+    font-size: 0.9em;
+}
+
+/* Card Layout */
+.card-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 25px;
+}
+
+.card {
+    background: var(--card-bg);
+    border-radius: var(--border-radius);
+    box-shadow: var(--box-shadow);
+    overflow: hidden;
+    transition: var(--transition);
+    border-top: 4px solid var(--primary-color);
+}
+
+.card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.15);
+}
+
+.card-content {
+    padding: 25px;
+}
+
+.card-title {
+    font-size: 1.3em;
+    color: var(--primary-color);
+    margin-top: 0;
+    margin-bottom: 10px;
+    font-weight: 600;
+}
+
+.card-description {
+    color: var(--text-light);
+    margin-bottom: 20px;
+    line-height: 1.5;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Detail Page Styles */
+.detail-header {
+    background-color: var(--primary-color);
+    color: white;
+    padding: 30px 20px;
+    text-align: center;
+    border-radius: var(--border-radius) var(--border-radius) 0 0;
+    position: relative;
+}
+
+.detail-header::after {
+    content: "";
+    position: absolute;
+    bottom: -10px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 60px;
+    height: 5px;
+    background-color: var(--secondary-color);
+    border-radius: 2.5px;
+}
+
+.detail-header h1 {
+    margin: 0;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+}
+
+.detail-content {
+    padding: 30px 25px;
+    background-color: var(--card-bg);
+    border-radius: 0 0 var(--border-radius) var(--border-radius);
+    box-shadow: var(--box-shadow);
+}
+
+.detail-section {
+    margin-bottom: 30px;
+    animation: fadeIn 0.5s ease-in-out;
+}
+
+@keyframes fadeIn {
+    0% { opacity: 0; transform: translateY(10px); }
+    100% { opacity: 1; transform: translateY(0); }
+}
+
+.detail-section h2 {
+    color: var(--primary-color);
+    font-size: 1.3em;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 10px;
+    margin-top: 0;
+    position: relative;
+}
+
+.detail-section h2::before {
+    content: "•";
+    color: var(--secondary-color);
+    margin-right: 8px;
+}
+
+.detail-item {
+    display: flex;
+    margin-bottom: 12px;
+    align-items: baseline;
+}
+
+.detail-label {
+    font-weight: bold;
+    width: 150px;
+    flex-shrink: 0;
+    color: var(--text-dark);
+}
+
+.detail-value {
+    flex-grow: 1;
+    color: var(--text-light);
+}
+
+.back-button {
+    display: block;
+    margin: 30px auto 20px;
+    width: 200px;
+}
+
+.no-results {
+    text-align: center;
+    padding: 40px 20px;
+    background: var(--card-bg);
+    border-radius: var(--border-radius);
+    box-shadow: var(--box-shadow);
+    color: var(--text-light);
+    font-size: 1.2em;
+}
+
+.no-results p {
+    margin-bottom: 20px;
+}
+
+/* Responsive Layout */
+@media (min-width: 768px) {
+    .form-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .card-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (min-width: 992px) {
+    .card-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+@media (max-width: 600px) {
+    .detail-item {
+        flex-direction: column;
+    }
+    
+    .detail-label {
+        width: 100%;
+        margin-bottom: 5px;
+    }
+}
+
+.full-width {
+    grid-column: 1 / -1;
+}
+
+.submit-row {
+    grid-column: 1 / -1;
+    margin-top: 20px;
+}
+
+.search-btn {
+    position: absolute;
+    right: 20px;
+    top: 15px;
+}
+
+/* Page Loading Animation */
+.page-transition {
+    animation: pageLoad 0.6s ease-in-out;
+}
+
+@keyframes pageLoad {
+    0% { opacity: 0; }
+    100% { opacity: 1; }
+}
+
+/* Enhanced Form Input Fields */
+input[type="date"] {
+    padding-right: 10px;
+}
+
+input[type="number"] {
+    padding-right: 10px;
+}
+
+/* Detail Container Styles */
+.detail-container {
+    max-width: 800px; /* Narrower than regular container */
+    margin: 20px auto;
+    padding: 0 20px;
+    position: relative;
+}
+
+/* Footer Styles */
+.footer {
+    text-align: center;
+    padding: 20px 0;
+    margin-top: 30px;
+    border-top: 1px solid rgba(0, 0, 0, 0.1); 
+}
+
+.footer p {
+    margin: 0;
+    color: var(--text-light);
+    font-size: 0.9em;
+}
+
+/* Language Selector Styles */
+.language-selector {
+    position: absolute;
+    right: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    gap: 5px;
+}
+
+.lang-btn {
+    background-color: rgba(255, 255, 255, 0.2);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    padding: 5px 8px;
+    border-radius: var(--border-radius);
+    font-size: 0.85em;
+    text-decoration: none;
+    transition: var(--transition);
+}
+
+.lang-btn:hover {
+    background-color: rgba(255, 255, 255, 0.3);
+    color: white;
+}
+
+.lang-btn.active {
+    background-color: rgba(255, 255, 255, 0.4);
+    font-weight: bold;
+}
+
+.language-selector select {
+    background-color: rgba(255, 255, 255, 0.2);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    padding: 6px 10px;
+    border-radius: var(--border-radius);
+    font-size: 0.85em;
+    cursor: pointer;
+    outline: none;
+    min-width: 100px;
+}
+
+.language-selector select:hover {
+    background-color: rgba(255, 255, 255, 0.3);
+}
+
+.language-selector select option {
+    background-color: var(--primary-dark);
+    color: white;
+    padding: 10px;
+}
+
+/* Language Selector Styles - 下拉菜单版本 */
+.language-selector {
+    position: absolute;
+    right: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+/* 下拉菜单容器 */
+.dropdown {
+    position: relative;
+    display: inline-block;
+}
+
+/* 下拉菜单按钮 */
+.dropdown-btn {
+    background-color: rgba(255, 255, 255, 0.2);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    padding: 6px 10px;
+    border-radius: var(--border-radius);
+    font-size: 0.85em;
+    cursor: pointer;
+    min-width: 70px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.dropdown-arrow {
+    font-size: 0.7em;
+    margin-left: 5px;
+}
+
+/* 下拉菜单内容 */
+.dropdown-content {
+    display: none;
+    position: absolute;
+    right: 0;
+    background-color: var(--primary-dark);
+    min-width: 120px;
+    box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+    z-index: 20;
+    border-radius: var(--border-radius);
+    overflow: hidden;
+}
+
+/* 下拉菜单链接 */
+.dropdown-content a {
+    color: white;
+    padding: 10px 12px;
+    text-decoration: none;
+    display: block;
+    text-align: left;
+    transition: var(--transition);
+}
+
+.dropdown-content a:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.dropdown-content a.active {
+    background-color: rgba(255, 255, 255, 0.2);
+    font-weight: bold;
+}
+
+/* 显示下拉菜单 */
+.dropdown:hover .dropdown-content {
+    display: block;
+}
+
+.dropdown:hover .dropdown-btn {
+    background-color: rgba(255, 255, 255, 0.3);
+}

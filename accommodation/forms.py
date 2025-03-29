@@ -6,7 +6,9 @@ class AccommodationForm(forms.ModelForm):
 
     class Meta:
         model = Accommodation
-        fields = ['title', 'description', 'type', 'beds', 'bedrooms', 'price', 'address']
+        fields = ['title', 'description', 'type', 'beds', 'bedrooms', 'price', 'address', 'available_from', 'available_to']
         widgets = {
             'description': forms.Textarea(attrs={'rows': 4}),
+            'available_from': forms.DateInput(attrs={'type': 'date'}),
+            'available_to': forms.DateInput(attrs={'type': 'date'}),
         }

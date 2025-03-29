@@ -3,6 +3,13 @@ from django.http import JsonResponse
 from django.shortcuts import render, redirect
 from .models import Accommodation
 from .forms import AccommodationForm
+from django.utils.dateparse import parse_date
+from django.db.models import Q
+from django.urls import reverse
+
+def index(request):
+    """首页视图函数"""
+    return render(request, 'accommodation/index.html')
 
 # test API
 def lookup_address(request):
@@ -136,4 +143,66 @@ def add_accommodation(request):
 
 def list_accommodation(request):
     accommodations = Accommodation.objects.all()
-    return render(request, 'accommodation/accommodation_list.html', {'accommodations': accommodations})
+    accommodation_type = request.GET.get("type", "")
+    region = request.GET.get("region", "")
+    available_from = request.GET.get("available_from", "")
+    available_to = request.GET.get("available_to", "")
+    min_beds = request.GET.get("min_beds", "")
+    min_bedrooms = request.GET.get("min_bedrooms", "")
+    max_price = request.GET.get("max_price", "")
+
+    # 过滤房源类型
+    if accommodation_type:
+        accommodations = accommodations.filter(type=accommodation_type)
+
+    # 过滤地区
+    if region:
+        accommodations = accommodations.filter(region=region)
+
+    # 过滤日期范围
+    if available_from and available_to:
+        try:
+            available_from = parse_date(available_from)
+            available_to = parse_date(available_to)
+            if available_from and available_to:
+                accommodations = accommodations.filter(
+                    Q(available_from__lte=available_from) & Q(available_to__gte=available_to)
+                )
+        except ValueError:
+            print("Invalid date format")  # 调试信息
+
+    # 过滤床位数
+    if min_beds:
+        accommodations = accommodations.filter(beds__gte=min_beds)
+
+    # 过滤卧室数
+    if min_bedrooms:
+        accommodations = accommodations.filter(bedrooms__gte=min_bedrooms)
+
+    # 过滤价格
+    if max_price:
+        accommodations = accommodations.filter(price__lte=max_price)
+
+    return render(request, 'accommodation/accommodation_list.html', {
+        'accommodations': accommodations,
+        'accommodation_type': accommodation_type,
+        'region': region,
+        'available_from': available_from,
+        'available_to': available_to,
+        'min_beds': min_beds,
+        'min_bedrooms': min_bedrooms,
+        'max_price': max_price,
+    })
+
+
+def search_accommodation(request):
+    if request.GET and any(request.GET.values()):
+        query_params = request.GET.urlencode()
+        return redirect(f"{reverse('list_accommodation')}?{query_params}")
+    else:
+        return render(request, 'accommodation/search_results.html')
+
+
+def accommodation_detail(request, pk):
+    accommodation = Accommodation.objects.get(pk=pk)
+    return render(request, 'accommodation/accommodation_detail.html', {'accommodation': accommodation})
