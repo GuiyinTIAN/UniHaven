@@ -1,6 +1,7 @@
 import requests
 from django.http import JsonResponse
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
+from django.conf import settings
 from .models import Accommodation
 from .forms import AccommodationForm
 from django.utils.dateparse import parse_date
@@ -27,7 +28,6 @@ def lookup_address(request):
     try:
         response = requests.get(api_url, headers=headers)
         response.raise_for_status()
-
 
         response.encoding = 'utf-8'
 
@@ -90,18 +90,16 @@ def lookup_address(request):
             else:
                 return JsonResponse({"error": "No results found"}, status=404)
         except ValueError:
-           # debugging
+            # debugging
+            print("Response Text (Debug):", response.text)
+            # debugging
             print("Response Text (Debug):", response.text)
             return JsonResponse({"error": "Invalid JSON response from API"}, status=500)
 
     except requests.HTTPError as e:
-        # debugging
-        print(f"HTTP Error: {e.response.status_code} - {e.response.text}")
         return JsonResponse({"error": f"HTTP Error: {e.response.status_code}"}, status=e.response.status_code)
     except requests.RequestException as e:
         return JsonResponse({"error": str(e)}, status=500)
-
-
 
 def add_accommodation(request):
     if request.method == "POST":
@@ -115,7 +113,6 @@ def add_accommodation(request):
             try:
                 response = requests.get(api_url, headers=headers)
                 response.raise_for_status()
-                print("API 响应:", response.text)
                 data = response.json()
 
                 # 从 API 响应中提取地理信息
@@ -142,7 +139,6 @@ def add_accommodation(request):
         form = AccommodationForm()
 
     return render(request, 'accommodation/add_accommodation.html', {'form': form})
-
 
 def list_accommodation(request):
     accommodations = Accommodation.objects.all()
@@ -173,7 +169,7 @@ def list_accommodation(request):
                     Q(available_from__lte=available_from) & Q(available_to__gte=available_to)
                 )
         except ValueError:
-            print("Invalid date format")  # 调试信息
+            pass
 
     # 过滤床位数
     if min_beds:
@@ -226,7 +222,6 @@ def list_accommodation(request):
         'max_distance': max_distance,
     })
 
-
 def search_accommodation(request):
     if request.GET and any(request.GET.values()):
         query_params = request.GET.urlencode()
@@ -236,7 +231,7 @@ def search_accommodation(request):
 
 
 def accommodation_detail(request, pk):
-    accommodation = Accommodation.objects.get(pk=pk)
+    accommodation = get_object_or_404(Accommodation, pk=pk)
     return render(request, 'accommodation/accommodation_detail.html', {'accommodation': accommodation})
 
 

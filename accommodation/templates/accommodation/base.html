@@ -3,20 +3,58 @@
 <!DOCTYPE html>
 <html lang="{{ LANGUAGE_CODE }}">
 <head>
-    <title>{% block title %}UniHaven{% endblock %}</title>
+    <title>{% block title %}UniHaven - Student Accommodation Solutions{% endblock %}</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="{% static 'accommodation/css/main.css' %}">
+    <style>
+        html, body {
+            height: 100%;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+        }
+        .home-btn {
+            background-color: transparent;
+            border: none;
+            box-shadow: none;
+            font-size: 1.5em;
+            padding: 5px 10px;
+            margin-right: 10px;
+        }
+        
+        .home-btn:hover {
+            background-color: rgba(255, 255, 255, 0.2);
+            transform: translateY(-2px);
+        }
+
+        .footer {
+            background-color: var(--primary-color);
+            color: white;
+            text-align: center;
+            padding: 10px 0;
+            font-size: 0.9em;
+        }
+        .content-wrapper {
+            flex: 1;
+        }
+    </style>
     {% block extra_css %}{% endblock %}
 </head>
 <body class="page-transition">
     <div class="navbar">
-        <h1>UniHaven</h1>
+        {% block home_button %}
+        <a href="{% url 'index' %}" class="home-btn btn btn-secondary">🏠</a>
+        {% endblock %}
+        <h1>{% block nav_title %}UniHaven{% endblock %}</h1>
+        <div class="nav-right"></div><!-- 添加空元素以保持对称 -->
     </div>
     
-    {% block content %}{% endblock %}
+    <div class="content-wrapper">
+        {% block content %}{% endblock %}
+    </div>
     
     <div class="footer">
-        <p>UniHaven &copy; 2025 - HKU COMP3297 </p>
+        <p>UniHaven &copy; 2025 - HKU COMP3297</p>
     </div>
     
     {% block extra_js %}{% endblock %}

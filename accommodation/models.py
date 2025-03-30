@@ -15,6 +15,11 @@ class Accommodation(models.Model):
     price = models.DecimalField(max_digits=10, decimal_places=2)
     available_from = models.DateField(null=True, blank=True)
     available_to = models.DateField(null=True, blank=True)
+
+    userID = models.CharField(max_length=255, blank=True, default="")
+    #If reserved is true, the accommodation is reserved
+    reserved = models.BooleanField(default=False)
+
     building_name = models.CharField(max_length=200, default="", blank=True)
     estate_name = models.CharField(max_length=200, default="", blank=True)
     street_name = models.CharField(max_length=200, default="", blank=True)

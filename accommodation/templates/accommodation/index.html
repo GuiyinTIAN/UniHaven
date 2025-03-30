@@ -3,6 +3,11 @@
 {% load i18n %}
 
 {% block title %}{% trans "UniHaven - 非本地学生住宿解决方案" %}{% endblock %}
+{% block nav_title %}UniHaven{% endblock %}
+
+{% block home_button %}
+<!-- Home button not needed on homepage -->
+{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -92,6 +97,46 @@
         padding: 20px;
     }
     
+    /* 语言切换器样式 */
+    .language-selector {
+        position: absolute;
+        top: 35px;
+        right: 20px;
+        z-index: 100;
+    }
+    
+    .language-selector select {
+        padding: 5px 10px;
+        border-radius: var(--border-radius);
+        border: 1px solid rgba(255,255,255,0.5);
+        background-color: rgba(0,51,102,0.7);
+        color: white;
+        cursor: pointer;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    }
+    
+    .language-selector select:focus {
+        outline: none;
+        border-color: var(--secondary-color);
+        box-shadow: 0 0 0 2px rgba(255,152,0,0.3);
+    }
+    
+    .language-selector select option {
+        background-color: white;
+        color: #333; 
+        font-weight: 500;
+    }
+    
+    /* 添加悬停效果 */
+    .language-selector select:hover {
+        background-color: rgba(0,51,102,0.9);
+        border-color: white;
+    }
+    
+    .language-selector select option:hover {
+        background-color: #f5f5f5;
+    }
+    
     @media (min-width: 768px) {
         .feature-grid {
             grid-template-columns: repeat(3, 1fr);
@@ -107,6 +152,23 @@
 
 {% block content %}
 <div class="hero-section">
+
+    <div class="language-selector">
+        <form action="/i18n/setlang/" method="post">
+            {% csrf_token %}
+            <input name="next" type="hidden" value="{{ request.path }}">
+            <select name="language" onchange="this.form.submit()">
+                {% get_current_language as CURRENT_LANGUAGE %}
+                {% get_available_languages as LANGUAGES %}
+                {% for code, name in LANGUAGES %}
+                    <option value="{{ code }}" {% if code == CURRENT_LANGUAGE %}selected{% endif %}>
+                        {{ name }}
+                    </option>
+                {% endfor %}
+            </select>
+        </form>
+    </div>
+    
     <h1 class="hero-title">{% trans "寻找理想的校外住宿" %}</h1>
     <p class="hero-subtitle">{% trans "为香港大学及其他大学的非本地学生提供便捷的租房服务" %}</p>
     <a href="{% url 'search_accommodation' %}" class="btn btn-secondary">{% trans "开始寻找住宿" %}</a>

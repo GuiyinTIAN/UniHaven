@@ -2,12 +2,13 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Add New Accommodation</title>
+    <title>UniHaven - Add New Accommodation</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="{% static 'accommodation/css/main.css' %}">
 </head>
 <body class="page-transition">
     <div class="navbar">
+        <a href="{% url 'index' %}" class="home-btn btn btn-secondary">🏠</a>
         <h1>Add New Accommodation</h1>
     </div>
     
@@ -147,5 +148,38 @@
             </form>
         </div>
     </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const today = new Date();
+            const yyyy = today.getFullYear();
+            const mm = String(today.getMonth() + 1).padStart(2, '0');
+            const dd = String(today.getDate()).padStart(2, '0');
+            const todayFormatted = `${yyyy}-${mm}-${dd}`;
+            
+            const fromDateInput = document.getElementById('{{ form.available_from.id_for_label }}');
+            fromDateInput.min = todayFormatted;
+            
+            const toDateInput = document.getElementById('{{ form.available_to.id_for_label }}');
+            toDateInput.min = todayFormatted;
+            
+            fromDateInput.addEventListener('change', function() {
+                if (fromDateInput.value) {
+                    toDateInput.min = fromDateInput.value;
+                    
+                    if (toDateInput.value && toDateInput.value < fromDateInput.value) {
+                        toDateInput.value = fromDateInput.value;
+                    }
+                }
+            });
+            
+            toDateInput.addEventListener('change', function() {
+                if (toDateInput.value && fromDateInput.value && fromDateInput.value > toDateInput.value) {
+                    alert('The end date must be after the start date.');
+                    toDateInput.value = fromDateInput.value;
+                }
+            });
+        });
+    </script>
 </body>
 </html>
