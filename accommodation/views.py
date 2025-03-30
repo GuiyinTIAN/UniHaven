@@ -7,7 +7,6 @@ from .forms import AccommodationForm
 from django.utils.dateparse import parse_date
 from django.db.models import Q
 from django.urls import reverse
-from django.utils.translation import gettext as _
 
 def index(request):
     """首页视图函数"""
@@ -198,6 +197,8 @@ def search_accommodation(request):
     else:
         return render(request, 'accommodation/search_results.html')
 
+
 def accommodation_detail(request, pk):
     accommodation = Accommodation.objects.get(pk=pk)
     return render(request, 'accommodation/accommodation_detail.html', {'accommodation': accommodation})
+

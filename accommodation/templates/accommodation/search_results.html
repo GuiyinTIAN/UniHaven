@@ -1,103 +1,75 @@
 {% extends 'accommodation/base.html' %}
 {% load static %}
-
-{% block title %}UniHaven - Search Accommodation{% endblock %}
-{% block nav_title %}Find your Accommodation{% endblock %}
-
-{% block content %}
-<div class="container">
-    <div class="form-card">
-        <form method="get" action="{% url 'search_accommodation' %}">
-            <div class="form-grid">
-                <div class="section-title">Accommodation Type</div>
-                <div class="form-group">
-                    <label for="type">Type of Accommodation:</label>
-                    <select name="type" id="type">
-                        <option value="">All Types</option>
-                        <option value="APARTMENT" {% if accommodation_type == "APARTMENT" %}selected{% endif %}>Apartment</option>
-                        <option value="HOUSE" {% if accommodation_type == "HOUSE" %}selected{% endif %}>House</option>
-                        <option value="HOSTEL" {% if accommodation_type == "HOSTEL" %}selected{% endif %}>Hostel</option>
-                    </select>
-                </div>
-                
-                <div class="form-group">
-                    <label for="region">Region:</label>
-                    <select name="region" id="region">
-                        <option value="">All Regions</option>
-                        <option value="HK" {% if region == "HK" %}selected{% endif %}>Hong Kong Island</option>
-                        <option value="KL" {% if region == "KL" %}selected{% endif %}>Kowloon</option>
-                        <option value="NT" {% if region == "NT" %}selected{% endif %}>New Territories</option>
-                    </select>
-                </div>
-                
-                <div class="section-title">Availability Period</div>
-                <div class="form-group">
-                    <label for="available_from">From:</label>
-                    <input type="date" name="available_from" id="available_from" value="{{ available_from|date:'Y-m-d' }}">
-                </div>
-                
-                <div class="form-group">
-                    <label for="available_to">To:</label>
-                    <input type="date" name="available_to" id="available_to" value="{{ available_to|date:'Y-m-d' }}">
-                </div>
-                
-                <div class="section-title">Requirements</div>
-                <div class="form-group">
-                    <label for="min_beds">Minimum Beds:</label>
-                    <input type="number" name="min_beds" id="min_beds" value="{{ min_beds }}" min="1">
-                </div>
-                
-                <div class="form-group">
-                    <label for="min_bedrooms">Minimum Bedrooms:</label>
-                    <input type="number" name="min_bedrooms" id="min_bedrooms" value="{{ min_bedrooms }}" min="1">
-                </div>
-                
-                <div class="form-group">
-                    <label for="max_price">Maximum Price (HKD):</label>
-                    <input type="number" name="max_price" id="max_price" value="{{ max_price }}" min="0">
-                </div>
-                
-                <div class="submit-row">
-                    <button type="submit" class="btn btn-primary btn-full">Search Accommodations</button>
-                </div>
-            </div>
-        </form>
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Search Accommodation</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{% static 'accommodation/css/main.css' %}">
+</head>
+<body class="page-transition">
+    <div class="navbar">
+        <h1>Find Your Perfect Accommodation</h1>
     </div>
-</div>
-{% endblock %}
-
-{% block extra_js %}
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const today = new Date();
-        const yyyy = today.getFullYear();
-        const mm = String(today.getMonth() + 1).padStart(2, '0');
-        const dd = String(today.getDate()).padStart(2, '0');
-        const todayFormatted = `${yyyy}-${mm}-${dd}`;
-        
-        const fromDateInput = document.getElementById('available_from');
-        fromDateInput.min = todayFormatted;
-
-        const toDateInput = document.getElementById('available_to');
-        toDateInput.min = todayFormatted;
-        
-        fromDateInput.addEventListener('change', function() {
-            if (fromDateInput.value) {
-                toDateInput.min = fromDateInput.value;
-                
-                if (toDateInput.value && toDateInput.value < fromDateInput.value) {
-                    toDateInput.value = fromDateInput.value;
-                }
-            }
-        });
-        
-
-        toDateInput.addEventListener('change', function() {
-            if (toDateInput.value && fromDateInput.value && fromDateInput.value > toDateInput.value) {
-                alert('The end date must be after the start date.');
-                toDateInput.value = fromDateInput.value;
-            }
-        });
-    });
-</script>
-{% endblock %}
+    
+    <div class="container">
+        <div class="form-card">
+            <form method="get" action="{% url 'search_accommodation' %}">
+                <div class="form-grid">
+                    <div class="section-title">Accommodation Type</div>
+                    <div class="form-group">
+                        <label for="type">Type of Accommodation:</label>
+                        <select name="type" id="type">
+                            <option value="">All Types</option>
+                            <option value="APARTMENT" {% if accommodation_type == "APARTMENT" %}selected{% endif %}>Apartment</option>
+                            <option value="HOUSE" {% if accommodation_type == "HOUSE" %}selected{% endif %}>House</option>
+                            <option value="HOSTEL" {% if accommodation_type == "HOSTEL" %}selected{% endif %}>Hostel</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="region">Region:</label>
+                        <select name="region" id="region">
+                            <option value="">All Regions</option>
+                            <option value="HK" {% if region == "HK" %}selected{% endif %}>Hong Kong Island</option>
+                            <option value="KL" {% if region == "KL" %}selected{% endif %}>Kowloon</option>
+                            <option value="NT" {% if region == "NT" %}selected{% endif %}>New Territories</option>
+                        </select>
+                    </div>
+                    
+                    <div class="section-title">Availability Period</div>
+                    <div class="form-group">
+                        <label for="available_from">From:</label>
+                        <input type="date" name="available_from" id="available_from" value="{{ available_from|date:'Y-m-d' }}">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="available_to">To:</label>
+                        <input type="date" name="available_to" id="available_to" value="{{ available_to|date:'Y-m-d' }}">
+                    </div>
+                    
+                    <div class="section-title">Requirements</div>
+                    <div class="form-group">
+                        <label for="min_beds">Minimum Beds:</label>
+                        <input type="number" name="min_beds" id="min_beds" value="{{ min_beds }}" min="1">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="min_bedrooms">Minimum Bedrooms:</label>
+                        <input type="number" name="min_bedrooms" id="min_bedrooms" value="{{ min_bedrooms }}" min="1">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="max_price">Maximum Price (HKD):</label>
+                        <input type="number" name="max_price" id="max_price" value="{{ max_price }}" min="0">
+                    </div>
+                    
+                    <div class="submit-row">
+                        <button type="submit" class="btn btn-primary btn-full">Search Accommodations</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</body>
+</html>
