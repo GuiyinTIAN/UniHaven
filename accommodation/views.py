@@ -1,6 +1,6 @@
 import requests
 from django.http import JsonResponse
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.conf import settings
 from .models import Accommodation
 from .forms import AccommodationForm
@@ -199,6 +199,6 @@ def search_accommodation(request):
 
 
 def accommodation_detail(request, pk):
-    accommodation = Accommodation.objects.get(pk=pk)
+    accommodation = get_object_or_404(Accommodation, pk=pk)
     return render(request, 'accommodation/accommodation_detail.html', {'accommodation': accommodation})
 
