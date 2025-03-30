@@ -5,6 +5,88 @@
     <title>Search Accommodation</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="{% static 'accommodation/css/main.css' %}">
+
+    <style>
+
+.search-result {
+    float: left;
+  width: 50%;
+  padding: 10px;
+}
+.select-column:after {
+content: "";
+  display:table-column;
+  clear: both;
+}
+
+        /* Popup Window Styles */
+        #searchResultPopup {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: white;
+            border: 1px solid #ccc;
+            padding: 20px;
+            z-index: 9999;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            max-height: 80%;
+            overflow-y: auto;
+            width: 80%;
+        }
+        /* Overlay for popup background */
+        #popupOverlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 9998;
+        }
+
+    .search-results-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 20px;
+    }
+
+    .search-results-table th, .search-results-table td {
+        border: 1px solid #ddd;
+        padding: 8px;
+        text-align: left;
+    }
+
+    .search-results-table th {
+        background-color: #f2f2f2;
+        font-weight: bold;
+    }
+
+    .search-results-table tr:nth-child(even) {
+        background-color: #f9f9f9;
+    }
+
+    .search-results-table tr:hover {
+        background-color: #f1f1f1;
+    }
+
+    .search-results-table button {
+        padding: 5px 10px;
+        background-color: #007bff;
+        color: white;
+        border: none;
+        border-radius: 3px;
+        cursor: pointer;
+    }
+
+    .search-results-table button:disabled {
+        background-color: #ccc;
+        cursor: not-allowed;
+    }
+    </style>
+
 </head>
 <body class="page-transition">
     <div class="navbar">
@@ -13,7 +95,11 @@
     
     <div class="container">
         <div class="form-card">
+
+            <form method="get" action="{% url 'search_accommodation' %}" id="searchForm">
+
             <form method="get" action="{% url 'search_accommodation' %}">
+
                 <div class="form-grid">
                     <div class="section-title">Accommodation Type</div>
                     <div class="form-group">
@@ -70,5 +156,285 @@
             </form>
         </div>
     </div>
+
+
+    <!-- Popup for search results -->
+    <div id="popupOverlay"></div>
+    <div id="searchResultPopup">
+        <h2>Search Results</h2>
+        <div id="searchResultsContainer">
+            <!-- Search results will be dynamically inserted here -->
+        </div>
+        <button onclick="closePopup()">Close</button>
+    </div>
+
+    <script>
+        // Function to show the popup
+        function showPopup(searchResultsHTML) {
+            document.getElementById("searchResultsContainer").innerHTML = searchResultsHTML;
+            document.getElementById("popupOverlay").style.display = "block";
+            document.getElementById("searchResultPopup").style.display = "block";
+        }
+
+        // Function to close the popup
+        function closePopup() {
+            document.getElementById("popupOverlay").style.display = "none";
+            document.getElementById("searchResultPopup").style.display = "none";
+        }
+
+        // Trigger the popup display when search form is submitted
+        document.getElementById("searchForm").addEventListener("submit", function(e) {
+            e.preventDefault(); // Prevent the form from submitting normally
+
+            // Fetch the search results (you need to implement this to fetch data dynamically)
+            fetchResults().then(function(searchResultsHTML) {
+                showPopup(searchResultsHTML);
+            });
+        });
+
+        // Function to fetch search results
+        function fetchResults() {
+            // Hard-coded accommodation data
+            const accommodations = [
+                {
+                "title": "Luxury Apartment in Central",
+                "description": "A luxurious 2-bedroom apartment with a stunning city view.",
+                "type": "APARTMENT",
+                "beds": 2,
+                "bedrooms": 2,
+                "price": 5000.00,
+                "available_from": "2025-05-01",
+                "available_to": "2025-06-01",
+                "reserved": false,
+                "building_name": "Sky Tower",
+                "estate_name": "Sky Estates",
+                "street_name": "Central Avenue",
+                "building_no": "12A",
+                "district": "Central",
+                "region": "HK",
+                "latitude": 22.2783,
+                "longitude": 114.1747,
+                "geo_address": "Central, Hong Kong",
+                "rating": 4.5,
+                "id": 1
+                },
+                {
+                "title": "Budget Hostel in Kowloon",
+                "description": "A luxurious 2-bedroom apartment with a stunning city view.",
+                "type": "APARTMENT",
+                "beds": 2,
+                "bedrooms": 2,
+                "price": 5000.00,
+                "available_from": "2025-05-01",
+                "available_to": "2025-06-01",
+                "reserved": false,
+                "building_name": "Sky Tower",
+                "estate_name": "Sky Estates",
+                "street_name": "Central Avenue",
+                "building_no": "12A",
+                "district": "Central",
+                "region": "HK",
+                "latitude": 22.2783,
+                "longitude": 114.1747,
+                "geo_address": "Central, Hong Kong",
+                "rating": 4.5,
+                "id": 2
+                },
+                {
+                "title": "3",
+                "description": "A luxurious 2-bedroom apartment with a stunning city view.",
+                "type": "APARTMENT",
+                "beds": 2,
+                "bedrooms": 2,
+                "price": 5000.00,
+                "available_from": "2025-05-01",
+                "available_to": "2025-06-01",
+                "reserved": false,
+                "building_name": "Sky Tower",
+                "estate_name": "Sky Estates",
+                "street_name": "Central Avenue",
+                "building_no": "12A",
+                "district": "Central",
+                "region": "HK",
+                "latitude": 22.2783,
+                "longitude": 114.1747,
+                "geo_address": "Central, Hong Kong",
+                "rating": 4.5,
+                "id": 3
+                }
+            ];
+
+            // Simulate a promise to return the hard-coded data
+            return new Promise((resolve) => {
+                const searchResultsHTML = generateSearchResultsHTML(accommodations);
+                resolve(searchResultsHTML);
+            });
+        }
+
+        // Function to generate HTML for the search results
+        function generateSearchResultsHTML(accommodations) {
+            let searchResultsHTML = `
+                <table class="search-results-table">
+                    <thead>
+                        <tr>
+                            <th>Title</th>
+                            <th>Description</th>
+                            <th>Type</th>
+                            <th>Beds</th>
+                            <th>Bedrooms</th>
+                            <th>Price (HKD)</th>
+                            <th>Available From</th>
+                            <th>Available To</th>
+                            <th>Building Name</th>
+                            <th>Estate Name</th>
+                            <th>Street Name</th>
+                            <th>Building No</th>
+                            <th>District</th>
+                            <th>Region</th>
+                            <th>Geo Address</th>
+                            <th>Latitude</th>
+                            <th>Longitude</th>
+                            <th>Rating</th>
+                            <th>Status</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            accommodations.forEach(function (accommodation) {
+                searchResultsHTML += `
+                    <tr>
+                        <td>${accommodation.title}</td>
+                        <td>${accommodation.description}</td>
+                        <td>${accommodation.type}</td>
+                        <td>${accommodation.beds}</td>
+                        <td>${accommodation.bedrooms}</td>
+                        <td>${accommodation.price.toFixed(2)}</td>
+                        <td>${accommodation.available_from}</td>
+                        <td>${accommodation.available_to}</td>
+                        <td>${accommodation.building_name}</td>
+                        <td>${accommodation.estate_name}</td>
+                        <td>${accommodation.street_name}</td>
+                        <td>${accommodation.building_no}</td>
+                        <td>${accommodation.district}</td>
+                        <td>${accommodation.region}</td>
+                        <td>${accommodation.geo_address}</td>
+                        <td>${accommodation.latitude}</td>
+                        <td>${accommodation.longitude}</td>
+                        <td>${accommodation.rating}</td>
+                        <td>${accommodation.reserved ? "Reserved" : "Available"}</td>
+                        <td>
+                            <button type="button" data-id="${accommodation.id}" data-action="reserve" onclick="reserveAccommodation(${accommodation.id})" ${accommodation.reserved ? "disabled" : ""}>
+                                ${accommodation.reserved ? "Reserved" : "Reserve"}
+                            </button>
+                            <button type="button" data-id="${accommodation.id}" data-action="cancel" onclick="cancelReservation(${accommodation.id})">
+                                Cancel
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            searchResultsHTML += `
+                    </tbody>
+                </table>
+            `;
+
+            return searchResultsHTML;
+        }
+
+        function reserveAccommodation(accommodationId) {
+            fetch('/reserve_accommodation/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-CSRFToken': getCSRFToken() // Include CSRF token for Django
+                },
+                body: `accommodation_id=${accommodationId}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert(data.message);
+
+                    // Update the UI to reflect the new reserved status
+                    const reserveButton = document.querySelector(`button[data-id="${accommodationId}"][data-action="reserve"]`);
+                    const cancelButton = document.querySelector(`button[data-id="${accommodationId}"][data-action="cancel"]`);
+                    
+                    if (reserveButton && cancelButton) {
+                        reserveButton.textContent = 'Reserved';
+                        reserveButton.disabled = true;
+                        cancelButton.disabled = false; // Enable the cancel button
+                    }
+                } else {
+                    alert(data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while reserving the accommodation.');
+            });
+        }
+
+        function cancelReservation(accommodationId) {
+    fetch('/cancel_reservation/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-CSRFToken': getCSRFToken() // Include CSRF token for Django
+        },
+        body: `accommodation_id=${accommodationId}`
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert(data.message);
+
+            // Update the UI to reflect the new reservation status
+            const reserveButton = document.querySelector(`button[data-id="${accommodationId}"][data-action="reserve"]`);
+            const cancelButton = document.querySelector(`button[data-id="${accommodationId}"][data-action="cancel"]`);
+            
+            if (reserveButton && cancelButton) {
+                reserveButton.textContent = 'Reserve';
+                reserveButton.disabled = false; // Enable the reserve button
+                cancelButton.disabled = true;
+            }
+        } else {
+            alert(data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('An error occurred while canceling the reservation.');
+    });
+}
+
+        // Helper function to get CSRF token from cookies
+        function getCSRFToken() {
+            const name = 'csrftoken';
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.startsWith(name + '=')) {
+                    return cookie.substring(name.length + 1);
+                }
+            }
+            return '';
+        }
+
+        function setUserIdentifier() {
+            if (!document.cookie.includes('user_identifier')) {
+                //const userIdentifier = crypto.randomUUID(); // Generate a unique identifier
+                userIdentifier = "123"
+
+                document.cookie = `user_identifier=${userIdentifier}; path=/; max-age=31536000`; // Store for 1 year
+            }
+        }
+
+        // Call this function when the page loads
+        setUserIdentifier();
+    </script>
+
 </body>
 </html>
