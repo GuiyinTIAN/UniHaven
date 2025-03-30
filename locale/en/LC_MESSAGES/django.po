@@ -1,0 +1,83 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2025-04-01 10:00+0800\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: en\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: accommodation/templates/accommodation/index.html:6
+msgid "UniHaven - 非本地学生住宿解决方案"
+msgstr "UniHaven - Accommodation Solutions for Non-local Students"
+
+#: accommodation/templates/accommodation/index.html:111
+msgid "寻找理想的校外住宿"
+msgstr "Find Your Ideal Off-Campus Accommodation"
+
+#: accommodation/templates/accommodation/index.html:112
+msgid "为香港大学及其他大学的非本地学生提供便捷的租房服务"
+msgstr "Convenient housing services for non-local students at HKU and other universities"
+
+#: accommodation/templates/accommodation/index.html:113
+msgid "开始寻找住宿"
+msgstr "Start Finding Accommodation"
+
+#: accommodation/templates/accommodation/index.html:120
+msgid "智能搜索"
+msgstr "Smart Search"
+
+#: accommodation/templates/accommodation/index.html:121
+msgid "根据您的具体需求筛选房源，包括房型、预算和位置等多种条件。"
+msgstr "Filter properties according to your specific needs, including property type, budget, and location."
+
+#: accommodation/templates/accommodation/index.html:127
+msgid "精确定位"
+msgstr "Precise Location"
+
+#: accommodation/templates/accommodation/index.html:128
+msgid "利用香港政府数据API，准确显示房源位置及距离校区的距离。"
+msgstr "Using Hong Kong government data APIs to accurately display property locations and distances to campus."
+
+#: accommodation/templates/accommodation/index.html:134
+msgid "灵活预订"
+msgstr "Flexible Booking"
+
+#: accommodation/templates/accommodation/index.html:135
+msgid "按照您的学期安排，轻松查找适合您日期范围的可用房源。"
+msgstr "Easily find available properties that match your semester schedule and date requirements."
+
+#: accommodation/templates/accommodation/index.html:141
+msgid "开始您的校外住宿之旅"
+msgstr "Start Your Off-Campus Housing Journey"
+
+#: accommodation/templates/accommodation/index.html:142
+msgid "无论您是需要寻找房源还是登记新房源，我们都能为您提供帮助。"
+msgstr "Whether you need to find a property or list a new one, we're here to help."
+
+#: accommodation/templates/accommodation/index.html:144
+msgid "搜索房源"
+msgstr "Search Properties"
+
+#: accommodation/templates/accommodation/index.html:145
+msgid "登记房源"
+msgstr "Add a Property"
+
+#: accommodation/templates/accommodation/index.html:150
+msgid "UniHaven帮助我在陌生的城市里找到了理想的住所，让我的留学生活更加便捷和舒适。"
+msgstr "UniHaven helped me find the ideal residence in an unfamiliar city, making my overseas study life more convenient and comfortable."
+
+#: accommodation/templates/accommodation/index.html:151
+msgid "— 交换生 Jane"
+msgstr "— Exchange Student Jane"
