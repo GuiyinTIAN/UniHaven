@@ -1,0 +1,154 @@
+{% load static %}
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Add New Accommodation</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{% static 'accommodation/css/main.css' %}">
+</head>
+<body class="page-transition">
+    <div class="navbar">
+        <h1>Add New Accommodation</h1>
+    </div>
+    
+    <div class="container">
+        <div class="form-card">
+            <form method="post">
+                {% csrf_token %}
+                <div class="form-grid">
+                    <div class="section-title">Basic Information</div>
+                    
+                    <div class="form-group">
+                        <label for="{{ form.title.id_for_label }}">Title:</label>
+                        {{ form.title }}
+                        {% if form.title.errors %}
+                            <ul class="errorlist">
+                                {% for error in form.title.errors %}
+                                    <li>{{ error }}</li>
+                                {% endfor %}
+                            </ul>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="{{ form.type.id_for_label }}">Accommodation Type:</label>
+                        {{ form.type }}
+                        {% if form.type.errors %}
+                            <ul class="errorlist">
+                                {% for error in form.type.errors %}
+                                    <li>{{ error }}</li>
+                                {% endfor %}
+                            </ul>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="form-group full-width">
+                        <label for="{{ form.description.id_for_label }}">Description:</label>
+                        {{ form.description }}
+                        {% if form.description.errors %}
+                            <ul class="errorlist">
+                                {% for error in form.description.errors %}
+                                    <li>{{ error }}</li>
+                                {% endfor %}
+                            </ul>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="section-title">Property Details</div>
+                    
+                    <div class="form-group">
+                        <label for="{{ form.beds.id_for_label }}">Number of Beds:</label>
+                        {{ form.beds }}
+                        {% if form.beds.errors %}
+                            <ul class="errorlist">
+                                {% for error in form.beds.errors %}
+                                    <li>{{ error }}</li>
+                                {% endfor %}
+                            </ul>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="{{ form.bedrooms.id_for_label }}">Number of Bedrooms:</label>
+                        {{ form.bedrooms }}
+                        {% if form.bedrooms.errors %}
+                            <ul class="errorlist">
+                                {% for error in form.bedrooms.errors %}
+                                    <li>{{ error }}</li>
+                                {% endfor %}
+                            </ul>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="{{ form.price.id_for_label }}">Price (HKD):</label>
+                        {{ form.price }}
+                        {% if form.price.errors %}
+                            <ul class="errorlist">
+                                {% for error in form.price.errors %}
+                                    <li>{{ error }}</li>
+                                {% endfor %}
+                            </ul>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="form-group full-width">
+                        <label for="{{ form.address.id_for_label }}">Address:</label>
+                        {{ form.address }}
+                        {% if form.address.errors %}
+                            <ul class="errorlist">
+                                {% for error in form.address.errors %}
+                                    <li>{{ error }}</li>
+                                {% endfor %}
+                            </ul>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="section-title">Availability</div>
+                    
+                    <div class="form-group">
+                        <label for="{{ form.available_from.id_for_label }}">Available From:</label>
+                        {{ form.available_from }}
+                        {% if form.available_from.errors %}
+                            <ul class="errorlist">
+                                {% for error in form.available_from.errors %}
+                                    <li>{{ error }}</li>
+                                {% endfor %}
+                            </ul>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="{{ form.available_to.id_for_label }}">Available To:</label>
+                        {{ form.available_to }}
+                        {% if form.available_to.errors %}
+                            <ul class="errorlist">
+                                {% for error in form.available_to.errors %}
+                                    <li>{{ error }}</li>
+                                {% endfor %}
+                            </ul>
+                        {% endif %}
+                    </div>
+                    
+                    {% if form.non_field_errors %}
+                        <div class="full-width">
+                            <ul class="errorlist">
+                                {% for error in form.non_field_errors %}
+                                    <li>{{ error }}</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    {% endif %}
+                    
+                    <div class="submit-row">
+                        <button type="submit" class="btn btn-primary btn-full">Add Accommodation</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+        <button type="button" data-id="${accommodation.id}" onclick="reserveAccommodation(${accommodation.id})" ${accommodation.reserved ? "disabled" : ""}>
+            ${accommodation.reserved ? "Reserved" : "Reserve"}
+        </button>
+    </div>
+</body>
+</html>
