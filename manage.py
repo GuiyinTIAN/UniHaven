@@ -68,9 +68,4 @@ def extract_address_info(json_data):
 
 if __name__ == "__main__":
     main()
-    
-    query = "香港大學"
-    result = get_address_info(query)
 
-    if result:
-        print(json.dumps(result, indent=4, ensure_ascii=False))
