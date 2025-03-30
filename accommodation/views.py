@@ -6,7 +6,10 @@ from .forms import AccommodationForm
 from django.utils.dateparse import parse_date
 from django.db.models import Q
 from django.urls import reverse
-
+from django.db.models import F, Func, FloatField, ExpressionWrapper
+import math
+HKU_latitude = 22.28143
+HKU_longitude = 114.14006
 def index(request):
     """首页视图函数"""
     return render(request, 'accommodation/index.html')
@@ -150,6 +153,7 @@ def list_accommodation(request):
     min_beds = request.GET.get("min_beds", "")
     min_bedrooms = request.GET.get("min_bedrooms", "")
     max_price = request.GET.get("max_price", "")
+    max_distance = request.GET.get("distance", "")
 
     # 过滤房源类型
     if accommodation_type:
@@ -182,6 +186,33 @@ def list_accommodation(request):
     # 过滤价格
     if max_price:
         accommodations = accommodations.filter(price__lte=max_price)
+    
+        # Calculate distance dynamically and filter
+    if max_distance:
+        max_distance = float(max_distance)
+
+        # Add distance annotation using the equirectangular approximation formula
+        accommodations = accommodations.annotate(
+            distance=ExpressionWrapper(
+                Func(
+                    Func(
+                        (F('longitude') - HKU_longitude) * math.pi / 180 *
+                        Func((F('latitude') + HKU_latitude) / 2 * math.pi / 180, function='COS'),
+                        function='POW',
+                        template="%(function)s(%(expressions)s, 2)"
+                    ) +
+                    Func(
+                        (F('latitude') - HKU_latitude) * math.pi / 180,
+                        function='POW',
+                        template="%(function)s(%(expressions)s, 2)"
+                    ),
+                    function='SQRT',
+                ) * 6371,  # Earth's radius in kilometers
+                output_field=FloatField(),
+            )
+        ).filter(distance__lte=max_distance)
+
+    
 
     return render(request, 'accommodation/accommodation_list.html', {
         'accommodations': accommodations,
@@ -192,6 +223,7 @@ def list_accommodation(request):
         'min_beds': min_beds,
         'min_bedrooms': min_bedrooms,
         'max_price': max_price,
+        'max_distance': max_distance,
     })
 
 
@@ -206,3 +238,14 @@ def search_accommodation(request):
 def accommodation_detail(request, pk):
     accommodation = Accommodation.objects.get(pk=pk)
     return render(request, 'accommodation/accommodation_detail.html', {'accommodation': accommodation})
+
+
+# Equirectangular approximation formula
+def calculate_distance(lat1, lon1, lat2, lon2):
+    R = 6371  # Earth's radius in kilometers
+    x = (lon2 - lon1) * math.cos((lat1 + lat2) / 2 * math.pi / 180)
+    y = (lat2 - lat1)
+    distance = math.sqrt(x**2 + y**2) * R
+    return distance
+
+

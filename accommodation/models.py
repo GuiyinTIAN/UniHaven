@@ -15,7 +15,6 @@ class Accommodation(models.Model):
     price = models.DecimalField(max_digits=10, decimal_places=2)
     available_from = models.DateField(null=True, blank=True)
     available_to = models.DateField(null=True, blank=True)
-
     building_name = models.CharField(max_length=200, default="", blank=True)
     estate_name = models.CharField(max_length=200, default="", blank=True)
     street_name = models.CharField(max_length=200, default="", blank=True)
@@ -25,7 +24,6 @@ class Accommodation(models.Model):
     latitude = models.FloatField(blank=True)
     longitude = models.FloatField(blank=True)
     geo_address = models.CharField(max_length=200, blank=True)
-
     rating = models.FloatField(default=0.0, blank=True)
 
     def formatted_address(self):
@@ -37,5 +35,6 @@ class Accommodation(models.Model):
             self.region
         ]
         return ", ".join(filter(None, parts))
+
 
 
