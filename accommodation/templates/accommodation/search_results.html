@@ -1,7 +1,8 @@
 {% extends 'accommodation/base.html' %}
 {% load static %}
 
-{% block title %}Search Accommodation{% endblock %}
+{% block title %}UniHaven - Search Accommodation{% endblock %}
+{% block nav_title %}Find your Accommodation{% endblock %}
 
 {% block content %}
 <div class="container">
@@ -63,4 +64,40 @@
         </form>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const today = new Date();
+        const yyyy = today.getFullYear();
+        const mm = String(today.getMonth() + 1).padStart(2, '0');
+        const dd = String(today.getDate()).padStart(2, '0');
+        const todayFormatted = `${yyyy}-${mm}-${dd}`;
+        
+        const fromDateInput = document.getElementById('available_from');
+        fromDateInput.min = todayFormatted;
+
+        const toDateInput = document.getElementById('available_to');
+        toDateInput.min = todayFormatted;
+        
+        fromDateInput.addEventListener('change', function() {
+            if (fromDateInput.value) {
+                toDateInput.min = fromDateInput.value;
+                
+                if (toDateInput.value && toDateInput.value < fromDateInput.value) {
+                    toDateInput.value = fromDateInput.value;
+                }
+            }
+        });
+        
+
+        toDateInput.addEventListener('change', function() {
+            if (toDateInput.value && fromDateInput.value && fromDateInput.value > toDateInput.value) {
+                alert('The end date must be after the start date.');
+                toDateInput.value = fromDateInput.value;
+            }
+        });
+    });
+</script>
 {% endblock %}

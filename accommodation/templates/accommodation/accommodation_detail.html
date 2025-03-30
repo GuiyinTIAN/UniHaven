@@ -1,72 +1,65 @@
+{% extends 'accommodation/base.html' %}
 {% load static %}
-<!DOCTYPE html>
-<html>
-<head>
-    <title>{{ accommodation.title }}</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="{% static 'accommodation/css/main.css' %}">
-</head>
-<body class="page-transition">
-    <div class="navbar">
-        <h1>Accommodation Details</h1>
+
+{% block title %}UniHaven - {{ accommodation.title }}{% endblock %}
+{% block nav_title %}Accommodation Details{% endblock %}
+
+{% block content %}
+<div class="detail-container">
+    <div class="detail-header">
+        <h1>{{ accommodation.title }}</h1>
     </div>
     
-    <div class="detail-container">
-        <div class="detail-header">
-            <h1>{{ accommodation.title }}</h1>
+    <div class="detail-content">
+        <div class="detail-section">
+            <h2>Basic Information</h2>
+            <div class="detail-item">
+                <div class="detail-label">Description:</div>
+                <div class="detail-value">{{ accommodation.description }}</div>
+            </div>
+            <div class="detail-item">
+                <div class="detail-label">Type:</div>
+                <div class="detail-value">{{ accommodation.type }}</div>
+            </div>
+            <div class="detail-item">
+                <div class="detail-label">Price:</div>
+                <div class="detail-value">${{ accommodation.price }}</div>
+            </div>
         </div>
         
-        <div class="detail-content">
-            <div class="detail-section">
-                <h2>Basic Information</h2>
-                <div class="detail-item">
-                    <div class="detail-label">Description:</div>
-                    <div class="detail-value">{{ accommodation.description }}</div>
-                </div>
-                <div class="detail-item">
-                    <div class="detail-label">Type:</div>
-                    <div class="detail-value">{{ accommodation.type }}</div>
-                </div>
-                <div class="detail-item">
-                    <div class="detail-label">Price:</div>
-                    <div class="detail-value">${{ accommodation.price }}</div>
-                </div>
+        <div class="detail-section">
+            <h2>Features</h2>
+            <div class="detail-item">
+                <div class="detail-label">Beds:</div>
+                <div class="detail-value">{{ accommodation.beds }}</div>
             </div>
-            
-            <div class="detail-section">
-                <h2>Features</h2>
-                <div class="detail-item">
-                    <div class="detail-label">Beds:</div>
-                    <div class="detail-value">{{ accommodation.beds }}</div>
-                </div>
-                <div class="detail-item">
-                    <div class="detail-label">Bedrooms:</div>
-                    <div class="detail-value">{{ accommodation.bedrooms }}</div>
-                </div>
+            <div class="detail-item">
+                <div class="detail-label">Bedrooms:</div>
+                <div class="detail-value">{{ accommodation.bedrooms }}</div>
             </div>
-            
-            <div class="detail-section">
-                <h2>Location</h2>
-                <div class="detail-item">
-                    <div class="detail-label">Address:</div>
-                    <div class="detail-value">{{ accommodation.formatted_address }}</div>
-                </div>
-            </div>
-            
-            <div class="detail-section">
-                <h2>Availability</h2>
-                <div class="detail-item">
-                    <div class="detail-label">Available From:</div>
-                    <div class="detail-value">{{ accommodation.available_from }}</div>
-                </div>
-                <div class="detail-item">
-                    <div class="detail-label">Available To:</div>
-                    <div class="detail-value">{{ accommodation.available_to }}</div>
-                </div>
-            </div>
-            
-            <a href="{% url 'list_accommodation' %}" class="btn btn-primary back-button">Back to Listings</a>
         </div>
+        
+        <div class="detail-section">
+            <h2>Location</h2>
+            <div class="detail-item">
+                <div class="detail-label">Address:</div>
+                <div class="detail-value">{{ accommodation.formatted_address }}</div>
+            </div>
+        </div>
+        
+        <div class="detail-section">
+            <h2>Availability</h2>
+            <div class="detail-item">
+                <div class="detail-label">Available From:</div>
+                <div class="detail-value">{{ accommodation.available_from }}</div>
+            </div>
+            <div class="detail-item">
+                <div class="detail-label">Available To:</div>
+                <div class="detail-value">{{ accommodation.available_to }}</div>
+            </div>
+        </div>
+        
+        <a href="{% url 'list_accommodation' %}" class="btn btn-primary back-button">Back to Listings</a>
     </div>
-</body>
-</html>
+</div>
+{% endblock %}
