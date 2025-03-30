@@ -1,0 +1,24 @@
+{% load static %}
+{% load i18n %}
+<!DOCTYPE html>
+<html lang="{{ LANGUAGE_CODE }}">
+<head>
+    <title>{% block title %}UniHaven{% endblock %}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{% static 'accommodation/css/main.css' %}">
+    {% block extra_css %}{% endblock %}
+</head>
+<body class="page-transition">
+    <div class="navbar">
+        <h1>UniHaven</h1>
+    </div>
+    
+    {% block content %}{% endblock %}
+    
+    <div class="footer">
+        <p>UniHaven &copy; 2025 - HKU COMP3297 </p>
+    </div>
+    
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

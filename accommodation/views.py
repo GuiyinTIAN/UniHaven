@@ -6,12 +6,14 @@ from .forms import AccommodationForm
 from django.utils.dateparse import parse_date
 from django.db.models import Q
 from django.urls import reverse
+
 from django.shortcuts import render, redirect
 from .models import Accommodation
 import logging
 from django.views.decorators.csrf import csrf_exempt
 
 logger = logging.getLogger(__name__)
+
 
 def index(request):
     """首页视图函数"""
@@ -200,6 +202,7 @@ def list_accommodation(request):
         'max_price': max_price,
     })
 
+
 def search_accommodation(request):
     if request.GET and any(request.GET.values()):
         query_params = request.GET.urlencode()
@@ -207,7 +210,6 @@ def search_accommodation(request):
     else:
         return render(request, 'accommodation/search_results.html')
 
-@csrf_exempt
 def reserve_accommodation(request):
     if request.method == 'POST':
         accommodation_id = request.POST.get('accommodation_id')
@@ -304,3 +306,9 @@ def accommodation_detail(request, pk):
         'accommodation': accommodation,
         'form': form
     })
+
+
+def accommodation_detail(request, pk):
+    accommodation = Accommodation.objects.get(pk=pk)
+    return render(request, 'accommodation/accommodation_detail.html', {'accommodation': accommodation})
+

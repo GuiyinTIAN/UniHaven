@@ -5,6 +5,7 @@
     <title>Search Accommodation</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="{% static 'accommodation/css/main.css' %}">
+
     <style>
 
 .search-result {
@@ -85,6 +86,7 @@ content: "";
         cursor: not-allowed;
     }
     </style>
+
 </head>
 <body class="page-transition">
     <div class="navbar">
@@ -93,7 +95,11 @@ content: "";
     
     <div class="container">
         <div class="form-card">
+
             <form method="get" action="{% url 'search_accommodation' %}" id="searchForm">
+
+            <form method="get" action="{% url 'search_accommodation' %}">
+
                 <div class="form-grid">
                     <div class="section-title">Accommodation Type</div>
                     <div class="form-group">
@@ -150,6 +156,7 @@ content: "";
             </form>
         </div>
     </div>
+
 
     <!-- Popup for search results -->
     <div id="popupOverlay"></div>
@@ -428,5 +435,6 @@ content: "";
         // Call this function when the page loads
         setUserIdentifier();
     </script>
+
 </body>
 </html>

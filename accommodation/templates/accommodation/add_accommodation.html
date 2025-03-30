@@ -146,9 +146,11 @@
                 </div>
             </form>
         </div>
+
         <button type="button" data-id="${accommodation.id}" onclick="reserveAccommodation(${accommodation.id})" ${accommodation.reserved ? "disabled" : ""}>
             ${accommodation.reserved ? "Reserved" : "Reserve"}
         </button>
+
     </div>
 </body>
 </html>
