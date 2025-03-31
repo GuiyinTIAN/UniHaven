@@ -97,6 +97,16 @@ body {
     padding: 12px 20px;
 }
 
+.btn-danger {
+    background-color: red;
+    color: white;
+    border: none;
+}
+
+.btn-danger:hover {
+    background-color: darkred;
+}
+
 /* Home Button Styles */
 .home-btn {
     background-color: transparent;
@@ -233,7 +243,7 @@ input:focus, textarea:focus, select:focus {
     margin-bottom: 20px;
     line-height: 1.5;
     display: -webkit-box;
-    -webkit-line-clamp: 3;
+    line-clamp: 3;
     -webkit-box-orient: vertical;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -317,11 +327,16 @@ input:focus, textarea:focus, select:focus {
     color: var(--text-light);
 }
 
+
+
 .back-button {
-    display: block;
+    display: block; /* Ensure block-level styling */
     margin: 30px auto 20px;
     width: 200px;
+    text-align: center; /* Center text inside the button */
 }
+
+
 
 .no-results {
     text-align: center;

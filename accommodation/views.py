@@ -231,10 +231,97 @@ def search_accommodation(request):
 
 
 def accommodation_detail(request, pk):
-    accommodation = get_object_or_404(Accommodation, pk=pk)
-    return render(request, 'accommodation/accommodation_detail.html', {'accommodation': accommodation})
+    # Get the accommodation object based on the primary key
+    accommodation = Accommodation.objects.get(pk=pk)
+    
+    # If the form is submitted
+    if request.method == 'POST':
+        form = AccommodationForm(request.POST, instance=accommodation)
+        
+        if form.is_valid():
+            form.save()  # Save the form data to update the reservation status
+            return redirect('accommodation_list')  # Redirect after saving
+    else:
+        form = AccommodationForm(instance=accommodation)
 
+    return render(request, 'accommodation/accommodation_detail.html', {
+        'accommodation': accommodation,
+        'form': form
+    })
 
+def reserve_accommodation(request, accommodation_id):
+    if request.method == 'POST':
+        user_id = request.COOKIES.get('user_identifier')  # Retrieve the userID from cookies
+
+        if not user_id:
+            return JsonResponse({'success': False, 'message': 'User ID is required.'}, status=400)
+
+        try:
+            accommodation = Accommodation.objects.get(id=accommodation_id)
+
+            if accommodation.reserved:
+                return JsonResponse({
+                    'success': False,
+                    'message': f'Accommodation "{accommodation.title}" is already reserved.'
+                }, status=400)
+
+            # Reserve the accommodation
+            accommodation.reserved = True
+            accommodation.userID = user_id  # Associate the reservation with the user
+            accommodation.save()
+
+            return JsonResponse({
+                'success': True,
+                'message': f'Accommodation "{accommodation.title}" has been reserved.',
+                'accommodation': {
+                    'id': accommodation.id,
+                    'reserved': accommodation.reserved
+                }
+            })
+        except Accommodation.DoesNotExist:
+            return JsonResponse({'success': False, 'message': 'Accommodation not found.'}, status=404)
+    else:
+        return JsonResponse({'success': False, 'message': 'Invalid request method.'}, status=400)
+    
+def cancel_reservation(request, accommodation_id):
+    if request.method == 'POST':
+        user_id = request.COOKIES.get('user_identifier')  # Retrieve the userID from cookies
+
+        if not user_id:
+            return JsonResponse({'success': False, 'message': 'User ID is required.'}, status=400)
+
+        try:
+            accommodation = Accommodation.objects.get(id=accommodation_id)
+
+            if not accommodation.reserved:
+                return JsonResponse({
+                    'success': False,
+                    'message': f'Accommodation "{accommodation.title}" is not reserved.'
+                }, status=400)
+
+            if str(accommodation.userID) != user_id:  # Check if the userID matches
+                return JsonResponse({
+                    'success': False,
+                    'message': 'You are not authorized to cancel this reservation.'
+                }, status=403)
+
+            # Cancel the reservation
+            accommodation.reserved = False
+            accommodation.userID = ""  # Reset the userID
+            accommodation.save()
+
+            return JsonResponse({
+                'success': True,
+                'message': f'Reservation for accommodation "{accommodation.title}" has been canceled.',
+                'accommodation': {
+                    'id': accommodation.id,
+                    'reserved': accommodation.reserved
+                }
+            })
+        except Accommodation.DoesNotExist:
+            return JsonResponse({'success': False, 'message': 'Accommodation not found.'}, status=404)
+    else:
+        return JsonResponse({'success': False, 'message': 'Invalid request method.'}, status=400)
 # Equirectangular approximation formula
 def calculate_distance(lat1, lon1, lat2, lon2):
     R = 6371  # Earth's radius in kilometers
