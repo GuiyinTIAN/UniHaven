@@ -58,8 +58,86 @@
                 <div class="detail-value">{{ accommodation.available_to }}</div>
             </div>
         </div>
+        <div style="display: flex; justify-content: center; margin-top: 15px;">
+            <!-- Reserve button -->
+            <a href="javascript:void(0);" onclick="reserveAccommodation({{ accommodation.id }})" class="btn btn-primary back-button">Reserve</a>
         
-        <a href="{% url 'list_accommodation' %}" class="btn btn-primary back-button">Back to Listings</a>
+            <!-- Cancel button -->
+            <a href="javascript:void(0);" onclick="cancelReservation({{ accommodation.id }})" class="btn btn-secondary back-button" style="background-color: red;">Cancel</a>
+        </div>
+        
+        <div class="button-group" style="display: flex; gap: 10px; justify-content: center; margin-top: 15px;">
+            <a href="{% url 'list_accommodation' %}" class="btn btn-primary back-button">Back to Listings</a>
+            <a href="{% url 'search_accommodation' %}" class="btn btn-secondary back-button">Back to Search</a>
+        </div>
     </div>
+
+
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    async function reserveAccommodation(accommodationId) {
+        const csrfToken = getCSRFToken();
+        try {
+            const response = await fetch(`/accommodation/reserve_accommodation/${accommodationId}/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken
+                }
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                alert(data.message); // Show success message
+                // Optionally, update the UI to reflect the reservation
+            } else {
+                const errorData = await response.json();
+                alert(`Failed to reserve accommodation: ${errorData.message}`);
+            }
+        } catch (error) {
+            console.error('Error reserving accommodation:', error);
+            alert('An error occurred while reserving the accommodation.');
+        }
+    }
+
+    async function cancelReservation(accommodationId) {
+        const csrfToken = getCSRFToken();
+        try {
+            const response = await fetch(`/accommodation/cancel_reservation/${accommodationId}/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken
+                }
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                alert(data.message); // Show success message
+                // Optionally, update the UI to reflect the cancellation
+            } else {
+                const errorData = await response.json();
+                alert(`Failed to cancel reservation: ${errorData.message}`);
+            }
+        } catch (error) {
+            console.error('Error canceling reservation:', error);
+            alert('An error occurred while canceling the reservation.');
+        }
+    }
+
+    function getCSRFToken() {
+        const name = 'csrftoken';
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.startsWith(name + '=')) {
+                return cookie.substring(name.length + 1);
+            }
+        }
+        return '';
+    }
+</script>
 {% endblock %}

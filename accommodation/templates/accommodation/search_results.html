@@ -68,36 +68,58 @@
 
 {% block extra_js %}
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const today = new Date();
-        const yyyy = today.getFullYear();
-        const mm = String(today.getMonth() + 1).padStart(2, '0');
-        const dd = String(today.getDate()).padStart(2, '0');
-        const todayFormatted = `${yyyy}-${mm}-${dd}`;
-        
-        const fromDateInput = document.getElementById('available_from');
-        fromDateInput.min = todayFormatted;
-        
-        const toDateInput = document.getElementById('available_to');
-        toDateInput.min = todayFormatted;
-        
-        fromDateInput.addEventListener('change', function() {
-            if (fromDateInput.value) {
-                toDateInput.min = fromDateInput.value;
-                
-                // if the end date is before the start date, set it to the start date
-                if (toDateInput.value && toDateInput.value < fromDateInput.value) {
-                    toDateInput.value = fromDateInput.value;
-                }
+function getCSRFToken() {
+    const name = 'csrftoken';
+    const cookies = document.cookie.split(';');
+    for (let i = 0; i < cookies.length; i++) {
+        const cookie = cookies[i].trim();
+        if (cookie.startsWith(name + '=')) {
+            return cookie.substring(name.length + 1);
+        }
+    }
+    return '';
+}
+
+async function reserveAccommodation(accommodationId) {
+    const csrfToken = getCSRFToken();
+    try {
+        const response = await fetch(`/accommodation/reserve/${accommodationId}/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': csrfToken
             }
         });
-        
-        toDateInput.addEventListener('change', function() {
-            if (toDateInput.value && fromDateInput.value && fromDateInput.value > toDateInput.value) {
-                alert('The end date must be after the start date.');
-                toDateInput.value = fromDateInput.value;
+
+        if (response.ok) {
+            alert('Accommodation reserved successfully!');
+        } else {
+            alert('Failed to reserve accommodation. Please try again.');
+        }
+    } catch (error) {
+        console.error('Error reserving accommodation:', error);
+        alert('An error occurred while reserving the accommodation.');
+    }
+}
+
+async function cancelReservation(accommodationId) {
+    const csrfToken = getCSRFToken();
+    try {
+        const response = await fetch(`/accommodation/cancel/${accommodationId}/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': csrfToken
             }
         });
-    });
+
+        if (response.ok) {
+            alert('Reservation canceled successfully!');
+        } else {
+            alert('Failed to cancel reservation. Please try again.');
+        }
+    } catch (error) {
+        console.error('Error canceling reservation:', error);
+        alert('An error occurred while canceling the reservation.');
+    }
+}
 </script>
 {% endblock %}
