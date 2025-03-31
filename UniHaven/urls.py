@@ -21,10 +21,7 @@ from django.urls import path, include
 from django.conf.urls.i18n import i18n_patterns
 
 urlpatterns = [
-    # 添加这一行来启用语言切换
     path('i18n/', include('django.conf.urls.i18n')),
     path("admin/", admin.site.urls),
-    path("", include("accommodation.urls")),
-    path('accommodation/', include('accommodation.urls'))
-    
+    path("", include("accommodation.urls")), 
 ]
