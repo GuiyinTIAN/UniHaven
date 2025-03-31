@@ -6,23 +6,38 @@
 
 {% block content %}
 <div class="container">
+    <h1>Accommodation List</h1>
+
+    <!-- Sort by Distance Link -->
+    <div class="sort-options">
+        <a href="?{% if order_by_distance %}order_by_distance=false{% else %}order_by_distance=true{% endif %}"
+            class="btn btn-secondary">
+            {% if order_by_distance %}
+            Remove Distance Sorting
+            {% else %}
+            Sort by Distance
+            {% endif %}
+        </a>
+    </div>
+
     {% if accommodations %}
-        <div class="card-grid">
-            {% for accommodation in accommodations %}
-                <div class="card">
-                    <div class="card-content">
-                        <h2 class="card-title">{{ accommodation.title }}</h2>
-                        <p class="card-description">{{ accommodation.description }}</p>
-                        <a href="{% url 'accommodation_detail' accommodation.pk %}" class="btn btn-primary">View Details</a>
-                    </div>
-                </div>
-            {% endfor %}
+    <div class="card-grid">
+        {% for accommodation in accommodations %}
+        <div class="card">
+            <div class="card-content">
+                <h2 class="card-title">{{ accommodation.title }}</h2>
+                <p class="card-description">{{ accommodation.description }}</p>
+                <p>Distance: {{ accommodation.distance|floatformat:2 }} km</p> <!-- Display distance -->
+                <a href="{% url 'accommodation_detail' accommodation.pk %}" class="btn btn-primary">View Details</a>
+            </div>
         </div>
+        {% endfor %}
+    </div>
     {% else %}
-        <div class="no-results">
-            <p>No accommodations found matching your criteria.</p>
-            <a href="{% url 'search_accommodation' %}" class="btn btn-primary">Try a New Search</a>
-        </div>
+    <div class="no-results">
+        <p>No accommodations found matching your criteria.</p>
+        <a href="{% url 'search_accommodation' %}" class="btn btn-primary">Try a New Search</a>
+    </div>
     {% endif %}
 </div>
 {% endblock %}

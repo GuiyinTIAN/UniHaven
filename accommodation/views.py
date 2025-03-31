@@ -150,6 +150,7 @@ def list_accommodation(request):
     min_bedrooms = request.GET.get("min_bedrooms", "")
     max_price = request.GET.get("max_price", "")
     max_distance = request.GET.get("distance", "")
+    order_by_distance = request.GET.get("order_by_distance", "false").lower() == "true"
 
     # 过滤房源类型
     if accommodation_type:
@@ -184,31 +185,34 @@ def list_accommodation(request):
         accommodations = accommodations.filter(price__lte=max_price)
     
         # Calculate distance dynamically and filter
+    accommodations = accommodations.annotate(
+        distance=ExpressionWrapper(
+            Func(
+                Func(
+                    (F('longitude') - HKU_longitude) * math.pi / 180 *
+                    Func((F('latitude') + HKU_latitude) / 2 * math.pi / 180, function='COS'),
+                    function='POW',
+                    template="%(function)s(%(expressions)s, 2)"
+                ) +
+                Func(
+                    (F('latitude') - HKU_latitude) * math.pi / 180,
+                    function='POW',
+                    template="%(function)s(%(expressions)s, 2)"
+                ),
+                function='SQRT',
+            ) * 6371,  # Earth's radius in kilometers
+            output_field=FloatField(),
+        )
+    )
+
+    # Filter by max_distance if provided
     if max_distance:
         max_distance = float(max_distance)
+        accommodations = accommodations.filter(distance__lte=max_distance)
 
-        # Add distance annotation using the equirectangular approximation formula
-        accommodations = accommodations.annotate(
-            distance=ExpressionWrapper(
-                Func(
-                    Func(
-                        (F('longitude') - HKU_longitude) * math.pi / 180 *
-                        Func((F('latitude') + HKU_latitude) / 2 * math.pi / 180, function='COS'),
-                        function='POW',
-                        template="%(function)s(%(expressions)s, 2)"
-                    ) +
-                    Func(
-                        (F('latitude') - HKU_latitude) * math.pi / 180,
-                        function='POW',
-                        template="%(function)s(%(expressions)s, 2)"
-                    ),
-                    function='SQRT',
-                ) * 6371,  # Earth's radius in kilometers
-                output_field=FloatField(),
-            )
-        ).filter(distance__lte=max_distance)
-
-    
+    # Order by distance if requested
+    if order_by_distance:
+        accommodations = accommodations.order_by('distance')
 
     return render(request, 'accommodation/accommodation_list.html', {
         'accommodations': accommodations,
@@ -220,7 +224,9 @@ def list_accommodation(request):
         'min_bedrooms': min_bedrooms,
         'max_price': max_price,
         'max_distance': max_distance,
+        'order_by_distance': order_by_distance,
     })
+
 
 def search_accommodation(request):
     if request.GET and any(request.GET.values()):

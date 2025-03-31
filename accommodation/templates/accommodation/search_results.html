@@ -14,9 +14,10 @@
                     <label for="type">Type of Accommodation:</label>
                     <select name="type" id="type">
                         <option value="">All Types</option>
-                        <option value="APARTMENT" {% if accommodation_type == "APARTMENT" %}selected{% endif %}>Apartment</option>
-                        <option value="HOUSE" {% if accommodation_type == "HOUSE" %}selected{% endif %}>House</option>
-                        <option value="HOSTEL" {% if accommodation_type == "HOSTEL" %}selected{% endif %}>Hostel</option>
+                        <option value="APARTMENT">Apartment
+                        </option>
+                        <option value="HOUSE">House</option>
+                        <option value="HOSTEL">Hostel</option>
                     </select>
                 </div>
 
@@ -24,16 +25,17 @@
                     <label for="region">Region:</label>
                     <select name="region" id="region">
                         <option value="">All Regions</option>
-                        <option value="HK" {% if region == "HK" %}selected{% endif %}>Hong Kong Island</option>
-                        <option value="KL" {% if region == "KL" %}selected{% endif %}>Kowloon</option>
-                        <option value="NT" {% if region == "NT" %}selected{% endif %}>New Territories</option>
+                        <option value="HK">Hong Kong Island</option>
+                        <option value="KL">Kowloon</option>
+                        <option value="NT">New Territories</option>
                     </select>
                 </div>
 
                 <div class="section-title">Availability Period</div>
                 <div class="form-group">
                     <label for="available_from">From:</label>
-                    <input type="date" name="available_from" id="available_from" value="{{ available_from|date:'Y-m-d' }}">
+                    <input type="date" name="available_from" id="available_from"
+                        value="{{ available_from|date:'Y-m-d' }}">
                 </div>
 
                 <div class="form-group">
