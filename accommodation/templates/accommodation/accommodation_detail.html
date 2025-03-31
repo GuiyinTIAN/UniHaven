@@ -62,10 +62,11 @@
             <!-- Reserve button -->
             <a href="javascript:void(0);" onclick="reserveAccommodation({{ accommodation.id }})" class="btn btn-primary back-button">Reserve</a>
         
+
             <!-- Cancel button -->
             <a href="javascript:void(0);" onclick="cancelReservation({{ accommodation.id }})" class="btn btn-secondary back-button" style="background-color: red;">Cancel</a>
         </div>
-        
+
         <div class="button-group" style="display: flex; gap: 10px; justify-content: center; margin-top: 15px;">
             <a href="{% url 'list_accommodation' %}" class="btn btn-primary back-button">Back to Listings</a>
             <a href="{% url 'search_accommodation' %}" class="btn btn-secondary back-button">Back to Search</a>
