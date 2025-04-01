@@ -45,34 +45,34 @@ curl -X GET "http://127.0.0.1:8000/"
 
 #### 示例
 ```bash
-curl -X GET "http://127.0.0.1:8000/lookup-address/?address=MainStreet"
+curl -X GET "http://127.0.0.1:8000/lookup-address/?address=HKU"
 ```
 
 #### 响应示例
 ```json
 {
     "EnglishAddress": {
-        "BuildingName": "Main Building",
-        "EstateName": "Main Estate",
-        "StreetName": "Main Street",
-        "BuildingNo": "123",
-        "District": "Central",
+        "BuildingName": "HKU SCHOOL OF PROFESSIONAL AND CONTINUING EDUCATION",
+        "EstateName": "",
+        "StreetName": "WAH LAM PATH",
+        "BuildingNo": "3",
+        "District": "SOUTHERN DISTRICT",
         "Region": "HK"
     },
     "ChineseAddress": {
-        "BuildingName": "主楼",
-        "EstateName": "主屋苑",
-        "StreetName": "主街",
-        "BuildingNo": "123",
-        "District": "中环",
+        "BuildingName": "香港大學專業進修學院",
+        "EstateName": "",
+        "StreetName": "華林徑",
+        "BuildingNo": "3",
+        "District": "南區",
         "Region": "香港"
     },
     "GeospatialInformation": {
-        "Latitude": 22.3964,
-        "Longitude": 114.1095,
-        "Northing": 123456,
-        "Easting": 654321,
-        "GeoAddress": "123 Main Street, Central, HK"
+        "Latitude": "22.25221",
+        "Longitude": "114.13809",
+        "Northing": "812604",
+        "Easting": "832270",
+        "GeoAddress": "3228612615T20050430"
     }
 }
 ```
@@ -101,15 +101,16 @@ curl -X GET "http://127.0.0.1:8000/lookup-address/?address=MainStreet"
 #### 示例
 ```bash
 curl -X POST "http://127.0.0.1:8000/add-accommodation/" \
+     -H "Accept: application/json" \
      -H "Content-Type: application/json" \
      -d '{
-         "title": "New Apartment",
+         "title": "Apartment1",
          "description": "A cozy apartment near HKU.",
          "type": "APARTMENT",
          "beds": 2,
          "bedrooms": 1,
          "price": 4500,
-         "address": "123 Main Street",
+         "address": "HKU",
          "available_from": "2025-04-01",
          "available_to": "2025-12-31"
      }'
