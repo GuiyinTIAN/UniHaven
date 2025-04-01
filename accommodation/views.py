@@ -7,6 +7,7 @@ from .forms import AccommodationForm
 from django.utils.dateparse import parse_date
 from django.db.models import Q
 from django.urls import reverse
+from django.views.decorators.csrf import csrf_exempt
 
 def index(request):
     """首页视图函数"""
@@ -200,25 +201,32 @@ def search_accommodation(request):
 
 def accommodation_detail(request, pk):
     # Get the accommodation object based on the primary key
-    accommodation = Accommodation.objects.get(pk=pk)
+    accommodation = get_object_or_404(Accommodation, pk=pk)
     
     # If the form is submitted
     if request.method == 'POST':
         form = AccommodationForm(request.POST, instance=accommodation)
-        
         if form.is_valid():
             form.save()  # Save the form data to update the reservation status
             return redirect('accommodation_list')  # Redirect after saving
     else:
         form = AccommodationForm(instance=accommodation)
 
-    return render(request, 'accommodation/accommodation_detail.html', {
+    # Create the response object
+    response = render(request, 'accommodation/accommodation_detail.html', {
         'accommodation': accommodation,
         'form': form
     })
 
+    # Set a cookie if it doesn't already exist
+    if 'user_identifier' not in request.COOKIES:
+        response.set_cookie('user_identifier', 'test_user_123', max_age=3600)  # Cookie expires in 1 hour
+
+    return response
+@csrf_exempt
 def reserve_accommodation(request, accommodation_id):
     if request.method == 'POST':
+        #print("Request Headers:", request.headers)
         user_id = request.COOKIES.get('user_identifier')  # Retrieve the userID from cookies
 
         if not user_id:
@@ -251,6 +259,7 @@ def reserve_accommodation(request, accommodation_id):
     else:
         return JsonResponse({'success': False, 'message': 'Invalid request method.'}, status=400)
     
+@csrf_exempt
 def cancel_reservation(request, accommodation_id):
     if request.method == 'POST':
         user_id = request.COOKIES.get('user_identifier')  # Retrieve the userID from cookies
@@ -267,7 +276,7 @@ def cancel_reservation(request, accommodation_id):
                     'message': f'Accommodation "{accommodation.title}" is not reserved.'
                 }, status=400)
 
-            if str(accommodation.userID) != user_id:  # Check if the userID matches
+            if str(accommodation.userID) != user_id or str(accommodation.userID) != "test_user_123":  # Check if the userID matches
                 return JsonResponse({
                     'success': False,
                     'message': 'You are not authorized to cancel this reservation.'
