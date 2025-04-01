@@ -10,6 +10,8 @@ from django.urls import reverse
 
 def index(request):
     """首页视图函数"""
+    if request.headers.get('Accept') == 'application/json':
+        return JsonResponse({"message": "Welcome to UniHaven!"})
     return render(request, 'accommodation/index.html')
 
 # test API
@@ -129,12 +131,18 @@ def add_accommodation(request):
                     accommodation.region = eng_address.get("Region", "")
 
                 accommodation.save()
+                if request.headers.get('Accept') == 'application/json':
+                    return JsonResponse({"success": True, "message": "Accommodation added successfully!"})
                 return redirect('add_accommodation')
             except requests.RequestException as e:
                 form.add_error(None, f"Error fetching geolocation: {str(e)}")
+        else:
+            if request.headers.get('Accept') == 'application/json':
+                return JsonResponse({"success": False, "errors": form.errors}, status=400)
     else:
         form = AccommodationForm()
-
+    if request.headers.get('Accept') == 'application/json':
+        return JsonResponse({"message": "Use POST to add accommodation."}, status=405)
     return render(request, 'accommodation/add_accommodation.html', {'form': form})
 
 def list_accommodation(request):
@@ -179,6 +187,14 @@ def list_accommodation(request):
     if max_price:
         accommodations = accommodations.filter(price__lte=max_price)
 
+    # 检查是否需要返回 JSON 响应
+    if request.headers.get('Accept') == 'application/json':
+        accommodations_data = list(accommodations.values(
+            'id', 'title', 'description', 'type', 'price', 'beds', 'bedrooms', 'available_from', 'available_to', 'region'
+        ))
+        return JsonResponse({'accommodations': accommodations_data})
+
+    # 默认返回 HTML 页面
     return render(request, 'accommodation/accommodation_list.html', {
         'accommodations': accommodations,
         'accommodation_type': accommodation_type,
@@ -193,29 +209,31 @@ def list_accommodation(request):
 def search_accommodation(request):
     if request.GET and any(request.GET.values()):
         query_params = request.GET.urlencode()
+        if request.headers.get('Accept') == 'application/json':
+            return JsonResponse({"redirect_url": f"{reverse('list_accommodation')}?{query_params}"})
         return redirect(f"{reverse('list_accommodation')}?{query_params}")
-    else:
-        return render(request, 'accommodation/search_results.html')
-
+    if request.headers.get('Accept') == 'application/json':
+        return JsonResponse({"message": "Use GET with query parameters to search accommodations."})
+    return render(request, 'accommodation/search_results.html')
 
 def accommodation_detail(request, pk):
-    # Get the accommodation object based on the primary key
-    accommodation = Accommodation.objects.get(pk=pk)
-    
-    # If the form is submitted
-    if request.method == 'POST':
-        form = AccommodationForm(request.POST, instance=accommodation)
-        
-        if form.is_valid():
-            form.save()  # Save the form data to update the reservation status
-            return redirect('accommodation_list')  # Redirect after saving
-    else:
-        form = AccommodationForm(instance=accommodation)
-
-    return render(request, 'accommodation/accommodation_detail.html', {
-        'accommodation': accommodation,
-        'form': form
-    })
+    accommodation = get_object_or_404(Accommodation, pk=pk)
+    if request.headers.get('Accept') == 'application/json':
+        return JsonResponse({
+            "id": accommodation.id,
+            "title": accommodation.title,
+            "description": accommodation.description,
+            "type": accommodation.type,
+            "price": accommodation.price,
+            "beds": accommodation.beds,
+            "bedrooms": accommodation.bedrooms,
+            "available_from": accommodation.available_from,
+            "available_to": accommodation.available_to,
+            "region": accommodation.region,
+            "reserved": accommodation.reserved,
+            "formatted_address": accommodation.formatted_address(),
+        })
+    return render(request, 'accommodation/accommodation_detail.html', {'accommodation': accommodation})
 
 def reserve_accommodation(request, accommodation_id):
     if request.method == 'POST':
@@ -238,14 +256,15 @@ def reserve_accommodation(request, accommodation_id):
             accommodation.userID = user_id  # Associate the reservation with the user
             accommodation.save()
 
-            return JsonResponse({
-                'success': True,
-                'message': f'Accommodation "{accommodation.title}" has been reserved.',
-                'accommodation': {
-                    'id': accommodation.id,
-                    'reserved': accommodation.reserved
-                }
-            })
+            if request.headers.get('Accept') == 'application/json':
+                return JsonResponse({
+                    'success': True,
+                    'message': f'Accommodation "{accommodation.title}" has been reserved.',
+                    'accommodation': {
+                        'id': accommodation.id,
+                        'reserved': accommodation.reserved
+                    }
+                })
         except Accommodation.DoesNotExist:
             return JsonResponse({'success': False, 'message': 'Accommodation not found.'}, status=404)
     else:
@@ -278,14 +297,15 @@ def cancel_reservation(request, accommodation_id):
             accommodation.userID = ""  # Reset the userID
             accommodation.save()
 
-            return JsonResponse({
-                'success': True,
-                'message': f'Reservation for accommodation "{accommodation.title}" has been canceled.',
-                'accommodation': {
-                    'id': accommodation.id,
-                    'reserved': accommodation.reserved
-                }
-            })
+            if request.headers.get('Accept') == 'application/json':
+                return JsonResponse({
+                    'success': True,
+                    'message': f'Reservation for accommodation "{accommodation.title}" has been canceled.',
+                    'accommodation': {
+                        'id': accommodation.id,
+                        'reserved': accommodation.reserved
+                    }
+                })
         except Accommodation.DoesNotExist:
             return JsonResponse({'success': False, 'message': 'Accommodation not found.'}, status=404)
     else:
