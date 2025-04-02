@@ -7,6 +7,7 @@ from .forms import AccommodationForm
 from django.utils.dateparse import parse_date
 from django.db.models import Q
 from django.urls import reverse
+from django.core.mail import send_mail
 
 def index(request):
     """首页视图函数"""
@@ -238,6 +239,18 @@ def reserve_accommodation(request, accommodation_id):
             accommodation.userID = user_id  # Associate the reservation with the user
             accommodation.save()
 
+            # Confirmation Email to Student
+            student_email = f"{user_id}@example.com"  # Replace with real logic
+            send_mail(
+                subject="Reservation Confirmed - UniHaven",
+                message=f"Hi {user_id},\n\nYour reservation for '{accommodation.title}' is confirmed.\nThank you!",
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[student_email],
+            )
+
+            # Notify CEDARS Specialist (console or later email)
+            print(f"[NOTIFY] CEDARS: New reservation by {user_id} for '{accommodation.title}'.")
+
             return JsonResponse({
                 'success': True,
                 'message': f'Accommodation "{accommodation.title}" has been reserved.',
@@ -277,6 +290,19 @@ def cancel_reservation(request, accommodation_id):
             accommodation.reserved = False
             accommodation.userID = ""  # Reset the userID
             accommodation.save()
+
+
+            # Email to Student
+            student_email = f"{user_id}@example.com"
+            send_mail(
+                subject="Reservation Cancelled - UniHaven",
+                message=f"Hi {user_id},\n\nYour reservation for '{accommodation.title}' has been cancelled.",
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[student_email],
+            )
+
+            # Notify Specialist
+            print(f"[NOTIFY] CEDARS: {user_id} cancelled the reservation for '{accommodation.title}'.")
 
             return JsonResponse({
                 'success': True,
