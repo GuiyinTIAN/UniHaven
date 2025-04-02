@@ -7,7 +7,6 @@ from .forms import AccommodationForm
 from django.utils.dateparse import parse_date
 from django.db.models import Q
 from django.urls import reverse
-from django.views.decorators.csrf import csrf_exempt
 
 def index(request):
     """首页视图函数"""
@@ -75,7 +74,7 @@ def lookup_address(request):
     except requests.RequestException as e:
         return JsonResponse({"error": str(e)}, status=500)
 
-@csrf_exempt
+
 def add_accommodation(request):
     """添加住宿信息"""
     if request.method == "POST":
@@ -223,7 +222,7 @@ def accommodation_detail(request, pk):
         if request.headers.get('Accept') == 'application/json':
             return JsonResponse({'error': 'Accommodation not found.'}, status=404)
 
-@csrf_exempt
+
 def reserve_accommodation(request, accommodation_id):
     """预订住宿"""
     if request.method == 'POST':
@@ -259,7 +258,7 @@ def reserve_accommodation(request, accommodation_id):
     else:
         return JsonResponse({'success': False, 'message': 'Invalid request method.'}, status=400)
 
-@csrf_exempt
+
 def cancel_reservation(request, accommodation_id):
     """取消预订"""
     if request.method == 'POST':
