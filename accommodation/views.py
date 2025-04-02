@@ -240,7 +240,7 @@ def reserve_accommodation(request, accommodation_id):
             accommodation.save()
 
             # Confirmation Email to Student
-            student_email = f"{user_id}@example.com"  # Replace with real logic
+            student_email = f"{user_id}@example.com"  
             send_mail(
                 subject="Reservation Confirmed - UniHaven",
                 message=f"Hi {user_id},\n\nYour reservation for '{accommodation.title}' is confirmed.\nThank you!",
@@ -248,8 +248,14 @@ def reserve_accommodation(request, accommodation_id):
                 recipient_list=[student_email],
             )
 
-            # Notify CEDARS Specialist (console or later email)
-            print(f"[NOTIFY] CEDARS: New reservation by {user_id} for '{accommodation.title}'.")
+            # Notify CEDARS Specialist 
+            specialist_email = "cedars@hku.hk"  
+            send_mail(
+                subject="[UniHaven] New Reservation Alert",
+                message=f"Dear CEDARS,\n\nStudent {user_id} has reserved the accommodation: '{accommodation.title}'.\nPlease follow up for contract processing.\n\nRegards,\nUniHaven System",
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[specialist_email],
+            )
 
             return JsonResponse({
                 'success': True,
@@ -302,7 +308,13 @@ def cancel_reservation(request, accommodation_id):
             )
 
             # Notify Specialist
-            print(f"[NOTIFY] CEDARS: {user_id} cancelled the reservation for '{accommodation.title}'.")
+            specialist_email = "cedars@hku.hk"  # Replace with actual email or use test email
+            send_mail(
+                subject="[UniHaven] Reservation Cancelled",
+                message=f"Dear CEDARS,\n\nStudent {user_id} has cancelled their reservation for '{accommodation.title}'.\nNo further action is required.\n\nRegards,\nUniHaven System",
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[specialist_email],
+            )
 
             return JsonResponse({
                 'success': True,
