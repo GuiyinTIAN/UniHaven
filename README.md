@@ -34,6 +34,74 @@ curl -X GET "http://127.0.0.1:8000/" -H "Accept: application/json"
 ```
 ---
 
+### Reserve Accommodation
+
+**URL**: `/reserve_accommodation/<id>/`  
+**Method**: `POST`  
+**Description**: Reserves a specific accommodation.
+
+#### Example Usage
+```bash
+curl -X POST "http://127.0.0.1:8000/reserve_accommodation/8/" \
+     -H "Content-Type: application/json" \
+     -b "user_identifier=123"
+```
+
+### Successful Response
+```json
+{
+    "success": true,
+    "message": "Accommodation 'Beautiful Garden' has been reserved.",
+    "accommodation": {
+        "id": 8,
+        "reserved": true
+    }
+}
+```
+
+### Failure Response
+```json
+{
+    "success": false,
+    "message": "You are not authorized to reserve this accommodation."
+}
+```
+
+
+### Cancel Accommodation
+
+**URL**: `/cancel_reservation/<id>/`  
+**Method**: `POST`  
+**Description**: Cancel a specific accommodation.
+
+#### Example Usage
+```bash
+curl -X POST "http://127.0.0.1:8000/cancel_reservation/8/" \
+     -H "Content-Type: application/json" \
+     -b "user_identifier=test_user_133"
+```
+
+### Successful Response
+```json
+{
+    "success": true,
+    "message": "Reservation for accommodation 'Beautiful Garden' has been canceled.",
+    "accommodation": {
+        "id": 8,
+        "reserved": false
+    }
+}
+```
+
+### Failure Response
+```json
+{
+    "success": false,
+    "message": "You are not authorized to cancel this reservation."
+}
+```
+
+
 ### Address Lookup API
 
 **URL**: `/lookup-address/`  
