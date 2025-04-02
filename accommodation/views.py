@@ -323,6 +323,7 @@ def reserve_accommodation(request, accommodation_id):
             return JsonResponse({
                 'success': True,
                 'message': f'Accommodation "{accommodation.title}" has been reserved.',
+                'UserID': user_id,
                 'accommodation': {
                     'id': accommodation.id,
                     'reserved': accommodation.reserved
@@ -380,6 +381,7 @@ def cancel_reservation(request, accommodation_id):
             return JsonResponse({
                 'success': True,
                 'message': f'Reservation for accommodation "{accommodation.title}" has been canceled.',
+                'UserID': user_id,
                 'accommodation': {
                     'id': accommodation.id,
                     'reserved': accommodation.reserved
