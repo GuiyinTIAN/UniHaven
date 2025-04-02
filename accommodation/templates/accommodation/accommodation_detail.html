@@ -83,7 +83,7 @@
     async function reserveAccommodation(accommodationId) {
         const csrfToken = getCSRFToken();
         try {
-            const response = await fetch(`/accommodation/reserve_accommodation/${accommodationId}/`, {
+            const response = await fetch(`/reserve_accommodation/${accommodationId}/`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -108,7 +108,7 @@
     async function cancelReservation(accommodationId) {
         const csrfToken = getCSRFToken();
         try {
-            const response = await fetch(`/accommodation/cancel_reservation/${accommodationId}/`, {
+            const response = await fetch(`/cancel_reservation/${accommodationId}/`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
