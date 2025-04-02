@@ -5,8 +5,12 @@ from django.conf import settings
 from .models import Accommodation
 from .forms import AccommodationForm
 from django.utils.dateparse import parse_date
-from django.db.models import Q
+from django.db.models import Q, F, Func, FloatField, ExpressionWrapper
 from django.urls import reverse
+import math
+
+HKU_LATITUDE = 22.28143  # 香港大学的纬度
+HKU_LONGITUDE = 114.14006  # 香港大学的经度
 
 def index(request):
     """首页视图函数"""
@@ -135,7 +139,7 @@ def add_accommodation(request):
     return render(request, 'accommodation/add_accommodation.html', {'form': form})
 
 def list_accommodation(request):
-    """列出所有住宿信息"""
+    """列出所有住宿信息，并支持根据距离筛选"""
     accommodations = Accommodation.objects.all()
     accommodation_type = request.GET.get("type", "")
     region = request.GET.get("region", "")
@@ -144,12 +148,18 @@ def list_accommodation(request):
     min_beds = request.GET.get("min_beds", "")
     min_bedrooms = request.GET.get("min_bedrooms", "")
     max_price = request.GET.get("max_price", "")
+    max_distance = request.GET.get("distance", "")  # 最大距离（公里）
+    order_by_distance = request.GET.get("order_by_distance", "false").lower() == "true"
 
-    # 过滤条件
+    # 过滤房源类型
     if accommodation_type:
         accommodations = accommodations.filter(type=accommodation_type)
+
+    # 过滤地区
     if region:
         accommodations = accommodations.filter(region=region)
+
+    # 过滤日期范围
     if available_from and available_to:
         try:
             available_from = parse_date(available_from)
@@ -160,17 +170,57 @@ def list_accommodation(request):
                 )
         except ValueError:
             pass
+
+    # 过滤床位数
     if min_beds:
         accommodations = accommodations.filter(beds__gte=min_beds)
+
+    # 过滤卧室数
     if min_bedrooms:
         accommodations = accommodations.filter(bedrooms__gte=min_bedrooms)
+
+    # 过滤价格
     if max_price:
         accommodations = accommodations.filter(price__lte=max_price)
+
+    # 根据距离计算并筛选
+    accommodations = accommodations.annotate(
+        distance=ExpressionWrapper(
+            Func(
+                Func(
+                    (F('longitude') - HKU_LONGITUDE) * math.pi / 180 *
+                    Func((F('latitude') + HKU_LATITUDE) / 2 * math.pi / 180, function='COS'),
+                    function='POW',
+                    template="%(function)s(%(expressions)s, 2)"
+                ) +
+                Func(
+                    (F('latitude') - HKU_LATITUDE) * math.pi / 180,
+                    function='POW',
+                    template="%(function)s(%(expressions)s, 2)"
+                ),
+                function='SQRT',
+            ) * 6371,  # 地球半径（公里）
+            output_field=FloatField(),
+        )
+    )
+
+    # 根据最大距离筛选
+    if max_distance:
+        try:
+            max_distance = float(max_distance)
+            accommodations = accommodations.filter(distance__lte=max_distance)
+        except ValueError:
+            pass
+
+    # 按距离排序
+    if order_by_distance:
+        accommodations = accommodations.order_by('distance')
 
     # 返回 JSON 或 HTML 响应
     if request.headers.get('Accept') == 'application/json':
         accommodations_data = list(accommodations.values(
-            'id', 'title', 'description', 'type', 'price', 'beds', 'bedrooms', 'available_from', 'available_to', 'region'
+            'id', 'title', 'description', 'type', 'price', 'beds', 'bedrooms',
+            'available_from', 'available_to', 'region', 'distance'
         ))
         return JsonResponse({'accommodations': accommodations_data})
 
@@ -183,6 +233,8 @@ def list_accommodation(request):
         'min_beds': min_beds,
         'min_bedrooms': min_bedrooms,
         'max_price': max_price,
+        'max_distance': max_distance,
+        'order_by_distance': order_by_distance,
     })
 
 def search_accommodation(request):

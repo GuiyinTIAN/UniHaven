@@ -1,122 +1,116 @@
-# UniHaven
-UniHaven is a web service designed to help non-local students at the University of Hong Kong (HKU) and other universities find suitable off-campus rental accommodation.
+# UniHaven - Student Accommodation Solutions
 
-
-
-# UniHaven - API Documentation
-
-UniHaven 是一个为非本地学生提供校外住宿解决方案的 Django 项目。以下是所有 API 和页面的调用方式。
+UniHaven is a Django-based project designed to provide off-campus accommodation solutions for non-local students. Below is the documentation for all APIs and pages.
 
 ---
 
-## 目录
-1. [首页](#首页)
-2. [地址查找 API](#地址查找-api)
-3. [添加住宿](#添加住宿)
-4. [查看住宿列表](#查看住宿列表)
-5. [搜索住宿](#搜索住宿)
-6. [查看住宿详情](#查看住宿详情)
-7. [预订住宿](#预订住宿)
-8. [取消预订](#取消预订)
+## Table of Contents
+1. [Home](#home)
+2. [Address Lookup API](#address-lookup-api)
+3. [Add Accommodation](#add-accommodation)
+4. [View Accommodation List](#view-accommodation-list)
+5. [Search Accommodation](#search-accommodation)
+6. [View Accommodation Details](#view-accommodation-details)
+7. [Reserve Accommodation](#reserve-accommodation)
+8. [Cancel Reservation](#cancel-reservation)
 
 ---
 
-### 首页
+### Home
 
 **URL**: `/`  
-**方法**: `GET`  
-**说明**: 显示项目的首页，提供导航到搜索住宿和添加住宿的功能。
+**Method**: `GET`  
+**Description**: Displays the homepage with navigation options to search for accommodations or add new accommodations.
 
-#### 示例
+#### Example
 ```bash
 curl -X GET "http://127.0.0.1:8000/"
 ```
 
 ---
 
-### 地址查找 API
+### Address Lookup API
 
 **URL**: `/lookup-address/`  
-**方法**: `GET`  
-**说明**: 根据地址查询香港政府 API，返回地址的详细信息。
+**Method**: `GET`  
+**Description**: Queries the Hong Kong government API to retrieve detailed address information.
 
-#### 参数
-- `address` (必填): 要查询的地址。
+#### Parameters
+- `address` (required): The address to query.
 
-#### 示例
+#### Example
 ```bash
-curl -X GET "http://127.0.0.1:8000/lookup-address/?address=HKU"
+curl -X GET "http://127.0.0.1:8000/lookup-address/?address=Main%20Street"
 ```
 
-#### 响应示例
+#### Response Example
 ```json
 {
     "EnglishAddress": {
-        "BuildingName": "HKU SCHOOL OF PROFESSIONAL AND CONTINUING EDUCATION",
-        "EstateName": "",
-        "StreetName": "WAH LAM PATH",
-        "BuildingNo": "3",
-        "District": "SOUTHERN DISTRICT",
+        "BuildingName": "Main Building",
+        "EstateName": "Main Estate",
+        "StreetName": "Main Street",
+        "BuildingNo": "123",
+        "District": "Central",
         "Region": "HK"
     },
     "ChineseAddress": {
-        "BuildingName": "香港大學專業進修學院",
-        "EstateName": "",
-        "StreetName": "華林徑",
-        "BuildingNo": "3",
-        "District": "南區",
+        "BuildingName": "主楼",
+        "EstateName": "主屋苑",
+        "StreetName": "主街",
+        "BuildingNo": "123",
+        "District": "中环",
         "Region": "香港"
     },
     "GeospatialInformation": {
-        "Latitude": "22.25221",
-        "Longitude": "114.13809",
-        "Northing": "812604",
-        "Easting": "832270",
-        "GeoAddress": "3228612615T20050430"
+        "Latitude": 22.3964,
+        "Longitude": 114.1095,
+        "Northing": 123456,
+        "Easting": 654321,
+        "GeoAddress": "123 Main Street, Central, HK"
     }
 }
 ```
 
 ---
 
-### 添加住宿
+### Add Accommodation
 
 **URL**: `/add-accommodation/`  
-**方法**: `POST`  
-**说明**: 添加新的住宿信息。
+**Method**: `POST`  
+**Description**: Adds a new accommodation listing.
 
-#### 参数
-| 参数名           | 类型     | 描述                                   |
-|------------------|----------|----------------------------------------|
-| `title`          | 字符串   | 住宿标题，例如 "New Apartment"         |
-| `description`    | 字符串   | 住宿描述，例如 "A cozy apartment near HKU." |
-| `type`           | 字符串   | 住宿类型，例如 "APARTMENT"、"HOUSE" 或 "HOSTEL" |
-| `beds`           | 整数     | 床位数量，例如 `2`                     |
-| `bedrooms`       | 整数     | 卧室数量，例如 `1`                     |
-| `price`          | 浮点数   | 价格（以港币为单位），例如 `4500`      |
-| `address`        | 字符串   | 地址，例如 "123 Main Street"           |
-| `available_from` | 日期     | 可用开始日期，例如 "2025-04-01"        |
-| `available_to`   | 日期     | 可用结束日期，例如 "2025-12-31"        |
+#### Parameters
+| Parameter         | Type     | Description                              |
+|-------------------|----------|------------------------------------------|
+| `title`           | String   | Accommodation title, e.g., "New Apartment" |
+| `description`     | String   | Description of the accommodation         |
+| `type`            | String   | Type of accommodation, e.g., "APARTMENT", "HOUSE", or "HOSTEL" |
+| `beds`            | Integer  | Number of beds                           |
+| `bedrooms`        | Integer  | Number of bedrooms                       |
+| `price`           | Float    | Price in HKD                             |
+| `address`         | String   | Address of the accommodation             |
+| `available_from`  | Date     | Start date of availability               |
+| `available_to`    | Date     | End date of availability                 |
 
-#### 示例
+#### Example
 ```bash
 curl -X POST "http://127.0.0.1:8000/add-accommodation/" \
-     -H "Accept: application/json" \
      -H "Content-Type: application/json" \
      -d '{
-         "title": "Apartment1",
+         "title": "New Apartment",
          "description": "A cozy apartment near HKU.",
          "type": "APARTMENT",
          "beds": 2,
          "bedrooms": 1,
          "price": 4500,
-         "address": "HKU",
+         "address": "123 Main Street",
          "available_from": "2025-04-01",
          "available_to": "2025-12-31"
      }'
 ```
 
-#### 响应示例
+#### Response Example
 ```json
 {
     "success": true,
@@ -126,18 +120,31 @@ curl -X POST "http://127.0.0.1:8000/add-accommodation/" \
 
 ---
 
-### 查看住宿列表
+### View Accommodation List
 
 **URL**: `/list-accommodation/`  
-**方法**: `GET`  
-**说明**: 获取所有住宿的列表。
+**Method**: `GET`  
+**Description**: Retrieves a list of all accommodations with optional filters.
 
-#### 示例
+#### Parameters
+| Parameter          | Description                                   |
+|--------------------|-----------------------------------------------|
+| `type`             | Type of accommodation, e.g., "APARTMENT", "HOUSE", or "HOSTEL" |
+| `region`           | Region, e.g., "HK", "KL", or "NT"            |
+| `available_from`   | Start date of availability                   |
+| `available_to`     | End date of availability                     |
+| `min_beds`         | Minimum number of beds                       |
+| `min_bedrooms`     | Minimum number of bedrooms                   |
+| `max_price`        | Maximum price in HKD                         |
+| `distance`         | Maximum distance from HKU (in kilometers)    |
+| `order_by_distance`| Whether to sort by distance (`true` or `false`) |
+
+#### Example
 ```bash
-curl -X GET "http://127.0.0.1:8000/list-accommodation/" -H "Accept: application/json"
+curl -X GET "http://127.0.0.1:8000/list-accommodation/?type=APARTMENT&distance=5&order_by_distance=true" -H "Accept: application/json"
 ```
 
-#### 响应示例
+#### Response Example
 ```json
 {
     "accommodations": [
@@ -151,7 +158,8 @@ curl -X GET "http://127.0.0.1:8000/list-accommodation/" -H "Accept: application/
             "bedrooms": 1,
             "available_from": "2025-04-01",
             "available_to": "2025-12-31",
-            "region": "HK"
+            "region": "HK",
+            "distance": 3.2
         }
     ]
 }
@@ -159,42 +167,31 @@ curl -X GET "http://127.0.0.1:8000/list-accommodation/" -H "Accept: application/
 
 ---
 
-### 搜索住宿
+### Search Accommodation
 
 **URL**: `/search-accommodation/`  
-**方法**: `GET`  
-**说明**: 根据条件搜索住宿。
+**Method**: `GET`  
+**Description**: Searches for accommodations based on specified criteria.
 
-#### 参数
-| 参数名           | 描述                                   |
-|------------------|----------------------------------------|
-| `type`           | 住宿类型，例如 "APARTMENT"、"HOUSE" 或 "HOSTEL" |
-| `region`         | 地区，例如 "HK"、"KL" 或 "NT"         |
-| `available_from` | 可用开始日期，例如 "2025-04-01"        |
-| `available_to`   | 可用结束日期，例如 "2025-12-31"        |
-| `min_beds`       | 最小床位数，例如 `2`                  |
-| `min_bedrooms`   | 最小卧室数，例如 `1`                  |
-| `max_price`      | 最大价格，例如 `5000`                 |
-
-#### 示例
+#### Example
 ```bash
-curl -X GET "http://127.0.0.1:8000/search-accommodation/?type=APARTMENT&region=HK&min_beds=2&max_price=5000" -H "Accept: application/json"
+curl -X GET "http://127.0.0.1:8000/search-accommodation/?type=House&region=HK&distance=10" -H "Accept: application/json"
 ```
 
 ---
 
-### 查看住宿详情
+### View Accommodation Details
 
 **URL**: `/accommodation/<id>/`  
-**方法**: `GET`  
-**说明**: 获取特定住宿的详细信息。
+**Method**: `GET`  
+**Description**: Retrieves detailed information about a specific accommodation.
 
-#### 示例
+#### Example
 ```bash
 curl -X GET "http://127.0.0.1:8000/accommodation/1/" -H "Accept: application/json"
 ```
 
-#### 响应示例
+#### Response Example
 ```json
 {
     "id": 1,
@@ -214,19 +211,20 @@ curl -X GET "http://127.0.0.1:8000/accommodation/1/" -H "Accept: application/jso
 
 ---
 
-### 预订住宿
+### Reserve Accommodation
 
 **URL**: `/reserve_accommodation/<id>/`  
-**方法**: `POST`  
-**说明**: 预订指定的住宿。
+**Method**: `POST`  
+**Description**: Reserves a specific accommodation.
 
-#### 示例
+#### Example
 ```bash
 curl -X POST "http://127.0.0.1:8000/reserve_accommodation/1/" \
-     -H "Content-Type: application/json"
+     -H "Content-Type: application/json" \
+     --cookie "user_identifier=123e4567-e89b-12d3-a456-426614174000"
 ```
 
-#### 响应示例
+#### Response Example
 ```json
 {
     "success": true,
@@ -236,19 +234,20 @@ curl -X POST "http://127.0.0.1:8000/reserve_accommodation/1/" \
 
 ---
 
-### 取消预订
+### Cancel Reservation
 
 **URL**: `/cancel_reservation/<id>/`  
-**方法**: `POST`  
-**说明**: 取消指定的住宿预订。
+**Method**: `POST`  
+**Description**: Cancels the reservation for a specific accommodation.
 
-#### 示例
+#### Example
 ```bash
 curl -X POST "http://127.0.0.1:8000/cancel_reservation/1/" \
-     -H "Content-Type: application/json"
+     -H "Content-Type: application/json" \
+     --cookie "user_identifier=123e4567-e89b-12d3-a456-426614174000"
 ```
 
-#### 响应示例
+#### Response Example
 ```json
 {
     "success": true,
@@ -258,11 +257,11 @@ curl -X POST "http://127.0.0.1:8000/cancel_reservation/1/" \
 
 ---
 
-## 注意事项
+## Notes
 
 1. **CSRF Token**:
-   - 如果启用了 CSRF 验证，请确保在请求中包含 `X-CSRFToken` 头部和 `csrftoken` Cookie。
-   - 示例：
+   - If CSRF protection is enabled, ensure that the `X-CSRFToken` header and `csrftoken` cookie are included in the request.
+   - Example:
      ```bash
      curl -b cookies.txt -X POST "http://127.0.0.1:8000/add-accommodation/" \
           -H "Content-Type: application/json" \
@@ -270,10 +269,13 @@ curl -X POST "http://127.0.0.1:8000/cancel_reservation/1/" \
           -d '{...}'
      ```
 
-2. **日期格式**:
-   - 所有日期参数必须为 `YYYY-MM-DD` 格式。
+2. **Date Format**:
+   - All date parameters must follow the `YYYY-MM-DD` format.
 
-3. **错误处理**:
-   - 如果请求失败，API 会返回适当的错误消息和状态码。
+3. **Distance Calculation**:
+   - Distances are calculated based on the coordinates of HKU (latitude: 22.28143, longitude: 114.14006).
 
-通过以上说明，您可以轻松调用 UniHaven 项目的所有功能。
+4. **Error Handling**:
+   - If a request fails, the API will return an appropriate error message and status code.
+
+With this documentation, you can easily interact with all the features of the UniHaven project. 
