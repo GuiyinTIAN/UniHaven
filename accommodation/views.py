@@ -8,6 +8,7 @@ from django.utils.dateparse import parse_date
 from django.db.models import Q, F, Func, FloatField, ExpressionWrapper
 from django.views.decorators.csrf import csrf_exempt
 from django.urls import reverse
+from django.core.mail import send_mail
 import math
 
 HKU_LATITUDE = 22.28143  # 香港大学的纬度
@@ -301,6 +302,24 @@ def reserve_accommodation(request, accommodation_id):
             accommodation.userID = user_id  # 关联用户
             accommodation.save()
 
+            # Confirmation Email to Student
+            student_email = f"{user_id}@example.com"  
+            send_mail(
+                subject="Reservation Confirmed - UniHaven",
+                message=f"Hi {user_id},\n\nYour reservation for '{accommodation.title}' is confirmed.\nThank you!",
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[student_email],
+            )
+
+            # Notify CEDARS Specialist 
+            specialist_email = "cedars@hku.hk"  
+            send_mail(
+                subject="[UniHaven] New Reservation Alert",
+                message=f"Dear CEDARS,\n\nStudent {user_id} has reserved the accommodation: '{accommodation.title}'.\nPlease follow up for contract processing.\n\nRegards,\nUniHaven System",
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[specialist_email],
+            )
+
             return JsonResponse({
                 'success': True,
                 'message': f'Accommodation "{accommodation.title}" has been reserved.',
@@ -337,6 +356,21 @@ def cancel_reservation(request, accommodation_id):
                     'success': False,
                     'message': 'You are not authorized to cancel this reservation.'
                 }, status=403)
+
+            # Cancel the reservation
+            accommodation.reserved = False
+            accommodation.userID = ""  # Reset the userID
+            accommodation.save()
+
+
+            # Email to Student
+            student_email = f"{user_id}@example.com"
+            send_mail(
+                subject="Reservation Cancelled - UniHaven",
+                message=f"Hi {user_id},\n\nYour reservation for '{accommodation.title}' has been cancelled.",
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[student_email],
+            )
 
             # 取消预订
             accommodation.reserved = False
