@@ -7,6 +7,7 @@ from .forms import AccommodationForm
 from django.utils.dateparse import parse_date
 from django.db.models import Q
 from django.urls import reverse
+from django.views.decorators.csrf import csrf_exempt
 
 def index(request):
     """首页视图函数"""
@@ -217,6 +218,7 @@ def accommodation_detail(request, pk):
         'form': form
     })
 
+@csrf_exempt
 def reserve_accommodation(request, accommodation_id):
     if request.method == 'POST':
         user_id = request.COOKIES.get('user_identifier')  # Retrieve the userID from cookies
@@ -251,6 +253,7 @@ def reserve_accommodation(request, accommodation_id):
     else:
         return JsonResponse({'success': False, 'message': 'Invalid request method.'}, status=400)
     
+@csrf_exempt
 def cancel_reservation(request, accommodation_id):
     if request.method == 'POST':
         user_id = request.COOKIES.get('user_identifier')  # Retrieve the userID from cookies
