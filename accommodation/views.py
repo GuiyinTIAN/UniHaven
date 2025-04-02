@@ -6,6 +6,7 @@ from .models import Accommodation
 from .forms import AccommodationForm
 from django.utils.dateparse import parse_date
 from django.db.models import Q, F, Func, FloatField, ExpressionWrapper
+from django.views.decorators.csrf import csrf_exempt
 from django.urls import reverse
 import math
 
@@ -78,7 +79,7 @@ def lookup_address(request):
     except requests.RequestException as e:
         return JsonResponse({"error": str(e)}, status=500)
 
-
+@csrf_exempt
 def add_accommodation(request):
     """添加住宿信息"""
     if request.method == "POST":
@@ -137,6 +138,7 @@ def add_accommodation(request):
 
     # 默认返回 HTML 页面
     return render(request, 'accommodation/add_accommodation.html', {'form': form})
+
 
 def list_accommodation(request):
     """列出所有住宿信息，并支持根据距离筛选"""
@@ -237,6 +239,7 @@ def list_accommodation(request):
         'order_by_distance': order_by_distance,
     })
 
+
 def search_accommodation(request):
     """搜索住宿信息"""
     if request.GET and any(request.GET.values()):
@@ -249,6 +252,7 @@ def search_accommodation(request):
     if request.headers.get('Accept') == 'application/json':
         return JsonResponse({"message": "Use GET with query parameters to search accommodations."})
     return render(request, 'accommodation/search_results.html')
+
 
 def accommodation_detail(request, pk):
     """查看住宿详情"""
@@ -274,7 +278,7 @@ def accommodation_detail(request, pk):
         if request.headers.get('Accept') == 'application/json':
             return JsonResponse({'error': 'Accommodation not found.'}, status=404)
 
-
+@csrf_exempt
 def reserve_accommodation(request, accommodation_id):
     """预订住宿"""
     if request.method == 'POST':
@@ -310,7 +314,7 @@ def reserve_accommodation(request, accommodation_id):
     else:
         return JsonResponse({'success': False, 'message': 'Invalid request method.'}, status=400)
 
-
+@csrf_exempt
 def cancel_reservation(request, accommodation_id):
     """取消预订"""
     if request.method == 'POST':

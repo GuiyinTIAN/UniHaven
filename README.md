@@ -19,14 +19,19 @@ UniHaven is a Django-based project designed to provide off-campus accommodation 
 ### Home
 
 **URL**: `/`  
-**Method**: `GET`  
+**Method**: `GET`
+**Header**: `-H "Accept:application/json"`  (show json output)
 **Description**: Displays the homepage with navigation options to search for accommodations or add new accommodations.
 
 #### Example
 ```bash
-curl -X GET "http://127.0.0.1:8000/"
+curl -X GET "http://127.0.0.1:8000/" -H "Accept: application/json"
 ```
-
+```bash
+{
+    "message": "Welcome to UniHaven!"
+}
+```
 ---
 
 ### Address Lookup API
@@ -40,34 +45,34 @@ curl -X GET "http://127.0.0.1:8000/"
 
 #### Example
 ```bash
-curl -X GET "http://127.0.0.1:8000/lookup-address/?address=Main%20Street"
+curl -X GET "http://127.0.0.1:8000/lookup-address/?address=HKU"
 ```
 
 #### Response Example
 ```json
 {
     "EnglishAddress": {
-        "BuildingName": "Main Building",
-        "EstateName": "Main Estate",
-        "StreetName": "Main Street",
-        "BuildingNo": "123",
-        "District": "Central",
+        "BuildingName": "HKU SCHOOL OF PROFESSIONAL AND CONTINUING EDUCATION",
+        "EstateName": "",
+        "StreetName": "WAH LAM PATH",
+        "BuildingNo": "3",
+        "District": "SOUTHERN DISTRICT",
         "Region": "HK"
     },
     "ChineseAddress": {
-        "BuildingName": "主楼",
-        "EstateName": "主屋苑",
-        "StreetName": "主街",
-        "BuildingNo": "123",
-        "District": "中环",
+        "BuildingName": "香港大學專業進修學院",
+        "EstateName": "",
+        "StreetName": "華林徑",
+        "BuildingNo": "3",
+        "District": "南區",
         "Region": "香港"
     },
     "GeospatialInformation": {
-        "Latitude": 22.3964,
-        "Longitude": 114.1095,
-        "Northing": 123456,
-        "Easting": 654321,
-        "GeoAddress": "123 Main Street, Central, HK"
+        "Latitude": "22.25221",
+        "Longitude": "114.13809",
+        "Northing": "812604",
+        "Easting": "832270",
+        "GeoAddress": "3228612615T20050430"
     }
 }
 ```
@@ -78,6 +83,8 @@ curl -X GET "http://127.0.0.1:8000/lookup-address/?address=Main%20Street"
 
 **URL**: `/add-accommodation/`  
 **Method**: `POST`  
+**Header**: `-H "Content-Type:application/json"`
+**Header**:`-H "X-CSRFToken: <your X-CSRFToken"` (optional, CSRF protection is enabled under development)
 **Description**: Adds a new accommodation listing.
 
 #### Parameters
@@ -141,7 +148,7 @@ curl -X POST "http://127.0.0.1:8000/add-accommodation/" \
 
 #### Example
 ```bash
-curl -X GET "http://127.0.0.1:8000/list-accommodation/?type=APARTMENT&distance=5&order_by_distance=true" -H "Accept: application/json"
+curl -X GET "http://localhost:8000/list-accommodation/" -H "Accept:application/json"
 ```
 
 #### Response Example
@@ -149,17 +156,17 @@ curl -X GET "http://127.0.0.1:8000/list-accommodation/?type=APARTMENT&distance=5
 {
     "accommodations": [
         {
-            "id": 1,
-            "title": "Cozy Apartment",
-            "description": "A nice apartment near HKU.",
+            "id": 15,
+            "title": "Apartment1",
+            "description": "A cozy apartment near HKU.",
             "type": "APARTMENT",
-            "price": 4500,
+            "price": "6500.00",
             "beds": 2,
             "bedrooms": 1,
             "available_from": "2025-04-01",
             "available_to": "2025-12-31",
             "region": "HK",
-            "distance": 3.2
+            "distance": 3.2554336410028095
         }
     ]
 }
@@ -171,6 +178,7 @@ curl -X GET "http://127.0.0.1:8000/list-accommodation/?type=APARTMENT&distance=5
 
 **URL**: `/search-accommodation/`  
 **Method**: `GET`  
+**Header**: `-H "Accept:application/json"`
 **Description**: Searches for accommodations based on specified criteria.
 
 #### Example
@@ -184,6 +192,7 @@ curl -X GET "http://127.0.0.1:8000/search-accommodation/?type=House&region=HK&di
 
 **URL**: `/accommodation/<id>/`  
 **Method**: `GET`  
+**Header**: `-H "Accept: application/json"`
 **Description**: Retrieves detailed information about a specific accommodation.
 
 #### Example
