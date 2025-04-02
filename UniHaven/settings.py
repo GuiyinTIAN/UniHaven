@@ -44,7 +44,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
-    "django.middleware.locale.LocaleMiddleware",  # 国际化中间件
+    "django.middleware.locale.LocaleMiddleware", 
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
@@ -65,7 +65,7 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
-                "django.template.context_processors.i18n",  # 确保此行已添加
+                "django.template.context_processors.i18n", 
             ],
         },
     },
@@ -114,7 +114,7 @@ LANGUAGES = [
     ('en', 'English'),
 ]
 
-# 翻译文件路径
+# path to the locale directory(Translations)
 LOCALE_PATHS = [
     BASE_DIR / 'locale',
 ]
