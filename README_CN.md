@@ -76,6 +76,75 @@ curl -X GET "http://127.0.0.1:8000/lookup-address/?address=HKU"
     }
 }
 ```
+### 預訂住宿
+
+**URL**: `/reserve_accommodation/<id>/`  
+**Method**: `POST`  
+**Description**: 預訂特定住宿
+
+#### 示例
+```bash
+curl -X POST "http://127.0.0.1:8000/reserve_accommodation/8/" \
+     -H "Content-Type: application/json" \
+     -b "user_identifier=123"
+```
+
+### 响应成功示例
+```json
+{
+    "success": true,
+    "message": "Accommodation 'Beautiful Garden' has been reserved.",
+    "accommodation": {
+        "id": 8,
+        "reserved": true
+    }
+}
+```
+
+### 响应失敗示例
+```json
+{
+    "success": false,
+    "message": "You are not authorized to reserve this accommodation."
+}
+```
+
+
+### 取消預訂
+
+**URL**: `/cancel_reservation/<id>/`  
+**Method**: `POST`  
+**Description**: Cancel a specific accommodation.
+
+#### 示例
+```bash
+curl -X POST "http://127.0.0.1:8000/cancel_reservation/8/" \
+     -H "Content-Type: application/json" \
+     -b "user_identifier=test_user_133"
+```
+
+### 响应成功示例
+```json
+{
+    "success": true,
+    "message": "Reservation for accommodation 'Beautiful Garden' has been canceled.",
+    "accommodation": {
+        "id": 8,
+        "reserved": false
+    }
+}
+```
+
+### 响应失敗示例
+```json
+{
+    "success": false,
+    "message": "You are not authorized to cancel this reservation."
+}
+```
+
+
+
 
 ---
 
