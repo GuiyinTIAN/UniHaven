@@ -80,10 +80,10 @@
 
 {% block extra_js %}
 <script>
-        async function reserveAccommodation(accommodationId) {
+    async function reserveAccommodation(accommodationId) {
         const csrfToken = getCSRFToken();
         try {
-            const response = await fetch(`/reserve_accommodation/${accommodationId}/`, {
+            const response = await fetch(`/reserve_accommodation/?id=${accommodationId}`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -108,7 +108,7 @@
     async function cancelReservation(accommodationId) {
         const csrfToken = getCSRFToken();
         try {
-            const response = await fetch(`/cancel_reservation/${accommodationId}/`, {
+            const response = await fetch(`/cancel_reservation/?id=${accommodationId}`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -131,15 +131,6 @@
     }
 
     function getCSRFToken() {
-        // const name = 'csrftoken';
-        // const cookies = document.cookie.split(';');
-        // for (let i = 0; i < cookies.length; i++) {
-        //     const cookie = cookies[i].trim();
-        //     if (cookie.startsWith(name + '=')) {
-        //         return cookie.substring(name.length + 1);
-        //     }
-        // }
-        // return '';
         return getCookie('csrftoken');
     }
 

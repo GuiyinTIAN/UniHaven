@@ -1,30 +1,44 @@
 import requests
-from django.http import JsonResponse
+import math
 from django.shortcuts import render, redirect, get_object_or_404
 from django.conf import settings
-from .models import Accommodation
-from .forms import AccommodationForm
 from django.utils.dateparse import parse_date
 from django.db.models import Q, F, Func, FloatField, ExpressionWrapper
-from django.views.decorators.csrf import csrf_exempt
 from django.urls import reverse
 from django.core.mail import send_mail
-import math
 
-HKU_LATITUDE = 22.28143  # 香港大学的纬度
-HKU_LONGITUDE = 114.14006  # 香港大学的经度
+from rest_framework import status
+from rest_framework.decorators import api_view, parser_classes, renderer_classes
+from rest_framework.parsers import JSONParser, FormParser, MultiPartParser
+from rest_framework.renderers import JSONRenderer, TemplateHTMLRenderer
+from rest_framework.response import Response
 
+from .models import Accommodation
+from .forms import AccommodationForm
+from .serializers import (
+    AccommodationSerializer, 
+    AccommodationDetailSerializer,
+    AccommodationListSerializer
+)
+
+# Geographic coordinates of The University of Hong Kong
+HKU_LATITUDE = 22.28143
+HKU_LONGITUDE = 114.14006
+
+@api_view(['GET'])
+@renderer_classes([JSONRenderer, TemplateHTMLRenderer])
 def index(request):
-    """首页视图函数"""
-    if request.headers.get('Accept') == 'application/json':
-        return JsonResponse({"message": "Welcome to UniHaven!"})
-    return render(request, 'accommodation/index.html')
+    """Home page view function"""
+    if request.accepted_renderer.format == 'json':
+        return Response({"message": "Welcome to UniHaven!"})
+    return Response({}, template_name='accommodation/index.html')
 
+@api_view(['GET'])
 def lookup_address(request):
-    """调用香港政府 API 查找地址"""
-    address = request.GET.get("address", "")
+    """Call Hong Kong government API to look up addresses"""
+    address = request.query_params.get("address", "")
     if not address:
-        return JsonResponse({"error": "Address parameter is required"}, status=400)
+        return Response({"error": "Address parameter is required"}, status=status.HTTP_400_BAD_REQUEST)
     number = 1 
 
     api_url = f"https://www.als.gov.hk/lookup?q={address}&n={number}"
@@ -44,8 +58,7 @@ def lookup_address(request):
                 geospatial_info = result.get("GeospatialInformation", {})
                 geo_address = result.get("GeoAddress", "")
 
-                # 返回地址信息
-                return JsonResponse({
+                return Response({
                     "EnglishAddress": {
                         "BuildingName": eng_address.get("BuildingName", ""),
                         "EstateName": eng_address.get("EngEstate", {}).get("EstateName", ""),
@@ -69,46 +82,44 @@ def lookup_address(request):
                         "Easting": geospatial_info.get("Easting", None),
                         "GeoAddress": geo_address
                     }
-                }, json_dumps_params={'ensure_ascii': False})
+                })
             else:
-                return JsonResponse({"error": "No results found"}, status=404)
+                return Response({"error": "No results found"}, status=status.HTTP_404_NOT_FOUND)
         except ValueError:
-            return JsonResponse({"error": "Invalid JSON response from API"}, status=500)
+            return Response({"error": "Invalid JSON response from API"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     except requests.HTTPError as e:
-        return JsonResponse({"error": f"HTTP Error: {e.response.status_code}"}, status=e.response.status_code)
+        return Response({"error": f"HTTP Error: {e.response.status_code}"}, status=e.response.status_code)
     except requests.RequestException as e:
-        return JsonResponse({"error": str(e)}, status=500)
+        return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-@csrf_exempt
+@api_view(['GET', 'POST'])
+@parser_classes([JSONParser, FormParser, MultiPartParser])
+@renderer_classes([JSONRenderer, TemplateHTMLRenderer])
 def add_accommodation(request):
-    """添加住宿信息"""
+    """Add new accommodation information"""
     if request.method == "POST":
-        if request.headers.get('Content-Type') == 'application/json':
-            # 解析 JSON 数据
-            import json
-            try:
-                data = json.loads(request.body)
-            except json.JSONDecodeError:
-                return JsonResponse({"success": False, "message": "Invalid JSON data."}, status=400)
-        else:
-            # 解析表单数据
-            data = request.POST
-
-        form = AccommodationForm(data)
-        if form.is_valid():
-            accommodation = form.save(commit=False)
-            address = form.cleaned_data['address']
-
-            # 调用地址查找 API
+        serializer = AccommodationSerializer(data=request.data)
+        if serializer.is_valid():
+            accommodation = Accommodation()
+            
+            fields = ['title', 'description', 'type', 'price', 'beds', 
+                     'bedrooms', 'available_from', 'available_to',
+                     'contact_phone', 'contact_email']
+            
+            for field in fields:
+                if field in serializer.validated_data:
+                    setattr(accommodation, field, serializer.validated_data[field])
+            
+            address = serializer.validated_data['address']
             api_url = f"https://www.als.gov.hk/lookup?q={address}&n=1"
             headers = {"Accept": "application/json"}
+            
             try:
                 response = requests.get(api_url, headers=headers)
                 response.raise_for_status()
                 data = response.json()
 
-                # 从 API 响应中提取地理信息
                 if data and 'SuggestedAddress' in data and len(data['SuggestedAddress']) > 0:
                     result = data['SuggestedAddress'][0]['Address']['PremisesAddress']
                     geospatial_info = result.get("GeospatialInformation", {})
@@ -125,45 +136,46 @@ def add_accommodation(request):
                     accommodation.region = eng_address.get("Region", "")
 
                 accommodation.save()
-
-                # 默认返回 JSON 响应
-                return JsonResponse({"success": True, "message": "Accommodation added successfully!"})
+                return Response(
+                    {"success": True, "message": "Accommodation added successfully!"}, 
+                    status=status.HTTP_201_CREATED
+                )
             except requests.RequestException as e:
-                form.add_error(None, f"Error fetching geolocation: {str(e)}")
+                return Response(
+                    {"success": False, "message": f"Error fetching geolocation: {str(e)}"}, 
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
         else:
-            # 返回错误响应
-            return JsonResponse({"success": False, "errors": form.errors}, status=400)
-
+            return Response(
+                {"success": False, "errors": serializer.errors}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
     else:
         form = AccommodationForm()
+        return render(request, 'accommodation/add_accommodation.html', {'form': form})
 
-    # 默认返回 HTML 页面
-    return render(request, 'accommodation/add_accommodation.html', {'form': form})
-
-
+@api_view(['GET'])
 def list_accommodation(request):
-    """列出所有住宿信息，并支持根据距离筛选"""
+    """List all accommodations with optional distance-based filtering"""
     accommodations = Accommodation.objects.all()
-    building_name = request.GET.get("building_name", "")
-    accommodation_type = request.GET.get("type", "")
-    region = request.GET.get("region", "")
-    available_from = request.GET.get("available_from", "")
-    available_to = request.GET.get("available_to", "")
-    min_beds = request.GET.get("min_beds", "")
-    min_bedrooms = request.GET.get("min_bedrooms", "")
-    max_price = request.GET.get("max_price", "")
-    max_distance = request.GET.get("distance", "")  # 最大距离（公里）
-    order_by_distance = request.GET.get("order_by_distance", "false").lower() == "true"
+    
+    building_name = request.query_params.get("building_name", "")
+    accommodation_type = request.query_params.get("type", "")
+    region = request.query_params.get("region", "")
+    available_from = request.query_params.get("available_from", "")
+    available_to = request.query_params.get("available_to", "")
+    min_beds = request.query_params.get("min_beds", "")
+    min_bedrooms = request.query_params.get("min_bedrooms", "")
+    max_price = request.query_params.get("max_price", "")
+    max_distance = request.query_params.get("distance", "")
+    order_by_distance = request.query_params.get("order_by_distance", "false").lower() == "true"
 
-    # 过滤房源类型
     if accommodation_type:
         accommodations = accommodations.filter(type=accommodation_type)
 
-    # 过滤地区
     if region:
         accommodations = accommodations.filter(region=region)
 
-    # 过滤日期范围
     if available_from and available_to:
         try:
             available_from = parse_date(available_from)
@@ -175,19 +187,16 @@ def list_accommodation(request):
         except ValueError:
             pass
 
-    # 过滤床位数
     if min_beds:
         accommodations = accommodations.filter(beds__gte=min_beds)
 
-    # 过滤卧室数
     if min_bedrooms:
         accommodations = accommodations.filter(bedrooms__gte=min_bedrooms)
 
-    # 过滤价格
     if max_price:
         accommodations = accommodations.filter(price__lte=max_price)
 
-    # 根据距离计算并筛选
+    # Calculate distance using Haversine formula
     accommodations = accommodations.annotate(
         distance=ExpressionWrapper(
             Func(
@@ -203,12 +212,11 @@ def list_accommodation(request):
                     template="%(function)s(%(expressions)s, 2)"
                 ),
                 function='SQRT',
-            ) * 6371,  # 地球半径（公里）
+            ) * 6371,  # Earth radius (km)
             output_field=FloatField(),
         )
     )
 
-    # 根据最大距离筛选
     if max_distance:
         try:
             max_distance = float(max_distance)
@@ -216,17 +224,12 @@ def list_accommodation(request):
         except ValueError:
             pass
 
-    # 按距离排序
     if order_by_distance:
         accommodations = accommodations.order_by('distance')
 
-    # 返回 JSON 或 HTML 响应
     if request.headers.get('Accept') == 'application/json':
-        accommodations_data = list(accommodations.values(
-            'id', 'title', 'description', 'type', 'price', 'beds', 'bedrooms',
-            'available_from', 'available_to', 'region', 'distance', 'building_name',
-        ))
-        return JsonResponse({'accommodations': accommodations_data})
+        serializer = AccommodationListSerializer(accommodations, many=True)
+        return Response({'accommodations': serializer.data})
 
     return render(request, 'accommodation/accommodation_list.html', {
         "buildingName": building_name,
@@ -242,154 +245,137 @@ def list_accommodation(request):
         'order_by_distance': order_by_distance,
     })
 
-
+@api_view(['GET'])
 def search_accommodation(request):
-    """搜索住宿信息"""
+    """Search for accommodations with filters"""
     if request.GET and any(request.GET.values()):
-        # 如果请求头为 JSON，直接返回住宿信息
-        if request.headers.get('Accept') == 'application/json':
-            return list_accommodation(request)
-        # 否则重定向到列表页面
+        # 始终使用重定向而不是直接调用函数，避免请求对象类型错误
         query_params = request.GET.urlencode()
+        if request.headers.get('Accept') == 'application/json':
+            # 添加一个标记参数以便接收端知道这是一个JSON请求
+            return redirect(f"{reverse('list_accommodation')}?{query_params}&format=json")
         return redirect(f"{reverse('list_accommodation')}?{query_params}")
+    
     if request.headers.get('Accept') == 'application/json':
-        return JsonResponse({"message": "Use GET with query parameters to search accommodations."})
+        return Response({"message": "Use GET with query parameters to search accommodations."})
+    
     return render(request, 'accommodation/search_results.html')
 
-
+@api_view(['GET'])
 def accommodation_detail(request, pk):
-    """查看住宿详情"""
+    """View accommodation details"""
     try:
-        accommodation = Accommodation.objects.get(pk=pk)
+        accommodation = get_object_or_404(Accommodation, pk=pk)
+        
         if request.headers.get('Accept') == 'application/json':
-            return JsonResponse({
-                "id": accommodation.id,
-                "title": accommodation.title,
-                "description": accommodation.description,
-                "type": accommodation.type,
-                "price": accommodation.price,
-                "beds": accommodation.beds,
-                "bedrooms": accommodation.bedrooms,
-                "available_from": accommodation.available_from,
-                "available_to": accommodation.available_to,
-                "region": accommodation.region,
-                "reserved": accommodation.reserved,
-                "formatted_address": accommodation.formatted_address(),
-            })
+            serializer = AccommodationDetailSerializer(accommodation)
+            return Response(serializer.data)
+        
         return render(request, 'accommodation/accommodation_detail.html', {'accommodation': accommodation})
+    
     except Accommodation.DoesNotExist:
-        if request.headers.get('Accept') == 'application/json':
-            return JsonResponse({'error': 'Accommodation not found.'}, status=404)
+        return Response({'error': 'Accommodation not found.'}, status=status.HTTP_404_NOT_FOUND)
 
-@csrf_exempt
-def reserve_accommodation(request, accommodation_id):
-    """预订住宿"""
-    if request.method == 'POST':
-        user_id = request.COOKIES.get('user_identifier')  # 从 Cookie 获取用户 ID
+@api_view(['POST'])
+def reserve_accommodation(request):
+    """Reserve an accommodation using query parameter id"""
+    accommodation_id = request.query_params.get('id')
+    if not accommodation_id:
+        return Response({'success': False, 'message': 'Accommodation ID is required'}, 
+                        status=status.HTTP_400_BAD_REQUEST)
+    
+    user_id = request.COOKIES.get('user_identifier')
+    if not user_id:
+        return Response({'success': False, 'message': 'User ID is required.'}, 
+                        status=status.HTTP_400_BAD_REQUEST)
 
-        if not user_id:
-            return JsonResponse({'success': False, 'message': 'User ID is required.'}, status=400)
+    try:
+        accommodation = get_object_or_404(Accommodation, id=accommodation_id)
 
-        try:
-            accommodation = Accommodation.objects.get(id=accommodation_id)
+        if accommodation.reserved:
+            return Response({
+                'success': False,
+                'message': f'Accommodation "{accommodation.title}" is already reserved by [{accommodation.userID}].'
+            }, status=status.HTTP_400_BAD_REQUEST)
 
-            if accommodation.reserved:
-                return JsonResponse({
-                    'success': False,
-                    'message': f'Accommodation "{accommodation.title}" is already reserved.'
-                }, status=400)
+        accommodation.reserved = True
+        accommodation.userID = user_id
+        accommodation.save()
 
-            # 预订住宿
-            accommodation.reserved = True
-            accommodation.userID = user_id  # 关联用户
-            accommodation.save()
+        student_email = f"{user_id}@example.com"  
+        send_mail(
+            subject="Reservation Confirmed - UniHaven",
+            message=f"Hi {user_id},\n\nYour reservation for '{accommodation.title}' is confirmed.\nThank you!",
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[student_email],
+        )
 
-            # Confirmation Email to Student
-            student_email = f"{user_id}@example.com"  
-            send_mail(
-                subject="Reservation Confirmed - UniHaven",
-                message=f"Hi {user_id},\n\nYour reservation for '{accommodation.title}' is confirmed.\nThank you!",
-                from_email=settings.DEFAULT_FROM_EMAIL,
-                recipient_list=[student_email],
-            )
+        specialist_email = "cedars@hku.hk"  
+        send_mail(
+            subject="[UniHaven] New Reservation Alert",
+            message=f"Dear CEDARS,\n\nStudent {user_id} has reserved the accommodation: '{accommodation.title}'.\nPlease follow up for contract processing.\n\nRegards,\nUniHaven System",
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[specialist_email],
+        )
 
-            # Notify CEDARS Specialist 
-            specialist_email = "cedars@hku.hk"  
-            send_mail(
-                subject="[UniHaven] New Reservation Alert",
-                message=f"Dear CEDARS,\n\nStudent {user_id} has reserved the accommodation: '{accommodation.title}'.\nPlease follow up for contract processing.\n\nRegards,\nUniHaven System",
-                from_email=settings.DEFAULT_FROM_EMAIL,
-                recipient_list=[specialist_email],
-            )
+        serializer = AccommodationDetailSerializer(accommodation)
+        return Response({
+            'success': True,
+            'message': f'Accommodation "{accommodation.title}" has been reserved.',
+            'UserID': user_id,
+            'accommodation': serializer.data
+        })
+    except Accommodation.DoesNotExist:
+        return Response({'success': False, 'message': 'Accommodation not found.'}, 
+                        status=status.HTTP_404_NOT_FOUND)
 
-            return JsonResponse({
-                'success': True,
-                'message': f'Accommodation "{accommodation.title}" has been reserved.',
-                'UserID': user_id,
-                'accommodation': {
-                    'id': accommodation.id,
-                    'reserved': accommodation.reserved
-                }
-            })
-        except Accommodation.DoesNotExist:
-            return JsonResponse({'success': False, 'message': 'Accommodation not found.'}, status=404)
-    else:
-        return JsonResponse({'success': False, 'message': 'Invalid request method.'}, status=400)
+@api_view(['POST'])
+def cancel_reservation(request):
+    """Cancel an accommodation reservation using query parameter id"""
+    accommodation_id = request.query_params.get('id')
+    if not accommodation_id:
+        return Response({'success': False, 'message': 'Accommodation ID is required'}, 
+                        status=status.HTTP_400_BAD_REQUEST)
+    
+    user_id = request.COOKIES.get('user_identifier')
+    if not user_id:
+        return Response({'success': False, 'message': 'User ID is required.'}, 
+                        status=status.HTTP_400_BAD_REQUEST)
 
-@csrf_exempt
-def cancel_reservation(request, accommodation_id):
-    """取消预订"""
-    if request.method == 'POST':
-        user_id = request.COOKIES.get('user_identifier')  # 从 Cookie 获取用户 ID
+    try:
+        accommodation = get_object_or_404(Accommodation, id=accommodation_id)
 
-        if not user_id:
-            return JsonResponse({'success': False, 'message': 'User ID is required.'}, status=400)
+        if not accommodation.reserved:
+            return Response({
+                'success': False,
+                'message': f'Accommodation "{accommodation.title}" is not reserved.'
+            }, status=status.HTTP_400_BAD_REQUEST)
 
-        try:
-            accommodation = Accommodation.objects.get(id=accommodation_id)
+        if str(accommodation.userID) != user_id:
+            return Response({
+                'success': False,
+                'message': f'You are not authorized to cancel this reservation. The accommodation can only be canceld by [{accommodation.userID}].'
+            }, status=status.HTTP_403_FORBIDDEN)
 
-            if not accommodation.reserved:
-                return JsonResponse({
-                    'success': False,
-                    'message': f'Accommodation "{accommodation.title}" is not reserved.'
-                }, status=400)
+        accommodation.reserved = False
+        accommodation.userID = ""
+        accommodation.save()
 
-            if str(accommodation.userID) != user_id:  # 检查用户 ID 是否匹配
-                return JsonResponse({
-                    'success': False,
-                    'message': 'You are not authorized to cancel this reservation.'
-                }, status=403)
+        student_email = f"{user_id}@example.com"
+        send_mail(
+            subject="Reservation Cancelled - UniHaven",
+            message=f"Hi {user_id},\n\nYour reservation for '{accommodation.title}' has been cancelled.",
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[student_email],
+        )
 
-            # Cancel the reservation
-            accommodation.reserved = False
-            accommodation.userID = ""  # Reset the userID
-            accommodation.save()
-
-
-            # Email to Student
-            student_email = f"{user_id}@example.com"
-            send_mail(
-                subject="Reservation Cancelled - UniHaven",
-                message=f"Hi {user_id},\n\nYour reservation for '{accommodation.title}' has been cancelled.",
-                from_email=settings.DEFAULT_FROM_EMAIL,
-                recipient_list=[student_email],
-            )
-
-            # 取消预订
-            accommodation.reserved = False
-            accommodation.userID = ""  # 重置用户 ID
-            accommodation.save()
-
-            return JsonResponse({
-                'success': True,
-                'message': f'Reservation for accommodation "{accommodation.title}" has been canceled.',
-                'UserID': user_id,
-                'accommodation': {
-                    'id': accommodation.id,
-                    'reserved': accommodation.reserved
-                }
-            })
-        except Accommodation.DoesNotExist:
-            return JsonResponse({'success': False, 'message': 'Accommodation not found.'}, status=404)
-    else:
-        return JsonResponse({'success': False, 'message': 'Invalid request method.'}, status=400)
+        serializer = AccommodationDetailSerializer(accommodation)
+        return Response({
+            'success': True,
+            'message': f'Reservation for accommodation "{accommodation.title}" has been canceled.',
+            'UserID': user_id,
+            'accommodation': serializer.data
+        })
+    except Accommodation.DoesNotExist:
+        return Response({'success': False, 'message': 'Accommodation not found.'}, 
+                        status=status.HTTP_404_NOT_FOUND)

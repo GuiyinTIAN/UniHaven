@@ -27,7 +27,7 @@ UniHaven 是一个基于 Django 的项目，旨在为非本地学生提供校外
 ```bash
 curl -X GET "http://127.0.0.1:8000/" -H "Accept: application/json"
 ```
-```bash
+```json
 {
     "message": "Welcome to UniHaven!"
 }
@@ -76,75 +76,6 @@ curl -X GET "http://127.0.0.1:8000/lookup-address/?address=HKU"
     }
 }
 ```
-### 預訂住宿
-
-**URL**: `/reserve_accommodation/<id>/`  
-**Method**: `POST`  
-**Description**: 預訂特定住宿
-
-#### 示例
-```bash
-curl -X POST "http://127.0.0.1:8000/reserve_accommodation/8/" \
-     -H "Content-Type: application/json" \
-     -b "user_identifier=123"
-```
-
-### 响应成功示例
-```json
-{
-    "success": true,
-    "message": "Accommodation 'Beautiful Garden' has been reserved.",
-    "accommodation": {
-        "id": 8,
-        "reserved": true
-    }
-}
-```
-
-### 响应失敗示例
-```json
-{
-    "success": false,
-    "message": "You are not authorized to reserve this accommodation."
-}
-```
-
-
-### 取消預訂
-
-**URL**: `/cancel_reservation/<id>/`  
-**Method**: `POST`  
-**Description**: Cancel a specific accommodation.
-
-#### 示例
-```bash
-curl -X POST "http://127.0.0.1:8000/cancel_reservation/8/" \
-     -H "Content-Type: application/json" \
-     -b "user_identifier=test_user_133"
-```
-
-### 响应成功示例
-```json
-{
-    "success": true,
-    "message": "Reservation for accommodation 'Beautiful Garden' has been canceled.",
-    "accommodation": {
-        "id": 8,
-        "reserved": false
-    }
-}
-```
-
-### 响应失敗示例
-```json
-{
-    "success": false,
-    "message": "You are not authorized to cancel this reservation."
-}
-```
-
-
-
 
 ---
 
@@ -168,6 +99,8 @@ curl -X POST "http://127.0.0.1:8000/cancel_reservation/8/" \
 | `address`        | 字符串   | 住宿地址                               |
 | `available_from` | 日期     | 可用开始日期                           |
 | `available_to`   | 日期     | 可用结束日期                           |
+| `contact_phone`  | 字符串   | 联系电话                               |
+| `contact_email`  | 字符串   | 联系邮箱                               |
 
 #### 示例
 ```bash
@@ -182,7 +115,9 @@ curl -X POST "http://127.0.0.1:8000/add-accommodation/" \
          "price": 4500,
          "address": "123 Main Street",
          "available_from": "2025-04-01",
-         "available_to": "2025-12-31"
+         "available_to": "2025-12-31",
+         "contact_phone": "+852 1234 5678",
+         "contact_email": "owner@example.com"
      }'
 ```
 
@@ -214,10 +149,11 @@ curl -X POST "http://127.0.0.1:8000/add-accommodation/" \
 | `max_price`        | 最大价格（港币）                       |
 | `distance`         | 距离香港大学的最大距离（公里）         |
 | `order_by_distance`| 是否按距离排序（`true` 或 `false`）    |
+| `format`           | 返回格式，设置为 `json` 时返回JSON格式 |
 
 #### 示例
 ```bash
-curl -X GET "http://localhost:8000/list-accommodation/" -H "Accept:application/json"
+curl -X GET "http://127.0.0.1:8000/list-accommodation/?type=APARTMENT&max_price=8000&format=json"
 ```
 
 #### 响应示例
@@ -227,6 +163,7 @@ curl -X GET "http://localhost:8000/list-accommodation/" -H "Accept:application/j
         {
             "id": 15,
             "title": "Apartment1",
+            "building_name": "University Residence",
             "description": "A cozy apartment near HKU.",
             "type": "APARTMENT",
             "price": "6500.00",
@@ -235,7 +172,10 @@ curl -X GET "http://localhost:8000/list-accommodation/" -H "Accept:application/j
             "available_from": "2025-04-01",
             "available_to": "2025-12-31",
             "region": "HK",
-            "distance": 3.2554336410028095
+            "distance": 1.25,
+            "reserved": false,
+            "contact_phone": "+852 1234 5678",
+            "contact_email": "owner@example.com"
         }
     ]
 }
@@ -247,12 +187,18 @@ curl -X GET "http://localhost:8000/list-accommodation/" -H "Accept:application/j
 
 **URL**: `/search-accommodation/`  
 **方法**: `GET`  
-**请求头**: `-H "Accept:application/json"`  
-**说明**: 根据指定条件搜索住宿。
+**请求头**: `-H "Accept:application/json"` 或参数 `format=json`  
+**说明**: 根据指定条件搜索住宿。此接口将重定向到列表接口，传递相应的查询参数。
 
 #### 示例
 ```bash
-curl -X GET "http://127.0.0.1:8000/search-accommodation/?type=House&region=HK&distance=10" -H "Accept: application/json"
+curl -X GET "http://127.0.0.1:8000/search-accommodation/?type=HOUSE&region=HK&distance=10" -H "Accept: application/json"
+```
+
+或者使用参数指定JSON格式:
+
+```bash
+curl -X GET "http://127.0.0.1:8000/search-accommodation/?type=HOUSE&region=HK&distance=10&format=json"
 ```
 
 ---
@@ -276,14 +222,18 @@ curl -X GET "http://127.0.0.1:8000/accommodation/1/" -H "Accept: application/jso
     "title": "Cozy Apartment",
     "description": "A nice apartment near HKU.",
     "type": "APARTMENT",
-    "price": 4500,
+    "price": "4500.00",
     "beds": 2,
     "bedrooms": 1,
     "available_from": "2025-04-01",
     "available_to": "2025-12-31",
     "region": "HK",
     "reserved": false,
-    "formatted_address": "123 Main Street, Central, HK"
+    "formatted_address": "123 Main Street, Central, HK",
+    "building_name": "Grand Heights",
+    "userID": "",
+    "contact_phone": "+852 1234 5678",
+    "contact_email": "owner@example.com"
 }
 ```
 
@@ -291,22 +241,40 @@ curl -X GET "http://127.0.0.1:8000/accommodation/1/" -H "Accept: application/jso
 
 ### 预订住宿
 
-**URL**: `/reserve_accommodation/<id>/`  
+**URL**: `/reserve_accommodation/`  
 **方法**: `POST`  
-**说明**: 预订指定的住宿。
+**参数**: `id` - 住宿ID  
+**说明**: 预订指定的住宿。需要user_identifier cookie。
 
 #### 示例
 ```bash
-curl -X POST "http://127.0.0.1:8000/reserve_accommodation/1/" \
+curl -X POST "http://127.0.0.1:8000/reserve_accommodation/?id=1" \
      -H "Content-Type: application/json" \
-     --cookie "user_identifier=123e4567-e89b-12d3-a456-426614174000"
+     -b "user_identifier=student123"
 ```
 
 #### 响应示例
 ```json
 {
     "success": true,
-    "message": "Accommodation 'Cozy Apartment' has been reserved."
+    "message": "Accommodation 'Cozy Apartment' has been reserved.",
+    "UserID": "student123",
+    "accommodation": {
+        "id": 1,
+        "title": "Cozy Apartment",
+        "description": "A nice apartment near HKU.",
+        "type": "APARTMENT",
+        "price": "4500.00",
+        "beds": 2,
+        "bedrooms": 1,
+        "available_from": "2025-04-01",
+        "available_to": "2025-12-31",
+        "region": "HK",
+        "reserved": true,
+        "formatted_address": "123 Main Street, Central, HK",
+        "building_name": "Grand Heights",
+        "userID": "student123"
+    }
 }
 ```
 
@@ -314,22 +282,40 @@ curl -X POST "http://127.0.0.1:8000/reserve_accommodation/1/" \
 
 ### 取消预订
 
-**URL**: `/cancel_reservation/<id>/`  
+**URL**: `/cancel_reservation/`  
 **方法**: `POST`  
-**说明**: 取消特定住宿的预订。
+**参数**: `id` - 住宿ID  
+**说明**: 取消特定住宿的预订。需要user_identifier cookie。
 
 #### 示例
 ```bash
-curl -X POST "http://127.0.0.1:8000/cancel_reservation/1/" \
+curl -X POST "http://127.0.0.1:8000/cancel_reservation/?id=1" \
      -H "Content-Type: application/json" \
-     --cookie "user_identifier=123e4567-e89b-12d3-a456-426614174000"
+     -b "user_identifier=student123"
 ```
 
 #### 响应示例
 ```json
 {
     "success": true,
-    "message": "Reservation for accommodation 'Cozy Apartment' has been canceled."
+    "message": "Reservation for accommodation 'Cozy Apartment' has been canceled.",
+    "UserID": "student123",
+    "accommodation": {
+        "id": 1,
+        "title": "Cozy Apartment",
+        "description": "A nice apartment near HKU.",
+        "type": "APARTMENT",
+        "price": "4500.00",
+        "beds": 2,
+        "bedrooms": 1,
+        "available_from": "2025-04-01",
+        "available_to": "2025-12-31",
+        "region": "HK",
+        "reserved": false,
+        "formatted_address": "123 Main Street, Central, HK",
+        "building_name": "Grand Heights",
+        "userID": ""
+    }
 }
 ```
 
@@ -352,8 +338,14 @@ curl -X POST "http://127.0.0.1:8000/cancel_reservation/1/" \
 
 3. **距离计算**:
    - 距离基于香港大学的坐标计算（纬度：22.28143，经度：114.14006）。
+   - 使用Haversine公式计算直线距离。
 
-4. **错误处理**:
-   - 如果请求失败，API 将返回适当的错误消息和状态码。
+4. **内容协商**:
+   - 大多数端点支持基于Accept头或format查询参数的内容协商
+   - 使用 `Accept: application/json` 或 `format=json` 获取JSON响应
+
+5. **用户标识**:
+   - 预订和取消预订操作需要用户标识cookie（user_identifier）
+   - 系统会向用户和住房管理员发送确认邮件
 
 通过本文档，您可以轻松使用 UniHaven 项目的所有功能。

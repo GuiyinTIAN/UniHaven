@@ -16,6 +16,10 @@ class Accommodation(models.Model):
     available_from = models.DateField(null=True, blank=True)
     available_to = models.DateField(null=True, blank=True)
 
+    # 添加联系方式字段
+    contact_phone = models.CharField(max_length=20, blank=True, null=True)
+    contact_email = models.EmailField(blank=True, null=True)
+
     userID = models.CharField(max_length=255, blank=True, default="")
     #If reserved is true, the accommodation is reserved
     reserved = models.BooleanField(default=False)
