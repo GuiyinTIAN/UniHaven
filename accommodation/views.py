@@ -144,6 +144,7 @@ def add_accommodation(request):
 def list_accommodation(request):
     """列出所有住宿信息，并支持根据距离筛选"""
     accommodations = Accommodation.objects.all()
+    building_name = request.GET.get("building_name", "")
     accommodation_type = request.GET.get("type", "")
     region = request.GET.get("region", "")
     available_from = request.GET.get("available_from", "")
@@ -223,11 +224,12 @@ def list_accommodation(request):
     if request.headers.get('Accept') == 'application/json':
         accommodations_data = list(accommodations.values(
             'id', 'title', 'description', 'type', 'price', 'beds', 'bedrooms',
-            'available_from', 'available_to', 'region', 'distance'
+            'available_from', 'available_to', 'region', 'distance', 'building_name',
         ))
         return JsonResponse({'accommodations': accommodations_data})
 
     return render(request, 'accommodation/accommodation_list.html', {
+        "buildingName": building_name,
         'accommodations': accommodations,
         'accommodation_type': accommodation_type,
         'region': region,
