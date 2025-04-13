@@ -9,6 +9,8 @@ from django.db.models import Q, F, Func, FloatField, ExpressionWrapper
 from django.views.decorators.csrf import csrf_exempt
 from django.urls import reverse
 from django.core.mail import send_mail
+# ✅ 添加一个自定义 API 用于刪除住宿
+from django.views.decorators.http import require_http_methods
 import math
 
 HKU_LATITUDE = 22.28143  # 香港大学的纬度
@@ -402,3 +404,21 @@ def cancel_reservation(request, accommodation_id):
             return JsonResponse({'success': False, 'message': 'Accommodation not found.'}, status=404)
     else:
         return JsonResponse({'success': False, 'message': 'Invalid request method.'}, status=400)
+    
+
+@csrf_exempt
+@require_http_methods(["DELETE"])
+def delete_accommodation(request, accommodation_id):
+    """刪除住宿信息 API"""
+    try:
+        accommodation = Accommodation.objects.get(id=accommodation_id)
+        accommodation.delete()
+        return JsonResponse({
+            "success": True,
+            "message": f"Accommodation '{accommodation.title}' has been deleted."
+        })
+    except Accommodation.DoesNotExist:
+        return JsonResponse({
+            "success": False,
+            "message": "Accommodation not found."
+        }, status=404)
