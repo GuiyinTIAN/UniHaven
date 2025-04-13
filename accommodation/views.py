@@ -375,6 +375,15 @@ def cancel_reservation(request, accommodation_id):
                 recipient_list=[student_email],
             )
 
+            # Notify CEDARS Specialist about cancellation
+            specialist_email = "cedars@hku.hk"  
+            send_mail(
+                subject="[UniHaven] Reservation Cancelled",
+                message=f"Dear CEDARS,\n\nStudent {user_id} has cancelled their reservation for '{accommodation.title}'.\nNo further action is required.\n\nRegards,\nUniHaven System",
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[specialist_email],
+            )
+
             # 取消预订
             accommodation.reserved = False
             accommodation.userID = ""  # 重置用户 ID
