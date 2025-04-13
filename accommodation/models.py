@@ -15,13 +15,11 @@ class Accommodation(models.Model):
     price = models.DecimalField(max_digits=10, decimal_places=2)
     available_from = models.DateField(null=True, blank=True)
     available_to = models.DateField(null=True, blank=True)
-
-    # 添加联系方式字段
     contact_phone = models.CharField(max_length=20, blank=True, null=True)
     contact_email = models.EmailField(blank=True, null=True)
 
+    # userID is the ID for resevation and cancellation
     userID = models.CharField(max_length=255, blank=True, default="")
-    #If reserved is true, the accommodation is reserved
     reserved = models.BooleanField(default=False)
 
     building_name = models.CharField(max_length=200, default="", blank=True)
