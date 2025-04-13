@@ -1,3 +1,13 @@
+"""
+Views for the accommodation application.
+
+This module contains all the view functions and classes for the UniHaven accommodation system,
+organized by functional areas:
+- Home/index
+- Address lookup
+- Accommodation management (add, list, search, view)
+- Reservation operations (reserve, cancel)
+"""
 import requests
 import math
 from django.shortcuts import render, redirect, get_object_or_404
@@ -12,6 +22,11 @@ from rest_framework.decorators import api_view, parser_classes, renderer_classes
 from rest_framework.parsers import JSONParser, FormParser, MultiPartParser
 from rest_framework.renderers import JSONRenderer, TemplateHTMLRenderer
 from rest_framework.response import Response
+from rest_framework.views import APIView
+from rest_framework.generics import GenericAPIView
+
+from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiResponse
+from drf_spectacular.types import OpenApiTypes
 
 from .models import Accommodation
 from .forms import AccommodationForm
@@ -20,22 +35,77 @@ from .serializers import (
     AccommodationDetailSerializer,
     AccommodationListSerializer
 )
+from .response_serializers import (
+    MessageResponseSerializer,
+    AddressResponseSerializer,
+    SuccessResponseSerializer,
+    ErrorResponseSerializer,
+    ReservationResponseSerializer,
+    AccommodationListResponseSerializer
+)
 
-# Geographic coordinates of The University of Hong Kong
+#------------------------------------------------------------------------------
+# Constants and Configurations
+#------------------------------------------------------------------------------
+
+# Geographic coordinates of The University of Hong Kong (used for distance calculations)
 HKU_LATITUDE = 22.28143
 HKU_LONGITUDE = 114.14006
 
+#------------------------------------------------------------------------------
+# Home Page
+#------------------------------------------------------------------------------
+
+@extend_schema(
+    summary="Home Page",
+    description="Home page view function",
+    responses={200: MessageResponseSerializer}
+)
 @api_view(['GET'])
 @renderer_classes([JSONRenderer, TemplateHTMLRenderer])
 def index(request):
-    """Home page view function"""
+    """
+    Home page view function.
+    
+    Returns:
+        - HTML template if no specific format is requested
+        - JSON welcome message if JSON format is requested
+    """
     if request.accepted_renderer.format == 'json':
         return Response({"message": "Welcome to UniHaven!"})
     return Response({}, template_name='accommodation/index.html')
 
+#------------------------------------------------------------------------------
+# Address Lookup
+#------------------------------------------------------------------------------
+
+@extend_schema(
+    summary="Address Lookup",
+    description="Call Hong Kong government API to look up addresses",
+    parameters=[
+        OpenApiParameter(name="address", location=OpenApiParameter.QUERY, required=True, type=str)
+    ],
+    responses={
+        200: AddressResponseSerializer,
+        400: OpenApiResponse(description="Address parameter is required"),
+        404: OpenApiResponse(description="No results found"),
+        500: OpenApiResponse(description="API error")
+    }
+)
 @api_view(['GET'])
 def lookup_address(request):
-    """Call Hong Kong government API to look up addresses"""
+    """
+    Call Hong Kong government API to look up addresses.
+    
+    Uses the Address Lookup Service (ALS) from the Hong Kong government to
+    retrieve detailed information about an address, including geographic coordinates.
+    
+    Args:
+        request: HTTP request containing address query parameter
+        
+    Returns:
+        JSON response with address details in English and Chinese, plus geospatial information
+    """
     address = request.query_params.get("address", "")
     if not address:
         return Response({"error": "Address parameter is required"}, status=status.HTTP_400_BAD_REQUEST)
@@ -93,70 +163,124 @@ def lookup_address(request):
     except requests.RequestException as e:
         return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-@api_view(['GET', 'POST'])
+#------------------------------------------------------------------------------
+# Accommodation Management
+#------------------------------------------------------------------------------
+
+@extend_schema(
+    summary="Add Accommodation",
+    description="Add new accommodation information",
+    request=AccommodationSerializer,
+    responses={
+        201: SuccessResponseSerializer,
+        400: ErrorResponseSerializer,
+        500: ErrorResponseSerializer
+    }
+)
+@api_view(['POST'])
 @parser_classes([JSONParser, FormParser, MultiPartParser])
-@renderer_classes([JSONRenderer, TemplateHTMLRenderer])
+@renderer_classes([JSONRenderer])
 def add_accommodation(request):
-    """Add new accommodation information"""
-    if request.method == "POST":
-        serializer = AccommodationSerializer(data=request.data)
-        if serializer.is_valid():
-            accommodation = Accommodation()
-            
-            fields = ['title', 'description', 'type', 'price', 'beds', 
-                     'bedrooms', 'available_from', 'available_to',
-                     'contact_phone', 'contact_email']
-            
-            for field in fields:
-                if field in serializer.validated_data:
-                    setattr(accommodation, field, serializer.validated_data[field])
-            
-            address = serializer.validated_data['address']
-            api_url = f"https://www.als.gov.hk/lookup?q={address}&n=1"
-            headers = {"Accept": "application/json"}
-            
-            try:
-                response = requests.get(api_url, headers=headers)
-                response.raise_for_status()
-                data = response.json()
+    """
+    Add new accommodation information.
+    
+    Processes accommodation data submitted via POST request.
+    When a valid form is submitted, the address is geocoded using the HK government API.
+    
+    Args:
+        request: HTTP POST request containing accommodation data
+        
+    Returns:
+        - JSON confirmation message on success
+        - JSON error message on failure
+    """
+    serializer = AccommodationSerializer(data=request.data)
+    if serializer.is_valid():
+        accommodation = Accommodation()
+        
+        fields = ['title', 'description', 'type', 'price', 'beds', 
+                 'bedrooms', 'available_from', 'available_to',
+                 'contact_phone', 'contact_email']
+        
+        for field in fields:
+            if field in serializer.validated_data:
+                setattr(accommodation, field, serializer.validated_data[field])
+        
+        address = serializer.validated_data['address']
+        api_url = f"https://www.als.gov.hk/lookup?q={address}&n=1"
+        headers = {"Accept": "application/json"}
+        
+        try:
+            response = requests.get(api_url, headers=headers)
+            response.raise_for_status()
+            data = response.json()
 
-                if data and 'SuggestedAddress' in data and len(data['SuggestedAddress']) > 0:
-                    result = data['SuggestedAddress'][0]['Address']['PremisesAddress']
-                    geospatial_info = result.get("GeospatialInformation", {})
-                    eng_address = result.get("EngPremisesAddress", {})
+            if data and 'SuggestedAddress' in data and len(data['SuggestedAddress']) > 0:
+                result = data['SuggestedAddress'][0]['Address']['PremisesAddress']
+                geospatial_info = result.get("GeospatialInformation", {})
+                eng_address = result.get("EngPremisesAddress", {})
 
-                    accommodation.latitude = geospatial_info.get("Latitude", 0.0)
-                    accommodation.longitude = geospatial_info.get("Longitude", 0.0)
-                    accommodation.geo_address = result.get("GeoAddress", "")
-                    accommodation.building_name = eng_address.get("BuildingName", "")
-                    accommodation.estate_name = eng_address.get("EngEstate", {}).get("EstateName", "")
-                    accommodation.street_name = eng_address.get("EngStreet", {}).get("StreetName", "")
-                    accommodation.building_no = eng_address.get("EngStreet", {}).get("BuildingNoFrom", "")
-                    accommodation.district = eng_address.get("EngDistrict", {}).get("DcDistrict", "")
-                    accommodation.region = eng_address.get("Region", "")
+                accommodation.latitude = geospatial_info.get("Latitude", 0.0)
+                accommodation.longitude = geospatial_info.get("Longitude", 0.0)
+                accommodation.geo_address = result.get("GeoAddress", "")
+                accommodation.building_name = eng_address.get("BuildingName", "")
+                accommodation.estate_name = eng_address.get("EngEstate", {}).get("EstateName", "")
+                accommodation.street_name = eng_address.get("EngStreet", {}).get("StreetName", "")
+                accommodation.building_no = eng_address.get("EngStreet", {}).get("BuildingNoFrom", "")
+                accommodation.district = eng_address.get("EngDistrict", {}).get("DcDistrict", "")
+                accommodation.region = eng_address.get("Region", "")
 
-                accommodation.save()
-                return Response(
-                    {"success": True, "message": "Accommodation added successfully!"}, 
-                    status=status.HTTP_201_CREATED
-                )
-            except requests.RequestException as e:
-                return Response(
-                    {"success": False, "message": f"Error fetching geolocation: {str(e)}"}, 
-                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
-                )
-        else:
+            accommodation.save()
             return Response(
-                {"success": False, "errors": serializer.errors}, 
-                status=status.HTTP_400_BAD_REQUEST
+                {"success": True, "message": "Accommodation added successfully!"}, 
+                status=status.HTTP_201_CREATED
+            )
+        except requests.RequestException as e:
+            return Response(
+                {"success": False, "message": f"Error fetching geolocation: {str(e)}"}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
     else:
-        form = AccommodationForm()
-        return render(request, 'accommodation/add_accommodation.html', {'form': form})
+        return Response(
+            {"success": False, "errors": serializer.errors}, 
+            status=status.HTTP_400_BAD_REQUEST
+        )
 
+@extend_schema(
+    summary="List Accommodations",
+    description="List all accommodations with optional filters",
+    parameters=[
+        OpenApiParameter(name="type", description="Accommodation type", type=str, required=False),
+        OpenApiParameter(name="region", description="Region", type=str, required=False),
+        OpenApiParameter(name="available_from", description="Available from date", type=OpenApiTypes.DATE, required=False),
+        OpenApiParameter(name="available_to", description="Available to date", type=OpenApiTypes.DATE, required=False),
+        OpenApiParameter(name="min_beds", description="Minimum beds", type=int, required=False),
+        OpenApiParameter(name="min_bedrooms", description="Minimum bedrooms", type=int, required=False),
+        OpenApiParameter(name="max_price", description="Maximum price", type=float, required=False),
+        OpenApiParameter(name="distance", description="Maximum distance from HKU (km)", type=float, required=False),
+        OpenApiParameter(name="order_by_distance", description="Sort by distance", type=bool, required=False),
+        OpenApiParameter(name="format", description="Response format", type=str, required=False),
+    ],
+    responses={
+        200: AccommodationListResponseSerializer,
+    }
+)
 @api_view(['GET'])
 def list_accommodation(request):
-    """List all accommodations with optional distance-based filtering"""
+    """
+    List all accommodations with optional filters.
+    
+    Supports various filtering options including accommodation type, region, availability dates,
+    minimum beds/bedrooms, maximum price, and maximum distance from HKU.
+    Distance calculation uses the Haversine formula.
+    
+    Args:
+        request: HTTP request with optional filter parameters
+        
+    Returns:
+        - HTML listing page with filtered accommodations
+        - JSON list of accommodations if requested
+    """
     accommodations = Accommodation.objects.all()
     
     building_name = request.query_params.get("building_name", "")
@@ -227,7 +351,7 @@ def list_accommodation(request):
     if order_by_distance:
         accommodations = accommodations.order_by('distance')
 
-    if request.headers.get('Accept') == 'application/json':
+    if request.headers.get('Accept') == 'application/json' or request.query_params.get('format') == 'json':
         serializer = AccommodationListSerializer(accommodations, many=True)
         return Response({'accommodations': serializer.data})
 
@@ -245,29 +369,83 @@ def list_accommodation(request):
         'order_by_distance': order_by_distance,
     })
 
+@extend_schema(
+    summary="Search Accommodations",
+    description="Search for accommodations with at least one filter",
+    parameters=[
+        OpenApiParameter(name="type", description="Accommodation type", type=str, required=False),
+        OpenApiParameter(name="region", description="Region", type=str, required=False),
+        OpenApiParameter(name="available_from", description="Available from date", type=OpenApiTypes.DATE, required=False),
+        OpenApiParameter(name="available_to", description="Available to date", type=OpenApiTypes.DATE, required=False),
+        OpenApiParameter(name="min_beds", description="Minimum beds", type=int, required=False),
+        OpenApiParameter(name="min_bedrooms", description="Minimum bedrooms", type=int, required=False),
+        OpenApiParameter(name="max_price", description="Maximum price", type=float, required=False),
+        OpenApiParameter(name="distance", description="Maximum distance from HKU (km)", type=float, required=False),
+        OpenApiParameter(name="format", description="Response format", type=str, required=False),
+    ],
+    responses={
+        200: MessageResponseSerializer,
+        302: OpenApiResponse(description="Redirect to accommodation list")
+    }
+)
 @api_view(['GET'])
 def search_accommodation(request):
-    """Search for accommodations with filters"""
+    """
+    Search for accommodations with filters.
+    
+    This endpoint redirects to the list_accommodation view with the provided filters.
+    If no filters are provided, it returns a search form or a message.
+    
+    Args:
+        request: HTTP request with search parameters
+        
+    Returns:
+        - Redirect to list_accommodation with filters
+        - HTML search form if no filters provided
+        - JSON message if JSON format requested
+    """
     if request.GET and any(request.GET.values()):
-        # 始终使用重定向而不是直接调用函数，避免请求对象类型错误
         query_params = request.GET.urlencode()
-        if request.headers.get('Accept') == 'application/json':
-            # 添加一个标记参数以便接收端知道这是一个JSON请求
+        if request.headers.get('Accept') == 'application/json' or request.query_params.get('format') == 'json':
             return redirect(f"{reverse('list_accommodation')}?{query_params}&format=json")
         return redirect(f"{reverse('list_accommodation')}?{query_params}")
     
-    if request.headers.get('Accept') == 'application/json':
+    if request.headers.get('Accept') == 'application/json' or request.query_params.get('format') == 'json':
         return Response({"message": "Use GET with query parameters to search accommodations."})
     
     return render(request, 'accommodation/search_results.html')
 
+@extend_schema(
+    summary="Accommodation Details",
+    description="View accommodation details",
+    parameters=[
+        OpenApiParameter(name="id", location=OpenApiParameter.PATH, description="Accommodation ID", type=int, required=True)
+    ],
+    responses={
+        200: AccommodationDetailSerializer,
+        404: ErrorResponseSerializer
+    }
+)
 @api_view(['GET'])
-def accommodation_detail(request, pk):
-    """View accommodation details"""
-    try:
-        accommodation = get_object_or_404(Accommodation, pk=pk)
+def accommodation_detail(request, id):
+    """
+    View accommodation details.
+    
+    Retrieves and displays detailed information about a specific accommodation.
+    
+    Args:
+        request: HTTP request
+        id: Accommodation ID (primary key)
         
-        if request.headers.get('Accept') == 'application/json':
+    Returns:
+        - HTML detail page for the accommodation
+        - JSON accommodation data if JSON format requested
+        - 404 error if accommodation not found
+    """
+    try:
+        accommodation = get_object_or_404(Accommodation, pk=id)
+        
+        if request.headers.get('Accept') == 'application/json' or request.query_params.get('format') == 'json':
             serializer = AccommodationDetailSerializer(accommodation)
             return Response(serializer.data)
         
@@ -276,106 +454,167 @@ def accommodation_detail(request, pk):
     except Accommodation.DoesNotExist:
         return Response({'error': 'Accommodation not found.'}, status=status.HTTP_404_NOT_FOUND)
 
-@api_view(['POST'])
-def reserve_accommodation(request):
-    """Reserve an accommodation using query parameter id"""
-    accommodation_id = request.query_params.get('id')
-    if not accommodation_id:
-        return Response({'success': False, 'message': 'Accommodation ID is required'}, 
-                        status=status.HTTP_400_BAD_REQUEST)
+#------------------------------------------------------------------------------
+# Reservation Operations
+#------------------------------------------------------------------------------
+
+class ReservationView(GenericAPIView):
+    """
+    Class-based view for reservation operations.
     
-    user_id = request.COOKIES.get('user_identifier')
-    if not user_id:
-        return Response({'success': False, 'message': 'User ID is required.'}, 
-                        status=status.HTTP_400_BAD_REQUEST)
-
-    try:
-        accommodation = get_object_or_404(Accommodation, id=accommodation_id)
-
-        if accommodation.reserved:
-            return Response({
-                'success': False,
-                'message': f'Accommodation "{accommodation.title}" is already reserved by [{accommodation.userID}].'
-            }, status=status.HTTP_400_BAD_REQUEST)
-
-        accommodation.reserved = True
-        accommodation.userID = user_id
-        accommodation.save()
-
-        student_email = f"{user_id}@example.com"  
-        send_mail(
-            subject="Reservation Confirmed - UniHaven",
-            message=f"Hi {user_id},\n\nYour reservation for '{accommodation.title}' is confirmed.\nThank you!",
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[student_email],
-        )
-
-        specialist_email = "cedars@hku.hk"  
-        send_mail(
-            subject="[UniHaven] New Reservation Alert",
-            message=f"Dear CEDARS,\n\nStudent {user_id} has reserved the accommodation: '{accommodation.title}'.\nPlease follow up for contract processing.\n\nRegards,\nUniHaven System",
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[specialist_email],
-        )
-
-        serializer = AccommodationDetailSerializer(accommodation)
-        return Response({
-            'success': True,
-            'message': f'Accommodation "{accommodation.title}" has been reserved.',
-            'UserID': user_id,
-            'accommodation': serializer.data
-        })
-    except Accommodation.DoesNotExist:
-        return Response({'success': False, 'message': 'Accommodation not found.'}, 
-                        status=status.HTTP_404_NOT_FOUND)
-
-@api_view(['POST'])
-def cancel_reservation(request):
-    """Cancel an accommodation reservation using query parameter id"""
-    accommodation_id = request.query_params.get('id')
-    if not accommodation_id:
-        return Response({'success': False, 'message': 'Accommodation ID is required'}, 
-                        status=status.HTTP_400_BAD_REQUEST)
+    Handles accommodation reservation requests, which requires a user identifier
+    cookie to be present in the request. The system also sends confirmation emails
+    to both the student and the housing administrator.
+    """
+    serializer_class = ReservationResponseSerializer
     
-    user_id = request.COOKIES.get('user_identifier')
-    if not user_id:
-        return Response({'success': False, 'message': 'User ID is required.'}, 
-                        status=status.HTTP_400_BAD_REQUEST)
+    @extend_schema(
+        summary="Reserve Accommodation",
+        description="Reserve an accommodation using query parameter id",
+        parameters=[
+            OpenApiParameter(name="id", location=OpenApiParameter.QUERY, description="Accommodation ID", type=int, required=True)
+        ],
+        responses={
+            200: ReservationResponseSerializer,
+            400: ErrorResponseSerializer,
+            404: ErrorResponseSerializer
+        }
+    )
+    def post(self, request):
+        """
+        Reserve an accommodation using query parameter id.
+        
+        Args:
+            request: HTTP POST request with accommodation ID and user cookie
+            
+        Returns:
+            - Reservation confirmation with accommodation details
+            - Error responses for various failure conditions
+        """
+        accommodation_id = request.query_params.get('id')
+        if not accommodation_id:
+            return Response({'success': False, 'message': 'Accommodation ID is required'}, 
+                            status=status.HTTP_400_BAD_REQUEST)
+        
+        user_id = request.COOKIES.get('user_identifier')
+        if not user_id:
+            return Response({'success': False, 'message': 'User ID is required.'}, 
+                            status=status.HTTP_400_BAD_REQUEST)
 
-    try:
-        accommodation = get_object_or_404(Accommodation, id=accommodation_id)
+        try:
+            accommodation = get_object_or_404(Accommodation, id=accommodation_id)
 
-        if not accommodation.reserved:
+            if accommodation.reserved:
+                return Response({
+                    'success': False,
+                    'message': f'Accommodation "{accommodation.title}" is already reserved by [{accommodation.userID}].'
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+            accommodation.reserved = True
+            accommodation.userID = user_id
+            accommodation.save()
+
+            student_email = f"{user_id}@example.com"  
+            send_mail(
+                subject="Reservation Confirmed - UniHaven",
+                message=f"Hi {user_id},\n\nYour reservation for '{accommodation.title}' is confirmed.\nThank you!",
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[student_email],
+            )
+
+            specialist_email = "cedars@hku.hk"  
+            send_mail(
+                subject="[UniHaven] New Reservation Alert",
+                message=f"Dear CEDARS,\n\nStudent {user_id} has reserved the accommodation: '{accommodation.title}'.\nPlease follow up for contract processing.\n\nRegards,\nUniHaven System",
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[specialist_email],
+            )
+
+            serializer = AccommodationDetailSerializer(accommodation)
             return Response({
-                'success': False,
-                'message': f'Accommodation "{accommodation.title}" is not reserved.'
-            }, status=status.HTTP_400_BAD_REQUEST)
+                'success': True,
+                'message': f'Accommodation "{accommodation.title}" has been reserved.',
+                'UserID': user_id,
+                'accommodation': serializer.data
+            })
+        except Accommodation.DoesNotExist:
+            return Response({'success': False, 'message': 'Accommodation not found.'}, 
+                            status=status.HTTP_404_NOT_FOUND)
 
-        if str(accommodation.userID) != user_id:
+class CancellationView(GenericAPIView):
+    """
+    Class-based view for cancellation operations.
+    
+    Handles cancellation of accommodation reservations. The user can only cancel
+    reservations they have made themselves, identified by the user_identifier cookie.
+    """
+    serializer_class = ReservationResponseSerializer
+    
+    @extend_schema(
+        summary="Cancel Reservation",
+        description="Cancel an accommodation reservation using query parameter id",
+        parameters=[
+            OpenApiParameter(name="id", location=OpenApiParameter.QUERY, description="Accommodation ID", type=int, required=True)
+        ],
+        responses={
+            200: ReservationResponseSerializer,
+            400: ErrorResponseSerializer,
+            403: ErrorResponseSerializer,
+            404: ErrorResponseSerializer
+        }
+    )
+    def post(self, request):
+        
+        """Cancel an accommodation reservation using query parameter id."""
+
+        accommodation_id = request.query_params.get('id')
+        if not accommodation_id:
+            return Response({'success': False, 'message': 'Accommodation ID is required'}, 
+                            status=status.HTTP_400_BAD_REQUEST)
+        
+        user_id = request.COOKIES.get('user_identifier')
+        if not user_id:
+            return Response({'success': False, 'message': 'User ID is required.'}, 
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            accommodation = get_object_or_404(Accommodation, id=accommodation_id)
+
+            if not accommodation.reserved:
+                return Response({
+                    'success': False,
+                    'message': f'Accommodation "{accommodation.title}" is not reserved.'
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+            if str(accommodation.userID) != user_id:
+                return Response({
+                    'success': False,
+                    'message': f'You are not authorized to cancel this reservation. The accommodation can only be canceled by [{accommodation.userID}].'
+                }, status=status.HTTP_403_FORBIDDEN)
+
+            accommodation.reserved = False
+            accommodation.userID = ""
+            accommodation.save()
+
+            student_email = f"{user_id}@example.com"
+            send_mail(
+                subject="Reservation Cancelled - UniHaven",
+                message=f"Hi {user_id},\n\nYour reservation for '{accommodation.title}' has been cancelled.",
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[student_email],
+            )
+
+            serializer = AccommodationDetailSerializer(accommodation)
             return Response({
-                'success': False,
-                'message': f'You are not authorized to cancel this reservation. The accommodation can only be canceld by [{accommodation.userID}].'
-            }, status=status.HTTP_403_FORBIDDEN)
+                'success': True,
+                'message': f'Reservation for accommodation "{accommodation.title}" has been canceled.',
+                'UserID': user_id,
+                'accommodation': serializer.data
+            })
+        except Accommodation.DoesNotExist:
+            return Response({'success': False, 'message': 'Accommodation not found.'}, 
+                            status=status.HTTP_404_NOT_FOUND)
 
-        accommodation.reserved = False
-        accommodation.userID = ""
-        accommodation.save()
-
-        student_email = f"{user_id}@example.com"
-        send_mail(
-            subject="Reservation Cancelled - UniHaven",
-            message=f"Hi {user_id},\n\nYour reservation for '{accommodation.title}' has been cancelled.",
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[student_email],
-        )
-
-        serializer = AccommodationDetailSerializer(accommodation)
-        return Response({
-            'success': True,
-            'message': f'Reservation for accommodation "{accommodation.title}" has been canceled.',
-            'UserID': user_id,
-            'accommodation': serializer.data
-        })
-    except Accommodation.DoesNotExist:
-        return Response({'success': False, 'message': 'Accommodation not found.'}, 
-                        status=status.HTTP_404_NOT_FOUND)
+# Create view functions from class-based views
+reserve_accommodation = ReservationView.as_view()
+cancel_reservation = CancellationView.as_view()
