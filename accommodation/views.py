@@ -406,9 +406,22 @@ def cancel_reservation(request, accommodation_id):
     
 
 @csrf_exempt
-@require_http_methods(["POST"])  
-def delete_accommodation(request, accommodation_id):
-    """删除住宿信息 API（使用 POST 方法）"""
+@require_http_methods(["POST"])
+def delete_accommodation(request):
+    """删除住宿信息"""
+    if request.headers.get('Content-Type') == 'application/json':
+        import json
+        try:
+            data = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({"success": False, "message": "Invalid JSON data."}, status=400)
+    else:
+        data = request.POST
+
+    accommodation_id = data.get("id")
+    if not accommodation_id:
+        return JsonResponse({"success": False, "message": "Accommodation ID is required."}, status=400)
+
     try:
         accommodation = Accommodation.objects.get(id=accommodation_id)
         accommodation.delete()
