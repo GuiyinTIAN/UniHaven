@@ -5,18 +5,23 @@ from django.conf import settings
 from .models import Accommodation
 from .forms import AccommodationForm
 from django.utils.dateparse import parse_date
-from django.db.models import Q
+from django.db.models import Q, F, Func, FloatField, ExpressionWrapper
+from django.views.decorators.csrf import csrf_exempt
 from django.urls import reverse
-from django.db.models import F, Func, FloatField, ExpressionWrapper
+from django.core.mail import send_mail
 import math
-HKU_latitude = 22.28143
-HKU_longitude = 114.14006
+
+HKU_LATITUDE = 22.28143  # 香港大学的纬度
+HKU_LONGITUDE = 114.14006  # 香港大学的经度
+
 def index(request):
     """首页视图函数"""
+    if request.headers.get('Accept') == 'application/json':
+        return JsonResponse({"message": "Welcome to UniHaven!"})
     return render(request, 'accommodation/index.html')
 
-# test API
 def lookup_address(request):
+    """调用香港政府 API 查找地址"""
     address = request.GET.get("address", "")
     if not address:
         return JsonResponse({"error": "Address parameter is required"}, status=400)
@@ -28,7 +33,6 @@ def lookup_address(request):
     try:
         response = requests.get(api_url, headers=headers)
         response.raise_for_status()
-
         response.encoding = 'utf-8'
 
         try:
@@ -40,60 +44,35 @@ def lookup_address(request):
                 geospatial_info = result.get("GeospatialInformation", {})
                 geo_address = result.get("GeoAddress", "")
 
-                # English address information
-                eng_building_name = eng_address.get("BuildingName", "")
-                eng_estate_name = eng_address.get("EngEstate", {}).get("EstateName", "")
-                eng_street_name = eng_address.get("EngStreet", {}).get("StreetName", "")
-                eng_building_no = eng_address.get("EngStreet", {}).get("BuildingNoFrom", "")
-                eng_district = eng_address.get("EngDistrict", {}).get("DcDistrict", "")
-                eng_region = eng_address.get("Region", "")
-
-                # Chinese address information
-                chi_building_name = chi_address.get("BuildingName", "")
-                chi_estate_name = chi_address.get("ChiEstate", {}).get("EstateName", "")
-                chi_street_name = chi_address.get("ChiStreet", {}).get("StreetName", "")
-                chi_building_no = chi_address.get("ChiStreet", {}).get("BuildingNoFrom", "")
-                chi_district = chi_address.get("ChiDistrict", {}).get("DcDistrict", "")
-                chi_region = chi_address.get("Region", "")
-
-                # Geospatial information
-                latitude = geospatial_info.get("Latitude", None)
-                longitude = geospatial_info.get("Longitude", None)
-                northing = geospatial_info.get("Northing", None)
-                easting = geospatial_info.get("Easting", None)
-
+                # 返回地址信息
                 return JsonResponse({
                     "EnglishAddress": {
-                        "BuildingName": eng_building_name,
-                        "EstateName": eng_estate_name,
-                        "StreetName": eng_street_name,
-                        "BuildingNo": eng_building_no,
-                        "District": eng_district,
-                        "Region": eng_region
+                        "BuildingName": eng_address.get("BuildingName", ""),
+                        "EstateName": eng_address.get("EngEstate", {}).get("EstateName", ""),
+                        "StreetName": eng_address.get("EngStreet", {}).get("StreetName", ""),
+                        "BuildingNo": eng_address.get("EngStreet", {}).get("BuildingNoFrom", ""),
+                        "District": eng_address.get("EngDistrict", {}).get("DcDistrict", ""),
+                        "Region": eng_address.get("Region", "")
                     },
                     "ChineseAddress": {
-                        "BuildingName": chi_building_name,
-                        "EstateName": chi_estate_name,
-                        "StreetName": chi_street_name,
-                        "BuildingNo": chi_building_no,
-                        "District": chi_district,
-                        "Region": chi_region
+                        "BuildingName": chi_address.get("BuildingName", ""),
+                        "EstateName": chi_address.get("ChiEstate", {}).get("EstateName", ""),
+                        "StreetName": chi_address.get("ChiStreet", {}).get("StreetName", ""),
+                        "BuildingNo": chi_address.get("ChiStreet", {}).get("BuildingNoFrom", ""),
+                        "District": chi_address.get("ChiDistrict", {}).get("DcDistrict", ""),
+                        "Region": chi_address.get("Region", "")
                     },
                     "GeospatialInformation": {
-                        "Latitude": latitude,
-                        "Longitude": longitude,
-                        "Northing": northing,
-                        "Easting": easting,
+                        "Latitude": geospatial_info.get("Latitude", None),
+                        "Longitude": geospatial_info.get("Longitude", None),
+                        "Northing": geospatial_info.get("Northing", None),
+                        "Easting": geospatial_info.get("Easting", None),
                         "GeoAddress": geo_address
                     }
                 }, json_dumps_params={'ensure_ascii': False})
             else:
                 return JsonResponse({"error": "No results found"}, status=404)
         except ValueError:
-            # debugging
-            print("Response Text (Debug):", response.text)
-            # debugging
-            print("Response Text (Debug):", response.text)
             return JsonResponse({"error": "Invalid JSON response from API"}, status=500)
 
     except requests.HTTPError as e:
@@ -101,13 +80,27 @@ def lookup_address(request):
     except requests.RequestException as e:
         return JsonResponse({"error": str(e)}, status=500)
 
+@csrf_exempt
 def add_accommodation(request):
+    """添加住宿信息"""
     if request.method == "POST":
-        form = AccommodationForm(request.POST)
+        if request.headers.get('Content-Type') == 'application/json':
+            # 解析 JSON 数据
+            import json
+            try:
+                data = json.loads(request.body)
+            except json.JSONDecodeError:
+                return JsonResponse({"success": False, "message": "Invalid JSON data."}, status=400)
+        else:
+            # 解析表单数据
+            data = request.POST
+
+        form = AccommodationForm(data)
         if form.is_valid():
             accommodation = form.save(commit=False)
             address = form.cleaned_data['address']
 
+            # 调用地址查找 API
             api_url = f"https://www.als.gov.hk/lookup?q={address}&n=1"
             headers = {"Accept": "application/json"}
             try:
@@ -132,16 +125,26 @@ def add_accommodation(request):
                     accommodation.region = eng_address.get("Region", "")
 
                 accommodation.save()
-                return redirect('add_accommodation')
+
+                # 默认返回 JSON 响应
+                return JsonResponse({"success": True, "message": "Accommodation added successfully!"})
             except requests.RequestException as e:
                 form.add_error(None, f"Error fetching geolocation: {str(e)}")
+        else:
+            # 返回错误响应
+            return JsonResponse({"success": False, "errors": form.errors}, status=400)
+
     else:
         form = AccommodationForm()
 
+    # 默认返回 HTML 页面
     return render(request, 'accommodation/add_accommodation.html', {'form': form})
 
+
 def list_accommodation(request):
+    """列出所有住宿信息，并支持根据距离筛选"""
     accommodations = Accommodation.objects.all()
+    building_name = request.GET.get("building_name", "")
     accommodation_type = request.GET.get("type", "")
     region = request.GET.get("region", "")
     available_from = request.GET.get("available_from", "")
@@ -150,6 +153,8 @@ def list_accommodation(request):
     min_bedrooms = request.GET.get("min_bedrooms", "")
     max_price = request.GET.get("max_price", "")
     max_distance = request.GET.get("distance", "")
+    order_by_distance = request.GET.get("order_by_distance", "false").lower() == "true"
+    max_distance = request.GET.get("distance", "")  # 最大距离（公里）
     order_by_distance = request.GET.get("order_by_distance", "false").lower() == "true"
 
     # 过滤房源类型
@@ -185,25 +190,6 @@ def list_accommodation(request):
         accommodations = accommodations.filter(price__lte=max_price)
     
         # Calculate distance dynamically and filter
-    accommodations = accommodations.annotate(
-        distance=ExpressionWrapper(
-            Func(
-                Func(
-                    (F('longitude') - HKU_longitude) * math.pi / 180 *
-                    Func((F('latitude') + HKU_latitude) / 2 * math.pi / 180, function='COS'),
-                    function='POW',
-                    template="%(function)s(%(expressions)s, 2)"
-                ) +
-                Func(
-                    (F('latitude') - HKU_latitude) * math.pi / 180,
-                    function='POW',
-                    template="%(function)s(%(expressions)s, 2)"
-                ),
-                function='SQRT',
-            ) * 6371,  # Earth's radius in kilometers
-            output_field=FloatField(),
-        )
-    )
 
     # Filter by max_distance if provided
     if max_distance:
@@ -214,7 +200,90 @@ def list_accommodation(request):
     if order_by_distance:
         accommodations = accommodations.order_by('distance')
 
+    # 根据距离计算并筛选
+    accommodations = accommodations.annotate(
+        distance=ExpressionWrapper(
+            Func(
+                Func(
+                    (F('longitude') - HKU_LONGITUDE) * math.pi / 180 *
+                    Func((F('latitude') + HKU_LATITUDE) / 2 * math.pi / 180, function='COS'),
+                    function='POW',
+                    template="%(function)s(%(expressions)s, 2)"
+                ) +
+                Func(
+                    (F('latitude') - HKU_LATITUDE) * math.pi / 180,
+                    function='POW',
+                    template="%(function)s(%(expressions)s, 2)"
+                ),
+                function='SQRT',
+            ) * 6371,  # 地球半径（公里）
+            output_field=FloatField(),
+        )
+    )
+
+    # 根据最大距离筛选
+    if max_distance:
+        try:
+            max_distance = float(max_distance)
+            accommodations = accommodations.filter(distance__lte=max_distance)
+        except ValueError:
+            pass
+
+    # 按距离排序
+    if order_by_distance:
+        accommodations = accommodations.order_by('distance')
+
+    # 返回 JSON 或 HTML 响应
+    if request.headers.get('Accept') == 'application/json':
+        accommodations_data = list(accommodations.values(
+            'id', 'title', 'description', 'type', 'price', 'beds', 'bedrooms',
+            'available_from', 'available_to', 'region', 'distance', 'building_name',
+        ))
+        return JsonResponse({'accommodations': accommodations_data})
+
+    # 根据距离计算并筛选
+    accommodations = accommodations.annotate(
+        distance=ExpressionWrapper(
+            Func(
+                Func(
+                    (F('longitude') - HKU_LONGITUDE) * math.pi / 180 *
+                    Func((F('latitude') + HKU_LATITUDE) / 2 * math.pi / 180, function='COS'),
+                    function='POW',
+                    template="%(function)s(%(expressions)s, 2)"
+                ) +
+                Func(
+                    (F('latitude') - HKU_LATITUDE) * math.pi / 180,
+                    function='POW',
+                    template="%(function)s(%(expressions)s, 2)"
+                ),
+                function='SQRT',
+            ) * 6371,  # 地球半径（公里）
+            output_field=FloatField(),
+        )
+    )
+
+    # 根据最大距离筛选
+    if max_distance:
+        try:
+            max_distance = float(max_distance)
+            accommodations = accommodations.filter(distance__lte=max_distance)
+        except ValueError:
+            pass
+
+    # 按距离排序
+    if order_by_distance:
+        accommodations = accommodations.order_by('distance')
+
+    # 返回 JSON 或 HTML 响应
+    if request.headers.get('Accept') == 'application/json':
+        accommodations_data = list(accommodations.values(
+            'id', 'title', 'description', 'type', 'price', 'beds', 'bedrooms',
+            'available_from', 'available_to', 'region', 'distance', 'building_name',
+        ))
+        return JsonResponse({'accommodations': accommodations_data})
+
     return render(request, 'accommodation/accommodation_list.html', {
+        "buildingName": building_name,
         'accommodations': accommodations,
         'accommodation_type': accommodation_type,
         'region': region,
@@ -225,39 +294,55 @@ def list_accommodation(request):
         'max_price': max_price,
         'max_distance': max_distance,
         'order_by_distance': order_by_distance,
+        'max_distance': max_distance,
+        'order_by_distance': order_by_distance,
     })
+
 
 
 def search_accommodation(request):
+    """搜索住宿信息"""
     if request.GET and any(request.GET.values()):
+        # 如果请求头为 JSON，直接返回住宿信息
+        if request.headers.get('Accept') == 'application/json':
+            return list_accommodation(request)
+        # 否则重定向到列表页面
         query_params = request.GET.urlencode()
         return redirect(f"{reverse('list_accommodation')}?{query_params}")
-    else:
-        return render(request, 'accommodation/search_results.html')
+    if request.headers.get('Accept') == 'application/json':
+        return JsonResponse({"message": "Use GET with query parameters to search accommodations."})
+    return render(request, 'accommodation/search_results.html')
 
 
 def accommodation_detail(request, pk):
-    # Get the accommodation object based on the primary key
-    accommodation = Accommodation.objects.get(pk=pk)
-    
-    # If the form is submitted
-    if request.method == 'POST':
-        form = AccommodationForm(request.POST, instance=accommodation)
-        
-        if form.is_valid():
-            form.save()  # Save the form data to update the reservation status
-            return redirect('accommodation_list')  # Redirect after saving
-    else:
-        form = AccommodationForm(instance=accommodation)
+    """查看住宿详情"""
+    try:
+        accommodation = Accommodation.objects.get(pk=pk)
+        if request.headers.get('Accept') == 'application/json':
+            return JsonResponse({
+                "id": accommodation.id,
+                "title": accommodation.title,
+                "description": accommodation.description,
+                "type": accommodation.type,
+                "price": accommodation.price,
+                "beds": accommodation.beds,
+                "bedrooms": accommodation.bedrooms,
+                "available_from": accommodation.available_from,
+                "available_to": accommodation.available_to,
+                "region": accommodation.region,
+                "reserved": accommodation.reserved,
+                "formatted_address": accommodation.formatted_address(),
+            })
+        return render(request, 'accommodation/accommodation_detail.html', {'accommodation': accommodation})
+    except Accommodation.DoesNotExist:
+        if request.headers.get('Accept') == 'application/json':
+            return JsonResponse({'error': 'Accommodation not found.'}, status=404)
 
-    return render(request, 'accommodation/accommodation_detail.html', {
-        'accommodation': accommodation,
-        'form': form
-    })
-
+@csrf_exempt
 def reserve_accommodation(request, accommodation_id):
+    """预订住宿"""
     if request.method == 'POST':
-        user_id = request.COOKIES.get('user_identifier')  # Retrieve the userID from cookies
+        user_id = request.COOKIES.get('user_identifier')  # 从 Cookie 获取用户 ID
 
         if not user_id:
             return JsonResponse({'success': False, 'message': 'User ID is required.'}, status=400)
@@ -271,14 +356,33 @@ def reserve_accommodation(request, accommodation_id):
                     'message': f'Accommodation "{accommodation.title}" is already reserved.'
                 }, status=400)
 
-            # Reserve the accommodation
+            # 预订住宿
             accommodation.reserved = True
-            accommodation.userID = user_id  # Associate the reservation with the user
+            accommodation.userID = user_id  # 关联用户
             accommodation.save()
+
+            # Confirmation Email to Student
+            student_email = f"{user_id}@example.com"  
+            send_mail(
+                subject="Reservation Confirmed - UniHaven",
+                message=f"Hi {user_id},\n\nYour reservation for '{accommodation.title}' is confirmed.\nThank you!",
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[student_email],
+            )
+
+            # Notify CEDARS Specialist 
+            specialist_email = "cedars@hku.hk"  
+            send_mail(
+                subject="[UniHaven] New Reservation Alert",
+                message=f"Dear CEDARS,\n\nStudent {user_id} has reserved the accommodation: '{accommodation.title}'.\nPlease follow up for contract processing.\n\nRegards,\nUniHaven System",
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[specialist_email],
+            )
 
             return JsonResponse({
                 'success': True,
                 'message': f'Accommodation "{accommodation.title}" has been reserved.',
+                'UserID': user_id,
                 'accommodation': {
                     'id': accommodation.id,
                     'reserved': accommodation.reserved
@@ -288,10 +392,12 @@ def reserve_accommodation(request, accommodation_id):
             return JsonResponse({'success': False, 'message': 'Accommodation not found.'}, status=404)
     else:
         return JsonResponse({'success': False, 'message': 'Invalid request method.'}, status=400)
-    
+
+@csrf_exempt
 def cancel_reservation(request, accommodation_id):
+    """取消预订"""
     if request.method == 'POST':
-        user_id = request.COOKIES.get('user_identifier')  # Retrieve the userID from cookies
+        user_id = request.COOKIES.get('user_identifier')  # 从 Cookie 获取用户 ID
 
         if not user_id:
             return JsonResponse({'success': False, 'message': 'User ID is required.'}, status=400)
@@ -305,7 +411,7 @@ def cancel_reservation(request, accommodation_id):
                     'message': f'Accommodation "{accommodation.title}" is not reserved.'
                 }, status=400)
 
-            if str(accommodation.userID) != user_id:  # Check if the userID matches
+            if str(accommodation.userID) != user_id:  # 检查用户 ID 是否匹配
                 return JsonResponse({
                     'success': False,
                     'message': 'You are not authorized to cancel this reservation.'
@@ -316,9 +422,34 @@ def cancel_reservation(request, accommodation_id):
             accommodation.userID = ""  # Reset the userID
             accommodation.save()
 
+
+            # Email to Student
+            student_email = f"{user_id}@example.com"
+            send_mail(
+                subject="Reservation Cancelled - UniHaven",
+                message=f"Hi {user_id},\n\nYour reservation for '{accommodation.title}' has been cancelled.",
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[student_email],
+            )
+
+            # Notify CEDARS Specialist about cancellation
+            specialist_email = "cedars@hku.hk"  
+            send_mail(
+                subject="[UniHaven] Reservation Cancelled",
+                message=f"Dear CEDARS,\n\nStudent {user_id} has cancelled their reservation for '{accommodation.title}'.\nNo further action is required.\n\nRegards,\nUniHaven System",
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[specialist_email],
+            )
+
+            # 取消预订
+            accommodation.reserved = False
+            accommodation.userID = ""  # 重置用户 ID
+            accommodation.save()
+
             return JsonResponse({
                 'success': True,
                 'message': f'Reservation for accommodation "{accommodation.title}" has been canceled.',
+                'UserID': user_id,
                 'accommodation': {
                     'id': accommodation.id,
                     'reserved': accommodation.reserved
