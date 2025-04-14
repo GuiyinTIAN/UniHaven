@@ -9,7 +9,6 @@ from django.db.models import Q, F, Func, FloatField, ExpressionWrapper
 from django.views.decorators.csrf import csrf_exempt
 from django.urls import reverse
 from django.core.mail import send_mail
-# ✅ 添加一个自定义 API 用于刪除住宿
 from django.views.decorators.http import require_http_methods
 import math
 
@@ -407,9 +406,9 @@ def cancel_reservation(request, accommodation_id):
     
 
 @csrf_exempt
-@require_http_methods(["DELETE"])
+@require_http_methods(["POST"])  
 def delete_accommodation(request, accommodation_id):
-    """刪除住宿信息 API"""
+    """删除住宿信息 API（使用 POST 方法）"""
     try:
         accommodation = Accommodation.objects.get(id=accommodation_id)
         accommodation.delete()
