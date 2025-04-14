@@ -11,8 +11,13 @@ from django.urls import reverse
 from django.core.mail import send_mail
 import math
 
-HKU_LATITUDE = 22.28143  # 香港大学的纬度
-HKU_LONGITUDE = 114.14006  # 香港大学的经度
+CAMPUS_LOCATIONS = {
+    "main": {"latitude": 22.28405, "longitude": 114.13784},
+    "sassoon": {"latitude": 22.2675, "longitude": 114.12881},
+    "swire": {"latitude": 22.20805, "longitude": 114.26021},
+    "kadoorie": {"latitude": 22.43022, "longitude": 114.11429},
+    "dentistry": {"latitude": 22.28649, "longitude": 114.14426},
+}
 
 def index(request):
     """首页视图函数"""
@@ -154,9 +159,13 @@ def list_accommodation(request):
     max_price = request.GET.get("max_price", "")
     max_distance = request.GET.get("distance", "")
     order_by_distance = request.GET.get("order_by_distance", "false").lower() == "true"
-    max_distance = request.GET.get("distance", "")  # 最大距离（公里）
-    order_by_distance = request.GET.get("order_by_distance", "false").lower() == "true"
+    campus = request.GET.get("campus", "main")  # Default to "main" campus
 
+    # Get selected campus coordinates
+    campus_coords = CAMPUS_LOCATIONS[campus]
+    campus_latitude = campus_coords["latitude"]
+    campus_longitude = campus_coords["longitude"]
+    print(f"Campus Coordinates: {campus_latitude}, {campus_longitude}")
     # 过滤房源类型
     if accommodation_type:
         accommodations = accommodations.filter(type=accommodation_type)
@@ -190,7 +199,25 @@ def list_accommodation(request):
         accommodations = accommodations.filter(price__lte=max_price)
     
         # Calculate distance dynamically and filter
-
+    accommodations = accommodations.annotate(
+        distance=ExpressionWrapper(
+            Func(
+                Func(
+                    (F('longitude') - campus_longitude) * math.pi / 180 *
+                    Func((F('latitude') + campus_latitude) / 2 * math.pi / 180, function='COS'),
+                    function='POW',
+                    template="%(function)s(%(expressions)s, 2)"
+                ) +
+                Func(
+                    (F('latitude') - campus_latitude) * math.pi / 180,
+                    function='POW',
+                    template="%(function)s(%(expressions)s, 2)"
+                ),
+                function='SQRT',
+            ) * 6371,  # 地球半径（公里）
+            output_field=FloatField(),
+        )
+    )
     # Filter by max_distance if provided
     if max_distance:
         max_distance = float(max_distance)
@@ -200,79 +227,8 @@ def list_accommodation(request):
     if order_by_distance:
         accommodations = accommodations.order_by('distance')
 
-    # 根据距离计算并筛选
-    accommodations = accommodations.annotate(
-        distance=ExpressionWrapper(
-            Func(
-                Func(
-                    (F('longitude') - HKU_LONGITUDE) * math.pi / 180 *
-                    Func((F('latitude') + HKU_LATITUDE) / 2 * math.pi / 180, function='COS'),
-                    function='POW',
-                    template="%(function)s(%(expressions)s, 2)"
-                ) +
-                Func(
-                    (F('latitude') - HKU_LATITUDE) * math.pi / 180,
-                    function='POW',
-                    template="%(function)s(%(expressions)s, 2)"
-                ),
-                function='SQRT',
-            ) * 6371,  # 地球半径（公里）
-            output_field=FloatField(),
-        )
-    )
 
-    # 根据最大距离筛选
-    if max_distance:
-        try:
-            max_distance = float(max_distance)
-            accommodations = accommodations.filter(distance__lte=max_distance)
-        except ValueError:
-            pass
 
-    # 按距离排序
-    if order_by_distance:
-        accommodations = accommodations.order_by('distance')
-
-    # 返回 JSON 或 HTML 响应
-    if request.headers.get('Accept') == 'application/json':
-        accommodations_data = list(accommodations.values(
-            'id', 'title', 'description', 'type', 'price', 'beds', 'bedrooms',
-            'available_from', 'available_to', 'region', 'distance', 'building_name',
-        ))
-        return JsonResponse({'accommodations': accommodations_data})
-
-    # 根据距离计算并筛选
-    accommodations = accommodations.annotate(
-        distance=ExpressionWrapper(
-            Func(
-                Func(
-                    (F('longitude') - HKU_LONGITUDE) * math.pi / 180 *
-                    Func((F('latitude') + HKU_LATITUDE) / 2 * math.pi / 180, function='COS'),
-                    function='POW',
-                    template="%(function)s(%(expressions)s, 2)"
-                ) +
-                Func(
-                    (F('latitude') - HKU_LATITUDE) * math.pi / 180,
-                    function='POW',
-                    template="%(function)s(%(expressions)s, 2)"
-                ),
-                function='SQRT',
-            ) * 6371,  # 地球半径（公里）
-            output_field=FloatField(),
-        )
-    )
-
-    # 根据最大距离筛选
-    if max_distance:
-        try:
-            max_distance = float(max_distance)
-            accommodations = accommodations.filter(distance__lte=max_distance)
-        except ValueError:
-            pass
-
-    # 按距离排序
-    if order_by_distance:
-        accommodations = accommodations.order_by('distance')
 
     # 返回 JSON 或 HTML 响应
     if request.headers.get('Accept') == 'application/json':
