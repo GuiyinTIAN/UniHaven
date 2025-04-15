@@ -699,7 +699,7 @@ class CancellationView(GenericAPIView):
         
 @extend_schema(
     summary="Rate Accommodation",
-    description="Rate an accommodation with a value between 0 and 5",
+    description="Rate an accommodation with a value between 0 and 5. Requires userid and rating as query parameters.",
     parameters=[
         OpenApiParameter(
             name="accommodation_id",
@@ -707,9 +707,22 @@ class CancellationView(GenericAPIView):
             description="ID of the accommodation to rate",
             type=int,
             required=True
+        ),
+        OpenApiParameter(
+            name="rating",
+            location=OpenApiParameter.QUERY,
+            description="Rating value (0 to 5)",
+            type=int,
+            required=True
+        ),
+        OpenApiParameter(
+            name="userid",
+            location=OpenApiParameter.QUERY,
+            description="Unique identifier for the user",
+            type=str,
+            required=True
         )
     ],
-    request=RatingSerializer,
     responses={
         200: SuccessResponseSerializer,
         400: ErrorResponseSerializer,
@@ -719,9 +732,8 @@ class CancellationView(GenericAPIView):
 @api_view(['POST'])
 @parser_classes([JSONParser, FormParser])
 def rate_accommodation(request, accommodation_id):
-    """Rate an accommodation with user verification"""
-    # Check user_identifier cookie
-    user_id = request.COOKIES.get('user_identifier')
+    """Rate an accommodation with userid verification"""
+    user_id = request.query_params.get('userid')
     if not user_id:
         return Response(
             {"success": False, "message": "User ID is required."},
