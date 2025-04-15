@@ -33,6 +33,8 @@ class Accommodation(models.Model):
     geo_address = models.CharField(max_length=200, blank=True)
 
     rating = models.FloatField(default=0.0, blank=True)
+    rating_count = models.IntegerField(default=0, blank=True)
+    rating_sum = models.FloatField(default=0.0, blank=True)
 
     def formatted_address(self):
         parts = [
