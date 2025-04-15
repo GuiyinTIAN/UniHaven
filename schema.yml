@@ -1,0 +1,792 @@
+openapi: 3.0.3
+info:
+  title: UniHaven API
+  version: 1.0.0
+  description: API for the UniHaven off-campus accommodation platform
+paths:
+  /api/:
+    get:
+      operationId: api_retrieve
+      description: Home page view function
+      summary: Home Page
+      parameters:
+      - in: query
+        name: format
+        schema:
+          type: string
+          enum:
+          - html
+          - json
+      tags:
+      - api
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+            text/html:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+          description: ''
+  /api/accommodation_detail/{id}/:
+    get:
+      operationId: api_accommodation_detail_retrieve
+      description: View accommodation details
+      summary: Accommodation Details
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: Accommodation ID
+        required: true
+      tags:
+      - api
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccommodationDetail'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/add-accommodation/:
+    post:
+      operationId: api_add_accommodation_create
+      description: Add new accommodation information
+      summary: Add Accommodation
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Accommodation'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Accommodation'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Accommodation'
+        required: true
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '500':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/cancel_reservation/{id}/:
+    post:
+      operationId: api_cancel_reservation_create
+      description: Cancel a specific accommodation reservation.
+      summary: Cancel Accommodation by ID
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: integer
+          required: true
+          description: The ID of the accommodation to cancel.
+        - in: cookie
+          name: user_identifier
+          schema:
+            type: string
+          required: true
+          description: The identifier of the user making the cancellation request.
+      tags:
+        - api
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: Successfully canceled the reservation.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Reservation for accommodation 'Beautiful Garden' has been canceled.
+                  accommodation:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                        example: 8
+                      reserved:
+                        type: boolean
+                        example: false
+        # '400':
+        #   description: Invalid request or missing parameters.
+        #   content:
+        #     application/json:
+        #       schema:
+        #         $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Unauthorized to cancel this reservation.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: You are not authorized to cancel this reservation.
+        '404':
+          description: Accommodation not found.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: page not found.
+
+  /api/delete-accommodation/:
+    post:
+      operationId: api_delete_accommodation_create
+      description: Delete an accommodation by ID using POST method
+      summary: Delete Accommodation
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeleteAccommodationRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/list-accommodation/:
+    get:
+      operationId: api_list_accommodation_retrieve
+      description: List all accommodations with optional filters
+      summary: List Accommodations
+      parameters:
+      - in: query
+        name: available_from
+        schema:
+          type: string
+          format: date
+        description: Available from date
+      - in: query
+        name: available_to
+        schema:
+          type: string
+          format: date
+        description: Available to date
+      - in: query
+        name: distance
+        schema:
+          type: number
+          format: double
+        description: Maximum distance from HKU (km)
+      - in: query
+        name: format
+        schema:
+          type: string
+        description: Response format
+      - in: query
+        name: max_price
+        schema:
+          type: number
+          format: double
+        description: Maximum price
+      - in: query
+        name: min_bedrooms
+        schema:
+          type: integer
+        description: Minimum bedrooms
+      - in: query
+        name: min_beds
+        schema:
+          type: integer
+        description: Minimum beds
+      - in: query
+        name: order_by_distance
+        schema:
+          type: boolean
+        description: Sort by distance
+      - in: query
+        name: region
+        schema:
+          type: string
+        description: Region
+      - in: query
+        name: type
+        schema:
+          type: string
+        description: Accommodation type
+      tags:
+      - api
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccommodationListResponse'
+          description: ''
+  /api/lookup-address/:
+    get:
+      operationId: api_lookup_address_retrieve
+      description: Call Hong Kong government API to look up addresses
+      summary: Address Lookup
+      parameters:
+      - in: query
+        name: address
+        schema:
+          type: string
+        required: true
+      tags:
+      - api
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AddressResponse'
+          description: ''
+        '400':
+          description: Address parameter is required
+        '404':
+          description: No results found
+        '500':
+          description: API error
+  /api/rate/{accommodation_id}/:
+    post:
+      operationId: api_rate_create
+      description: Rate an accommodation with a value between 0 and 5
+      summary: Rate Accommodation
+      parameters:
+      - in: path
+        name: accommodation_id
+        schema:
+          type: integer
+        description: ID of the accommodation to rate
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Rating'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Rating'
+        required: true
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+  /api/reserve_accommodation/{id}/:
+    post:
+      operationId: reserve_accommodation_create
+      description: Reserves a specific accommodation.
+      summary: Reserve Accommodation by ID
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: integer
+          required: true
+          description: The ID of the accommodation to reserve.
+        - in: cookie
+          name: user_identifier
+          schema:
+            type: string
+          required: true
+          description: The identifier of the user making the reservation.
+      tags:
+        - api
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: Successfully reserved the accommodation.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Accommodation 'Beautiful Garden' has been reserved.
+                  accommodation:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                        example: 8
+                      reserved:
+                        type: boolean
+                        example: true
+      
+        # '400':
+        #   description: Invalid request or missing parameters.
+        #   content:
+        #     application/json:
+        #       schema:
+        #         $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized to reserve the accommodation.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: You are not authorized to reserve this accommodation.
+        '404':
+          description: Not Found.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: Page not found.
+                    
+  /api/search-accommodation/:
+    get:
+      operationId: api_search_accommodation_retrieve
+      description: Search for accommodations with at least one filter
+      summary: Search Accommodations
+      parameters:
+      - in: query
+        name: available_from
+        schema:
+          type: string
+          format: date
+        description: Available from date
+      - in: query
+        name: available_to
+        schema:
+          type: string
+          format: date
+        description: Available to date
+      - in: query
+        name: distance
+        schema:
+          type: number
+          format: double
+        description: Maximum distance from HKU (km)
+      - in: query
+        name: format
+        schema:
+          type: string
+        description: Response format
+      - in: query
+        name: max_price
+        schema:
+          type: number
+          format: double
+        description: Maximum price
+      - in: query
+        name: min_bedrooms
+        schema:
+          type: integer
+        description: Minimum bedrooms
+      - in: query
+        name: min_beds
+        schema:
+          type: integer
+        description: Minimum beds
+      - in: query
+        name: region
+        schema:
+          type: string
+        description: Region
+      - in: query
+        name: type
+        schema:
+          type: string
+        description: Accommodation type
+      tags:
+      - api
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+          description: ''
+        '302':
+          description: Redirect to accommodation list
+components:
+  schemas:
+    Accommodation:
+      type: object
+      description: Serializer for creating and updating accommodation information
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        title:
+          type: string
+          maxLength: 200
+        description:
+          type: string
+        type:
+          $ref: '#/components/schemas/TypeEnum'
+        price:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+        beds:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: -9223372036854775808
+          format: int64
+        bedrooms:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: -9223372036854775808
+          format: int64
+        available_from:
+          type: string
+          format: date
+          nullable: true
+        available_to:
+          type: string
+          format: date
+          nullable: true
+        address:
+          type: string
+          writeOnly: true
+        formatted_address:
+          type: string
+          readOnly: true
+        reserved:
+          type: boolean
+        userID:
+          type: string
+          maxLength: 255
+        building_name:
+          type: string
+          readOnly: true
+        region:
+          type: string
+          readOnly: true
+        contact_phone:
+          type: string
+          nullable: true
+          maxLength: 20
+        contact_email:
+          type: string
+          format: email
+          nullable: true
+          maxLength: 254
+        rating:
+          type: number
+          format: double
+        rating_count:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: -9223372036854775808
+          format: int64
+      required:
+      - address
+      - bedrooms
+      - beds
+      - building_name
+      - description
+      - formatted_address
+      - id
+      - price
+      - region
+      - title
+      - type
+    AccommodationDetail:
+      type: object
+      description: Serializer for displaying accommodation details
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        title:
+          type: string
+          maxLength: 200
+        description:
+          type: string
+        type:
+          $ref: '#/components/schemas/TypeEnum'
+        price:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+        beds:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: -9223372036854775808
+          format: int64
+        bedrooms:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: -9223372036854775808
+          format: int64
+        available_from:
+          type: string
+          format: date
+          nullable: true
+        available_to:
+          type: string
+          format: date
+          nullable: true
+        region:
+          type: string
+          maxLength: 100
+        reserved:
+          type: boolean
+        formatted_address:
+          type: string
+          readOnly: true
+        building_name:
+          type: string
+          maxLength: 200
+        userID:
+          type: string
+          maxLength: 255
+        contact_phone:
+          type: string
+          nullable: true
+          maxLength: 20
+        contact_email:
+          type: string
+          format: email
+          nullable: true
+          maxLength: 254
+        rating:
+          type: number
+          format: double
+        rating_count:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: -9223372036854775808
+          format: int64
+      required:
+      - bedrooms
+      - beds
+      - description
+      - formatted_address
+      - id
+      - price
+      - title
+      - type
+    AccommodationListResponse:
+      type: object
+      description: Serializer for accommodation list responses
+      properties:
+        accommodations:
+          type: array
+          items:
+            type: object
+            additionalProperties: {}
+      required:
+      - accommodations
+    AddressResponse:
+      type: object
+      description: Serializer for address lookup responses
+      properties:
+        EnglishAddress:
+          type: object
+          additionalProperties: {}
+        ChineseAddress:
+          type: object
+          additionalProperties: {}
+        GeospatialInformation:
+          type: object
+          additionalProperties: {}
+      required:
+      - ChineseAddress
+      - EnglishAddress
+      - GeospatialInformation
+    DeleteAccommodationRequest:
+      type: object
+      description: Serializer for delete accommodation request
+      properties:
+        id:
+          type: integer
+      required:
+      - id
+    ErrorResponse:
+      type: object
+      description: Serializer for error responses
+      properties:
+        success:
+          type: boolean
+          default: false
+        message:
+          type: string
+        errors:
+          type: object
+          additionalProperties: {}
+      required:
+      - message
+    MessageResponse:
+      type: object
+      description: Serializer for simple message responses
+      properties:
+        message:
+          type: string
+      required:
+      - message
+    Rating:
+      type: object
+      description: Serializer for validating accommodation rating input
+      properties:
+        rating:
+          type: integer
+          maximum: 5
+          minimum: 0
+      required:
+      - rating
+    ReservationResponse:
+      type: object
+      description: Serializer for reservation and cancellation responses
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+        UserID:
+          type: string
+        accommodation:
+          $ref: '#/components/schemas/AccommodationDetail'
+      required:
+      - message
+      - success
+    SuccessResponse:
+      type: object
+      description: Serializer for success responses
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+      required:
+      - message
+      - success
+    TypeEnum:
+      enum:
+      - APARTMENT
+      - HOUSE
+      - HOSTEL
+      type: string
+      description: |-
+        * `APARTMENT` - Apartment
+        * `HOUSE` - House
+        * `HOSTEL` - Hostel
+  securitySchemes:
+    basicAuth:
+      type: http
+      scheme: basic
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: sessionid
