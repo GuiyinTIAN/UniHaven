@@ -31,7 +31,6 @@ class Accommodation(models.Model):
     latitude = models.FloatField(blank=True)
     longitude = models.FloatField(blank=True)
     geo_address = models.CharField(max_length=200, blank=True)
-
     rating = models.FloatField(default=0.0, blank=True)
     rating_count = models.IntegerField(default=0, blank=True)
     rating_sum = models.FloatField(default=0.0, blank=True)
@@ -45,5 +44,6 @@ class Accommodation(models.Model):
             self.region
         ]
         return ", ".join(filter(None, parts))
+
 
 

@@ -51,8 +51,13 @@ from .response_serializers import (
 #------------------------------------------------------------------------------
 
 # Geographic coordinates of The University of Hong Kong (used for distance calculations)
-HKU_LATITUDE = 22.28143
-HKU_LONGITUDE = 114.14006
+CAMPUS_LOCATIONS = {
+    "main": {"latitude": 22.28405, "longitude": 114.13784},
+    "sassoon": {"latitude": 22.2675, "longitude": 114.12881},
+    "swire": {"latitude": 22.20805, "longitude": 114.26021},
+    "kadoorie": {"latitude": 22.43022, "longitude": 114.11429},
+    "dentistry": {"latitude": 22.28649, "longitude": 114.14426},
+}
 
 #------------------------------------------------------------------------------
 # Home Page
@@ -344,7 +349,14 @@ def list_accommodation(request):
     max_price = request.query_params.get("max_price", "")
     max_distance = request.query_params.get("distance", "")
     order_by_distance = request.query_params.get("order_by_distance", "false").lower() == "true"
+    campus = request.query_params.get("campus", "main")  # Default to "main" campus
 
+    # Get selected campus coordinates
+    campus_coords = CAMPUS_LOCATIONS[campus]
+    campus_latitude = campus_coords["latitude"]
+    campus_longitude = campus_coords["longitude"]
+    print(f"Campus Coordinates: {campus_latitude}, {campus_longitude}")
+    # 过滤房源类型
     if accommodation_type:
         accommodations = accommodations.filter(type=accommodation_type)
 
@@ -376,13 +388,13 @@ def list_accommodation(request):
         distance=ExpressionWrapper(
             Func(
                 Func(
-                    (F('longitude') - HKU_LONGITUDE) * math.pi / 180 *
-                    Func((F('latitude') + HKU_LATITUDE) / 2 * math.pi / 180, function='COS'),
+                    (F('longitude') - campus_longitude) * math.pi / 180 *
+                    Func((F('latitude') + campus_latitude) / 2 * math.pi / 180, function='COS'),
                     function='POW',
                     template="%(function)s(%(expressions)s, 2)"
                 ) +
                 Func(
-                    (F('latitude') - HKU_LATITUDE) * math.pi / 180,
+                    (F('latitude') - campus_latitude) * math.pi / 180,
                     function='POW',
                     template="%(function)s(%(expressions)s, 2)"
                 ),
@@ -393,11 +405,8 @@ def list_accommodation(request):
     )
 
     if max_distance:
-        try:
-            max_distance = float(max_distance)
-            accommodations = accommodations.filter(distance__lte=max_distance)
-        except ValueError:
-            pass
+        max_distance = float(max_distance)
+        accommodations = accommodations.filter(distance__lte=max_distance)
 
     if order_by_distance:
         accommodations = accommodations.order_by('distance')
@@ -416,6 +425,8 @@ def list_accommodation(request):
         'min_beds': min_beds,
         'min_bedrooms': min_bedrooms,
         'max_price': max_price,
+        'max_distance': max_distance,
+        'order_by_distance': order_by_distance,
         'max_distance': max_distance,
         'order_by_distance': order_by_distance,
     })
