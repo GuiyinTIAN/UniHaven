@@ -456,6 +456,18 @@ def list_accommodation(request):
         OpenApiParameter(name="max_price", description="Maximum price", type=float, required=False),
         OpenApiParameter(name="distance", description="Maximum distance from HKU (km)", type=float, required=False),
         OpenApiParameter(name="format", description="Response format", type=str, required=False),
+        OpenApiParameter(name="format", description="Response format", type=str, required=False),
+                OpenApiParameter(
+            name="campus",
+            description=(
+                "Specify the campus location to calculate distances from. "
+                "Valid values: 'main', 'sassoon', 'swire', 'kadoorie', 'dentistry'. "
+                "Defaults to 'main' if not provided."
+            ),
+            type=OpenApiTypes.STR,
+            required=False,
+        ),
+
     ],
     responses={
         200: MessageResponseSerializer,
