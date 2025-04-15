@@ -33,7 +33,8 @@ from .forms import AccommodationForm
 from .serializers import (
     AccommodationSerializer, 
     AccommodationDetailSerializer,
-    AccommodationListSerializer
+    AccommodationListSerializer,
+    RatingSerializer
 )
 from .response_serializers import (
     MessageResponseSerializer,
@@ -41,7 +42,8 @@ from .response_serializers import (
     SuccessResponseSerializer,
     ErrorResponseSerializer,
     ReservationResponseSerializer,
-    AccommodationListResponseSerializer
+    AccommodationListResponseSerializer,
+    DeleteAccommodationRequestSerializer
 )
 
 #------------------------------------------------------------------------------
@@ -248,6 +250,55 @@ def add_accommodation(request):
     else:
         return Response(
             {"success": False, "errors": serializer.errors}, 
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+@extend_schema(
+    summary="Delete Accommodation",
+    description="Delete an accommodation by ID using POST method",
+    request=DeleteAccommodationRequestSerializer,
+    responses={
+        200: SuccessResponseSerializer,
+        400: ErrorResponseSerializer,
+        404: ErrorResponseSerializer
+    }
+)
+@api_view(['POST'])
+@parser_classes([JSONParser])
+@renderer_classes([JSONRenderer])
+def delete_accommodation(request):
+    """
+    Delete an accommodation by ID.
+
+    Processes a POST request with JSON containing the accommodation ID.
+    If the ID is valid and exists, the corresponding accommodation will be deleted.
+
+    Args:
+        request: HTTP POST request with JSON containing "id"
+
+    Returns:
+        - JSON confirmation message on success
+        - JSON error message on failure
+    """
+    serializer = DeleteAccommodationRequestSerializer(data=request.data)
+    if serializer.is_valid():
+        accommodation_id = serializer.validated_data['id']
+        try:
+            accommodation = Accommodation.objects.get(id=accommodation_id)
+            title = accommodation.title
+            accommodation.delete()
+            return Response(
+                {"success": True, "message": f"Accommodation '{title}' has been deleted."},
+                status=status.HTTP_200_OK
+            )
+        except Accommodation.DoesNotExist:
+            return Response(
+                {"success": False, "message": "Accommodation not found."},
+                status=status.HTTP_404_NOT_FOUND
+            )
+    else:
+        return Response(
+            {"success": False, "errors": serializer.errors},
             status=status.HTTP_400_BAD_REQUEST
         )
 
@@ -627,6 +678,14 @@ class CancellationView(GenericAPIView):
                 recipient_list=[student_email],
             )
 
+            specialist_email = "cedars@hku.hk"  
+            send_mail(
+                subject="[UniHaven] Reservation Cancelled",
+                message=f"Dear CEDARS,\n\nStudent {user_id} has cancelled their reservation for '{accommodation.title}'.\nNo further action is required.\n\nRegards,\nUniHaven System",
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[specialist_email],
+            )
+
             serializer = AccommodationDetailSerializer(accommodation)
             return Response({
                 'success': True,
@@ -637,6 +696,81 @@ class CancellationView(GenericAPIView):
         except Accommodation.DoesNotExist:
             return Response({'success': False, 'message': 'Accommodation not found.'}, 
                             status=status.HTTP_404_NOT_FOUND)
+        
+@extend_schema(
+    summary="Rate Accommodation",
+    description="Rate an accommodation with a value between 0 and 5",
+    parameters=[
+        OpenApiParameter(
+            name="accommodation_id",
+            location=OpenApiParameter.PATH,
+            description="ID of the accommodation to rate",
+            type=int,
+            required=True
+        )
+    ],
+    request=RatingSerializer,
+    responses={
+        200: SuccessResponseSerializer,
+        400: ErrorResponseSerializer,
+        404: ErrorResponseSerializer
+    }
+)
+@api_view(['POST'])
+@parser_classes([JSONParser, FormParser])
+def rate_accommodation(request, accommodation_id):
+    """Rate an accommodation"""
+    user_id = request.COOKIES.get('user_identifier')
+    if not user_id:
+        return Response(
+            {"success": False, "message": "User ID is required."},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    accommodation = get_object_or_404(Accommodation, id=accommodation_id)
+    
+    # Check if the user has already rated this accommodation
+    rated_accommodations = request.session.get('rated_accommodations', [])
+    if str(accommodation_id) in rated_accommodations:
+        return Response(
+            {"success": False, "message": "You have already rated this accommodation."},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    # Validate the rating input using the serializer
+    serializer = RatingSerializer(data=request.POST)
+    if not serializer.is_valid():
+        return Response(
+            {"success": False, "message": serializer.errors},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    # Update accommodation rating
+    rating_value = serializer.validated_data['rating']
+    accommodation.rating_sum += rating_value
+    accommodation.rating_count += 1
+    accommodation.rating = (
+        round(accommodation.rating_sum / accommodation.rating_count, 1)
+        if accommodation.rating_count > 0
+        else 0.0
+    )
+    accommodation.save()
+
+    # Update session to track rated accommodation
+    rated_accommodations.append(str(accommodation_id))
+    request.session['rated_accommodations'] = rated_accommodations
+    request.session.modified = True
+
+    # Serialize the accommodation for the response
+    accommodation_serializer = AccommodationDetailSerializer(accommodation)
+    return Response(
+        {
+            "success": True,
+            "message": "Rating submitted successfully.",
+            "accommodation": accommodation_serializer.data
+        },
+        status=status.HTTP_200_OK
+    )
 
 # Create view functions from class-based views
 reserve_accommodation = ReservationView.as_view()

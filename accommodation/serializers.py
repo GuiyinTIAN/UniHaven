@@ -12,7 +12,7 @@ class AccommodationSerializer(serializers.ModelSerializer):
         fields = ['id', 'title', 'description', 'type', 'price', 'beds', 'bedrooms', 
                  'available_from', 'available_to', 'address', 'formatted_address',
                  'reserved', 'userID', 'building_name', 'region', 
-                 'contact_phone', 'contact_email']
+                 'contact_phone', 'contact_email','rating', 'rating_count']
         read_only_fields = ['id', 'latitude', 'longitude', 'building_name', 
                            'estate_name', 'street_name', 'building_no', 'district', 
                            'region', 'formatted_address']
@@ -29,7 +29,7 @@ class AccommodationDetailSerializer(serializers.ModelSerializer):
         model = Accommodation
         fields = ['id', 'title', 'description', 'type', 'price', 'beds', 'bedrooms', 
                  'available_from', 'available_to', 'region', 'reserved', 'formatted_address',
-                 'building_name', 'userID', 'contact_phone', 'contact_email']
+                 'building_name', 'userID', 'contact_phone', 'contact_email','rating', 'rating_count']
     
     @extend_schema_field(serializers.CharField())
     def get_formatted_address(self, obj) -> str:
@@ -42,4 +42,9 @@ class AccommodationListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Accommodation
         fields = ['id', 'title', 'building_name', 'description', 'type', 'price', 'beds', 'bedrooms',
-                 'available_from', 'available_to', 'region', 'distance', 'reserved', 'contact_phone', 'contact_email']
+                 'available_from', 'available_to', 'region', 'distance', 'reserved', 'contact_phone', 
+                 'contact_email','rating', 'rating_count']
+        
+class RatingSerializer(serializers.Serializer):
+    """Serializer for validating accommodation rating input"""
+    rating = serializers.IntegerField(min_value=0, max_value=5)

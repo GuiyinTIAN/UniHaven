@@ -34,3 +34,7 @@ class AccommodationListResponseSerializer(serializers.Serializer):
     accommodations = serializers.ListField(
         child=serializers.DictField()
     )
+
+class DeleteAccommodationRequestSerializer(serializers.Serializer):
+    """Serializer for delete accommodation request"""
+    id = serializers.IntegerField(required=True)

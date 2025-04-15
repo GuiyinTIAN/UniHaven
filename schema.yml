@@ -33,9 +33,9 @@ paths:
               schema:
                 $ref: '#/components/schemas/MessageResponse'
           description: ''
-  /api/accommodation/{id}/:
+  /api/accommodation_detail/{id}/:
     get:
-      operationId: api_accommodation_retrieve
+      operationId: api_accommodation_detail_retrieve
       description: View accommodation details
       summary: Accommodation Details
       parameters:
@@ -161,6 +161,42 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
           description: ''
+  /api/delete-accommodation/:
+    post:
+      operationId: api_delete_accommodation_create
+      description: Delete an accommodation by ID using POST method
+      summary: Delete Accommodation
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeleteAccommodationRequest'
+        required: true
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
   /api/list-accommodation/:
     get:
       operationId: api_list_accommodation_retrieve
@@ -264,6 +300,52 @@ paths:
           description: No results found
         '500':
           description: API error
+  /api/rate/{accommodation_id}/:
+    post:
+      operationId: api_rate_create
+      description: Rate an accommodation with a value between 0 and 5
+      summary: Rate Accommodation
+      parameters:
+      - in: path
+        name: accommodation_id
+        schema:
+          type: integer
+        description: ID of the accommodation to rate
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Rating'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Rating'
+        required: true
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
+        '404':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: ''
   /api/reserve_accommodation/:
     post:
       operationId: api_reserve_accommodation_create
@@ -447,6 +529,14 @@ components:
           format: email
           nullable: true
           maxLength: 254
+        rating:
+          type: number
+          format: double
+        rating_count:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: -9223372036854775808
+          format: int64
       required:
       - address
       - bedrooms
@@ -518,6 +608,14 @@ components:
           format: email
           nullable: true
           maxLength: 254
+        rating:
+          type: number
+          format: double
+        rating_count:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: -9223372036854775808
+          format: int64
       required:
       - bedrooms
       - beds
@@ -555,6 +653,14 @@ components:
       - ChineseAddress
       - EnglishAddress
       - GeospatialInformation
+    DeleteAccommodationRequest:
+      type: object
+      description: Serializer for delete accommodation request
+      properties:
+        id:
+          type: integer
+      required:
+      - id
     ErrorResponse:
       type: object
       description: Serializer for error responses
@@ -577,6 +683,16 @@ components:
           type: string
       required:
       - message
+    Rating:
+      type: object
+      description: Serializer for validating accommodation rating input
+      properties:
+        rating:
+          type: integer
+          maximum: 5
+          minimum: 0
+      required:
+      - rating
     ReservationResponse:
       type: object
       description: Serializer for reservation and cancellation responses
