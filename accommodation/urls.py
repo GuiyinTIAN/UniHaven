@@ -7,7 +7,9 @@ urlpatterns = [
     path("add-accommodation/", views.add_accommodation, name="add_accommodation"),
     path("list-accommodation/", views.list_accommodation, name="list_accommodation"),
     path("search-accommodation/", views.search_accommodation, name="search_accommodation"),
-    path("accommodation/<int:pk>/", views.accommodation_detail, name="accommodation_detail"),
-    path("reserve_accommodation/<int:accommodation_id>/", views.reserve_accommodation, name="reserve_accommodation"),
-    path('cancel_reservation/<int:accommodation_id>/', views.cancel_reservation, name='cancel_reservation')
+    path("accommodation_detail/<int:id>/", views.accommodation_detail, name="accommodation_detail"),
+    path("reserve_accommodation/", views.reserve_accommodation, name="reserve_accommodation"),
+    path("cancel_reservation/", views.cancel_reservation, name="cancel_reservation"),
+    path("delete-accommodation/", views.delete_accommodation, name="delete_accommodation"),
+    path('rate/<int:accommodation_id>/', views.rate_accommodation, name='rate_accommodation'),  
 ]

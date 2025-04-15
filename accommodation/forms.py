@@ -7,13 +7,15 @@ class AccommodationForm(forms.ModelForm):
     class Meta:
         model = Accommodation
 
-        fields = ['title', 'description', 'type', 'beds', 'bedrooms', 'price', 'address', 'available_from', 'available_to']
+        fields = ['title', 'description', 'type', 'beds', 'bedrooms', 'price', 
+                 'address', 'available_from', 'available_to',
+                 'contact_phone', 'contact_email',]
 
         widgets = {
             'description': forms.Textarea(attrs={'rows': 4}),
             'available_from': forms.DateInput(attrs={'type': 'date'}),
             'available_to': forms.DateInput(attrs={'type': 'date'}),
-
+            'contact_phone': forms.TextInput(attrs={'placeholder': 'eg: +852 1234 5678'}),
+            'contact_email': forms.EmailInput(attrs={'placeholder': 'eg: your_email@example.com'}),
             'reserved': forms.CheckboxInput(attrs={'class': 'reserved-checkbox'})
-
         }
