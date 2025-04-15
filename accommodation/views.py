@@ -313,7 +313,7 @@ def delete_accommodation(request):
         OpenApiParameter(name="min_beds", description="Minimum beds", type=int, required=False),
         OpenApiParameter(name="min_bedrooms", description="Minimum bedrooms", type=int, required=False),
         OpenApiParameter(name="max_price", description="Maximum price", type=float, required=False),
-        OpenApiParameter(name="distance", description="Maximum distance from HKU (km)", type=float, required=False),
+        OpenApiParameter(name="distance", description="Maximum distance from HKU (km)", type=float, required=True),
         OpenApiParameter(name="order_by_distance", description="Sort by distance", type=bool, required=False),
         OpenApiParameter(name="format", description="Response format", type=str, required=False),
                 OpenApiParameter(
@@ -368,7 +368,7 @@ def list_accommodation(request):
     campus_latitude = campus_coords["latitude"]
     campus_longitude = campus_coords["longitude"]
     print(f"Campus Coordinates: {campus_latitude}, {campus_longitude}")
-    # 过滤房源类型
+    
     if accommodation_type:
         accommodations = accommodations.filter(type=accommodation_type)
 
@@ -454,7 +454,7 @@ def list_accommodation(request):
         OpenApiParameter(name="min_beds", description="Minimum beds", type=int, required=False),
         OpenApiParameter(name="min_bedrooms", description="Minimum bedrooms", type=int, required=False),
         OpenApiParameter(name="max_price", description="Maximum price", type=float, required=False),
-        OpenApiParameter(name="distance", description="Maximum distance from HKU (km)", type=float, required=False),
+        OpenApiParameter(name="distance", description="Maximum distance from HKU (km)", type=float, required=True),
         OpenApiParameter(name="format", description="Response format", type=str, required=False),
         OpenApiParameter(name="format", description="Response format", type=str, required=False),
                 OpenApiParameter(
