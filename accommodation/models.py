@@ -1,5 +1,5 @@
 from django.db import models
-
+from django.core.validators import MinValueValidator, MaxValueValidator
 
 class Accommodation(models.Model):
     TYPE_CHOICES = [
@@ -31,9 +31,9 @@ class Accommodation(models.Model):
     latitude = models.FloatField(blank=True)
     longitude = models.FloatField(blank=True)
     geo_address = models.CharField(max_length=200, blank=True)
-    rating = models.FloatField(default=0.0, blank=True)
-    rating_count = models.IntegerField(default=0, blank=True)
-    rating_sum = models.FloatField(default=0.0, blank=True)
+    rating = models.FloatField(default=0.0, validators=[MinValueValidator(0.0), MaxValueValidator(5.0)])
+    rating_sum = models.FloatField(default=0.0)  
+    rating_count = models.IntegerField(default=0)
 
     def formatted_address(self):
         parts = [
@@ -45,5 +45,16 @@ class Accommodation(models.Model):
         ]
         return ", ".join(filter(None, parts))
 
+class AccommodationRating(models.Model):
+    accommodation = models.ForeignKey(Accommodation, on_delete=models.CASCADE, related_name='ratings')
+    user_identifier = models.CharField(max_length=200)
+    rating = models.IntegerField(validators=[MinValueValidator(0), MaxValueValidator(5)])
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ['accommodation', 'user_identifier']  # Prevent duplicate ratings
+
+    def __str__(self):
+        return f"{self.user_identifier} rated {self.accommodation.title} ({self.rating})"
 
 

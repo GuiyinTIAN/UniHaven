@@ -29,7 +29,7 @@ class AccommodationDetailSerializer(serializers.ModelSerializer):
         model = Accommodation
         fields = ['id', 'title', 'description', 'type', 'price', 'beds', 'bedrooms', 
                  'available_from', 'available_to', 'region', 'reserved', 'formatted_address',
-                 'building_name', 'userID', 'contact_phone', 'contact_email','rating', 'rating_count']
+                 'building_name', 'userID', 'contact_phone', 'contact_email','rating', 'rating_count', 'rating_sum']
     
     @extend_schema_field(serializers.CharField())
     def get_formatted_address(self, obj) -> str:
@@ -43,7 +43,7 @@ class AccommodationListSerializer(serializers.ModelSerializer):
         model = Accommodation
         fields = ['id', 'title', 'building_name', 'description', 'type', 'price', 'beds', 'bedrooms',
                  'available_from', 'available_to', 'region', 'distance', 'reserved', 'contact_phone', 
-                 'contact_email','rating', 'rating_count']
+                 'contact_email','rating', 'rating_count', 'rating_sum']
         
 class RatingSerializer(serializers.Serializer):
     """Serializer for validating accommodation rating input"""
