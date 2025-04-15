@@ -316,6 +316,17 @@ def delete_accommodation(request):
         OpenApiParameter(name="distance", description="Maximum distance from HKU (km)", type=float, required=False),
         OpenApiParameter(name="order_by_distance", description="Sort by distance", type=bool, required=False),
         OpenApiParameter(name="format", description="Response format", type=str, required=False),
+                OpenApiParameter(
+            name="campus",
+            description=(
+                "Specify the campus location to calculate distances from. "
+                "Valid values: 'main', 'sassoon', 'swire', 'kadoorie', 'dentistry'. "
+                "Defaults to 'main' if not provided."
+            ),
+            type=OpenApiTypes.STR,
+            required=False,
+        ),
+
     ],
     responses={
         200: AccommodationListResponseSerializer,
@@ -350,7 +361,8 @@ def list_accommodation(request):
     max_distance = request.query_params.get("distance", "")
     order_by_distance = request.query_params.get("order_by_distance", "false").lower() == "true"
     campus = request.query_params.get("campus", "main")  # Default to "main" campus
-
+    if campus not in CAMPUS_LOCATIONS:
+        campus = "main"  # Default to "main" if campus is invalid
     # Get selected campus coordinates
     campus_coords = CAMPUS_LOCATIONS[campus]
     campus_latitude = campus_coords["latitude"]
