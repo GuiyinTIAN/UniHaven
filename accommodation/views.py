@@ -41,7 +41,8 @@ from .response_serializers import (
     SuccessResponseSerializer,
     ErrorResponseSerializer,
     ReservationResponseSerializer,
-    AccommodationListResponseSerializer
+    AccommodationListResponseSerializer,
+    DeleteAccommodationRequestSerializer
 )
 
 #------------------------------------------------------------------------------
@@ -243,6 +244,55 @@ def add_accommodation(request):
     else:
         return Response(
             {"success": False, "errors": serializer.errors}, 
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+@extend_schema(
+    summary="Delete Accommodation",
+    description="Delete an accommodation by ID using POST method",
+    request=DeleteAccommodationRequestSerializer,
+    responses={
+        200: SuccessResponseSerializer,
+        400: ErrorResponseSerializer,
+        404: ErrorResponseSerializer
+    }
+)
+@api_view(['POST'])
+@parser_classes([JSONParser])
+@renderer_classes([JSONRenderer])
+def delete_accommodation(request):
+    """
+    Delete an accommodation by ID.
+
+    Processes a POST request with JSON containing the accommodation ID.
+    If the ID is valid and exists, the corresponding accommodation will be deleted.
+
+    Args:
+        request: HTTP POST request with JSON containing "id"
+
+    Returns:
+        - JSON confirmation message on success
+        - JSON error message on failure
+    """
+    serializer = DeleteAccommodationRequestSerializer(data=request.data)
+    if serializer.is_valid():
+        accommodation_id = serializer.validated_data['id']
+        try:
+            accommodation = Accommodation.objects.get(id=accommodation_id)
+            title = accommodation.title
+            accommodation.delete()
+            return Response(
+                {"success": True, "message": f"Accommodation '{title}' has been deleted."},
+                status=status.HTTP_200_OK
+            )
+        except Accommodation.DoesNotExist:
+            return Response(
+                {"success": False, "message": "Accommodation not found."},
+                status=status.HTTP_404_NOT_FOUND
+            )
+    else:
+        return Response(
+            {"success": False, "errors": serializer.errors},
             status=status.HTTP_400_BAD_REQUEST
         )
 
@@ -602,6 +652,14 @@ class CancellationView(GenericAPIView):
                 message=f"Hi {user_id},\n\nYour reservation for '{accommodation.title}' has been cancelled.",
                 from_email=settings.DEFAULT_FROM_EMAIL,
                 recipient_list=[student_email],
+            )
+
+            specialist_email = "cedars@hku.hk"  
+            send_mail(
+                subject="[UniHaven] Reservation Cancelled",
+                message=f"Dear CEDARS,\n\nStudent {user_id} has cancelled their reservation for '{accommodation.title}'.\nNo further action is required.\n\nRegards,\nUniHaven System",
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[specialist_email],
             )
 
             serializer = AccommodationDetailSerializer(accommodation)
