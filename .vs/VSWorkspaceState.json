@@ -1,0 +1,11 @@
+{
+  "ExpandedNodes": [
+    "",
+    "\\accommodation",
+    "\\accommodation\\templates",
+    "\\accommodation\\templates\\accommodation",
+    "\\locale"
+  ],
+  "SelectedNode": "\\accommodation\\templates\\accommodation\\accommodation_detail.html",
+  "PreviewInSolutionExplorer": false
+}
