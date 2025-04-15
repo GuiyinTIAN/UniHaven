@@ -28,7 +28,7 @@ from rest_framework.generics import GenericAPIView
 from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiResponse
 from drf_spectacular.types import OpenApiTypes
 
-from .models import Accommodation
+from .models import Accommodation, AccommodationRating
 from .forms import AccommodationForm
 from .serializers import (
     AccommodationSerializer, 
@@ -711,7 +711,7 @@ class CancellationView(GenericAPIView):
         
 @extend_schema(
     summary="Rate Accommodation",
-    description="Rate an accommodation with a value between 0 and 5",
+    description="Rate an accommodation with a value between 0 and 5. Requires userid and rating as query parameters.",
     parameters=[
         OpenApiParameter(
             name="accommodation_id",
@@ -719,9 +719,22 @@ class CancellationView(GenericAPIView):
             description="ID of the accommodation to rate",
             type=int,
             required=True
+        ),
+        OpenApiParameter(
+            name="rating",
+            location=OpenApiParameter.QUERY,
+            description="Rating value (0 to 5)",
+            type=int,
+            required=True
+        ),
+        OpenApiParameter(
+            name="userid",
+            location=OpenApiParameter.QUERY,
+            description="Unique identifier for the user",
+            type=str,
+            required=True
         )
     ],
-    request=RatingSerializer,
     responses={
         200: SuccessResponseSerializer,
         400: ErrorResponseSerializer,
@@ -731,34 +744,47 @@ class CancellationView(GenericAPIView):
 @api_view(['POST'])
 @parser_classes([JSONParser, FormParser])
 def rate_accommodation(request, accommodation_id):
-    """Rate an accommodation"""
-    user_id = request.COOKIES.get('user_identifier')
+    """Rate an accommodation with userid verification"""
+    user_id = request.query_params.get('userid')
     if not user_id:
         return Response(
             {"success": False, "message": "User ID is required."},
             status=status.HTTP_400_BAD_REQUEST
         )
 
+    rating_str = request.query_params.get('rating')
+    if not rating_str:
+        return Response(
+            {"success": False, "message": "Rating parameter is required."},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+    try:
+        rating_value = int(rating_str)
+        if not 0 <= rating_value <= 5:
+            raise ValueError("Rating must be between 0 and 5.")
+    except ValueError:
+        return Response(
+            {"success": False, "message": "Invalid rating. Must be an integer between 0 and 5."},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
     accommodation = get_object_or_404(Accommodation, id=accommodation_id)
     
-    # Check if the user has already rated this accommodation
-    rated_accommodations = request.session.get('rated_accommodations', [])
-    if str(accommodation_id) in rated_accommodations:
+    if AccommodationRating.objects.filter(
+        accommodation=accommodation, user_identifier=user_id
+    ).exists():
         return Response(
             {"success": False, "message": "You have already rated this accommodation."},
             status=status.HTTP_400_BAD_REQUEST
         )
 
-    # Validate the rating input using the serializer
-    serializer = RatingSerializer(data=request.POST)
-    if not serializer.is_valid():
-        return Response(
-            {"success": False, "message": serializer.errors},
-            status=status.HTTP_400_BAD_REQUEST
-        )
+    AccommodationRating.objects.create(
+        accommodation=accommodation,
+        user_identifier=user_id,
+        rating=rating_value
+    )
 
-    # Update accommodation rating
-    rating_value = serializer.validated_data['rating']
     accommodation.rating_sum += rating_value
     accommodation.rating_count += 1
     accommodation.rating = (
@@ -768,12 +794,6 @@ def rate_accommodation(request, accommodation_id):
     )
     accommodation.save()
 
-    # Update session to track rated accommodation
-    rated_accommodations.append(str(accommodation_id))
-    request.session['rated_accommodations'] = rated_accommodations
-    request.session.modified = True
-
-    # Serialize the accommodation for the response
     accommodation_serializer = AccommodationDetailSerializer(accommodation)
     return Response(
         {
