@@ -276,8 +276,13 @@ def accommodation_detail(request, pk):
                 "region": accommodation.region,
                 "reserved": accommodation.reserved,
                 "formatted_address": accommodation.formatted_address(),
+                "rating": accommodation.rating,
+                "rating_count": accommodation.rating_count
             })
-        return render(request, 'accommodation/accommodation_detail.html', {'accommodation': accommodation})
+        return render(request, 'accommodation/accommodation_detail.html', {'accommodation': accommodation,
+                                                                           'rating': accommodation.rating,
+                                                                           'rating_count': accommodation.rating_count
+                                                                           })
     except Accommodation.DoesNotExist:
         if request.headers.get('Accept') == 'application/json':
             return JsonResponse({'error': 'Accommodation not found.'}, status=404)
@@ -434,3 +439,65 @@ def delete_accommodation(request):
             "success": False,
             "message": "Accommodation not found."
         }, status=404)
+
+
+@csrf_exempt
+def rate_accommodation(request, accommodation_id):
+        """Rate Accommodation"""    
+        if request.method == "POST":
+            user_id = request.COOKIES.get('user_identifier')
+            if not user_id:
+                return JsonResponse({"success": False, "message": "User ID is required."}, status=400)
+            
+            accommodation = get_object_or_404(Accommodation, id=accommodation_id)
+            rating_value = request.POST.get('rating')
+            
+            rated_accommodations = request.session.get('rated_accommodations', [])
+            
+            if str(accommodation_id) in rated_accommodations:
+                return JsonResponse({
+                    "success": False,
+                    "message": "You have already rated this accommodation."
+                }, status=400)
+
+            try:
+                rating_value = int(rating_value)
+                if not 0 <= rating_value <= 5:  # Assuming 1-5 rating scale
+                    return JsonResponse({
+                        "success": False,
+                        "message": "Rating must be between 0 and 5."
+                    }, status=400)
+                
+                accommodation.rating_sum += rating_value
+                accommodation.rating_count += 1
+                
+                if accommodation.rating_count > 0:
+                    accommodation.rating = round(accommodation.rating_sum / accommodation.rating_count, 1)
+                else:
+                    accommodation.rating = 0.0
+                    
+                accommodation.save()
+            
+                rated_accommodations.append(str(accommodation_id))
+                request.session['rated_accommodations'] = rated_accommodations
+                request.session.modified = True
+
+                return JsonResponse({
+                    "success": True,
+                    "message": "Rating submitted successfully.",
+                    "accommodation": {
+                        "id": accommodation.id,
+                        "rating": accommodation.rating,
+                        "rating_count": accommodation.rating_count
+                    }
+                })
+            except ValueError:
+                return JsonResponse({
+                    "success": False,
+                    "message": "Invalid rating value."
+                }, status=400)
+
+        return JsonResponse({
+            "success": False,
+            "message": "Invalid request method."
+        }, status=400)

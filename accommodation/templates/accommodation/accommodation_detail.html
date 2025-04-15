@@ -26,7 +26,7 @@
                 <div class="detail-value">${{ accommodation.price }}</div>
             </div>
         </div>
-        
+
         <div class="detail-section">
             <h2>Features</h2>
             <div class="detail-item">
@@ -38,7 +38,7 @@
                 <div class="detail-value">{{ accommodation.bedrooms }}</div>
             </div>
         </div>
-        
+
         <div class="detail-section">
             <h2>Location</h2>
             <div class="detail-item">
@@ -46,7 +46,7 @@
                 <div class="detail-value">{{ accommodation.formatted_address }}</div>
             </div>
         </div>
-        
+
         <div class="detail-section">
             <h2>Availability</h2>
             <div class="detail-item">
@@ -58,6 +58,22 @@
                 <div class="detail-value">{{ accommodation.available_to }}</div>
             </div>
         </div>
+
+        <div class="detail-section">
+            <h2>Rating</h2>
+            <div class="detail-item">
+                <div class="detail-label">Current Rating:</div>
+                <div class="detail-value" id="rating-display">{{ accommodation.rating|floatformat:1 }} ({{ accommodation.rating_count }} reviews)</div>
+            </div>
+            <div class="detail-item">
+                <div class="detail-label">Submit Rating:</div>
+                <div class="detail-value">
+                    <input type="number" id="rating-{{ accommodation.id }}" min="0" max="5" step="1" placeholder="0-5" required>
+                    <button class="btn btn-primary" onclick="rateAccommodation('{{ accommodation.id }}')">Rate</button>
+                </div>
+            </div>
+        </div>
+
         <div style="display: flex; justify-content: center; margin-top: 15px;">
             <!-- Reserve button -->
             <a href="javascript:void(0);" onclick="reserveAccommodation('{{ accommodation.id }}')" class="btn btn-primary back-button">Reserve</a>
@@ -80,6 +96,44 @@
 
 {% block extra_js %}
 <script>
+        async function rateAccommodation(accommodationId) {
+            const csrfToken = getCSRFToken();
+            const ratingInput = document.getElementById(`rating-${accommodationId}`);
+            const rating = ratingInput.value;
+
+            if (!rating && rating !== '0') {
+                alert("Please enter a rating.");
+                return;
+            }
+
+            try {
+                const response = await fetch(`/rate/${accommodationId}/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'X-CSRFToken': csrfToken
+                    },
+                    body: `rating=${rating}`
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    alert(data.message);
+                    if (data.success) {
+                        const ratingDisplay = document.getElementById('rating-display');
+                        ratingDisplay.textContent = `${data.accommodation.rating} (${data.accommodation.rating_count} reviews)`;
+                        ratingInput.value = ''; // Clear input
+                    }
+                } else {
+                    const errorData = await response.json();
+                    alert(`Failed to submit rating: ${errorData.message}`);
+                }
+            } catch (error) {
+                console.error('Error submitting rating:', error);
+                alert('An error occurred while submitting the rating.');
+            }
+        }
+
         async function reserveAccommodation(accommodationId) {
         const csrfToken = getCSRFToken();
         try {

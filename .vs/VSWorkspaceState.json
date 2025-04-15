@@ -1,0 +1,15 @@
+{
+  "ExpandedNodes": [
+    "",
+    "\\accommodation",
+    "\\accommodation\\migrations",
+    "\\accommodation\\static",
+    "\\accommodation\\static\\accommodation",
+    "\\accommodation\\static\\accommodation\\css",
+    "\\accommodation\\templates",
+    "\\accommodation\\templates\\accommodation",
+    "\\UniHaven"
+  ],
+  "SelectedNode": "\\db.sqlite3",
+  "PreviewInSolutionExplorer": false
+}
