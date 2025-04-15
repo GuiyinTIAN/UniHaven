@@ -556,9 +556,10 @@ class ReservationView(GenericAPIView):
     
     @extend_schema(
         summary="Reserve Accommodation",
-        description="Reserve an accommodation using query parameter id",
+        description="Reserve an accommodation using query parameter id and user id",
         parameters=[
-            OpenApiParameter(name="id", location=OpenApiParameter.QUERY, description="Accommodation ID", type=int, required=True)
+            OpenApiParameter(name="id", location=OpenApiParameter.QUERY, description="Accommodation ID", type=int, required=True),
+            OpenApiParameter(name="User ID", location=OpenApiParameter.QUERY, description="User ID", type=str, required=True)
         ],
         responses={
             200: ReservationResponseSerializer,
@@ -578,11 +579,13 @@ class ReservationView(GenericAPIView):
             - Error responses for various failure conditions
         """
         accommodation_id = request.query_params.get('id')
+        user_id = request.query_params.get('cookie')
+
         if not accommodation_id:
             return Response({'success': False, 'message': 'Accommodation ID is required'}, 
                             status=status.HTTP_400_BAD_REQUEST)
         
-        user_id = request.COOKIES.get('user_identifier')
+
         if not user_id:
             return Response({'success': False, 'message': 'User ID is required.'}, 
                             status=status.HTTP_400_BAD_REQUEST)
@@ -638,9 +641,10 @@ class CancellationView(GenericAPIView):
     
     @extend_schema(
         summary="Cancel Reservation",
-        description="Cancel an accommodation reservation using query parameter id",
+        description="Cancel an accommodation reservation using query parameter id and user id",
         parameters=[
-            OpenApiParameter(name="id", location=OpenApiParameter.QUERY, description="Accommodation ID", type=int, required=True)
+            OpenApiParameter(name="id", location=OpenApiParameter.QUERY, description="Accommodation ID", type=int, required=True),
+            OpenApiParameter(name="User ID", location=OpenApiParameter.QUERY, description="User ID", type=str, required=True)
         ],
         responses={
             200: ReservationResponseSerializer,
@@ -654,11 +658,13 @@ class CancellationView(GenericAPIView):
         """Cancel an accommodation reservation using query parameter id."""
 
         accommodation_id = request.query_params.get('id')
+        user_id = request.query_params.get('cookie')
+
         if not accommodation_id:
             return Response({'success': False, 'message': 'Accommodation ID is required'}, 
                             status=status.HTTP_400_BAD_REQUEST)
         
-        user_id = request.COOKIES.get('user_identifier')
+
         if not user_id:
             return Response({'success': False, 'message': 'User ID is required.'}, 
                             status=status.HTTP_400_BAD_REQUEST)
