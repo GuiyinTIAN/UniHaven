@@ -18,7 +18,7 @@ from django.urls import reverse
 from django.core.mail import send_mail
 
 from rest_framework import status
-from rest_framework.decorators import api_view, parser_classes, renderer_classes
+from rest_framework.decorators import api_view, parser_classes, renderer_classes, authentication_classes, permission_classes
 from rest_framework.parsers import JSONParser, FormParser, MultiPartParser
 from rest_framework.renderers import JSONRenderer, TemplateHTMLRenderer
 from rest_framework.response import Response
@@ -47,6 +47,8 @@ from .response_serializers import (
     DeleteAccommodationRequestSerializer
 )
 from .utils import get_university_from_user_id
+from .authentication import UniversityAPIKeyAuthentication
+from .permissions import UniversityAccessPermission
 
 #------------------------------------------------------------------------------
 # Constants and Configurations
@@ -63,6 +65,25 @@ CAMPUS_LOCATIONS = {
     "HKUST": {"latitude": 22.33584, "longitude": 114.26355},
     "HKUST": {"latitude": 22.41907, "longitude": 114.20693},
 }
+
+# API Key Parameters for Swagger UI
+API_KEY_PARAMETER = [
+    OpenApiParameter(
+        name="X-API-Key", 
+        location=OpenApiParameter.HEADER, 
+        description="API key, used to identify requests from university systems", 
+        type=str, 
+        required=False
+    ),
+    OpenApiParameter(
+        name="api_key", 
+        location=OpenApiParameter.QUERY, 
+        description="API key (if the request header method is not used), used to identify the requests of the university system", 
+        type=str, 
+        required=False
+    )
+]
+
 
 #------------------------------------------------------------------------------
 # Home Page
@@ -174,23 +195,29 @@ def lookup_address(request):
 #------------------------------------------------------------------------------
 @extend_schema(
     summary="Add Accommodation",
-    description="Add new accommodation information",
+    description="Add new accommodation information. Requires API key authentication.",
     request=AddAccommodationSerializer,
+    parameters=API_KEY_PARAMETER,
     responses={
         201: SuccessResponseSerializer,
         400: ErrorResponseSerializer,
+        401: OpenApiResponse(description="API key authentication failed"),
+        403: OpenApiResponse(description="Permission denied"),
         500: ErrorResponseSerializer
     }
 )
 @api_view(['POST'])
 @parser_classes([JSONParser, FormParser, MultiPartParser])
 @renderer_classes([JSONRenderer])
+@authentication_classes([UniversityAPIKeyAuthentication])
+@permission_classes([UniversityAccessPermission])
 def add_accommodation(request):
     """
     Add new accommodation information.
 
     Processes accommodation data submitted via POST request.
     When a valid form is submitted, the address is geocoded using the HK government API.
+    Requires API key authentication - only university systems can add accommodations.
     
     Args:
         request: HTTP POST request containing accommodation data
@@ -199,6 +226,9 @@ def add_accommodation(request):
         - JSON confirmation message on success
         - JSON error message on failure
     """
+    # 获取认证的大学对象
+    university = request.user
+    
     serializer = AddAccommodationSerializer(data=request.data)
     if serializer.is_valid():
         accommodation = Accommodation()
@@ -247,18 +277,38 @@ def add_accommodation(request):
                         status=status.HTTP_400_BAD_REQUEST
                     )
                 
-                # 继续保存房产信息
-                accommodation.save()
-            return Response(
-                {"success": True, "message": "Accommodation added successfully!"}, 
-                status=status.HTTP_201_CREATED
-            )
+                # 保存房产信息
+                try:
+                    accommodation.save()
+                    
+                    # 将该住宿与当前认证的大学关联
+                    accommodation.affiliated_universities.add(university)
+                    
+                    print(f"住宿保存成功: ID={accommodation.id}, 标题={accommodation.title}")
+                    return Response(
+                        {"success": True, "message": "Accommodation added successfully!", "id": accommodation.id}, 
+                        status=status.HTTP_201_CREATED
+                    )
+                except Exception as e:
+                    print(f"保存住宿时出错: {str(e)}")
+                    return Response(
+                        {"success": False, "message": f"Error saving accommodation: {str(e)}"}, 
+                        status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                    )
+            else:
+                print("地址API未返回有效地址")
+                return Response(
+                    {"success": False, "message": "Could not geocode the provided address. Please provide a valid Hong Kong address."}, 
+                    status=status.HTTP_400_BAD_REQUEST
+                )
         except requests.RequestException as e:
+            print(f"地址API请求错误: {str(e)}")
             return Response(
                 {"success": False, "message": f"Error fetching geolocation: {str(e)}"}, 
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
     else:
+        print(f"表单验证失败: {serializer.errors}")
         return Response(
             {"success": False, "errors": serializer.errors}, 
             status=status.HTTP_400_BAD_REQUEST
@@ -266,23 +316,29 @@ def add_accommodation(request):
 
 @extend_schema(
     summary="Delete Accommodation",
-    description="Delete an accommodation by ID using POST method",
+    description="Delete an accommodation by ID using POST method. Requires API key authentication.",
     request=DeleteAccommodationRequestSerializer,
+    parameters=API_KEY_PARAMETER,
     responses={
         200: SuccessResponseSerializer,
         400: ErrorResponseSerializer,
+        401: OpenApiResponse(description="API key authentication failed"),
+        403: OpenApiResponse(description="Not allowed to delete this accommodation"),
         404: ErrorResponseSerializer
     }
 )
 @api_view(['POST'])
 @parser_classes([JSONParser])
 @renderer_classes([JSONRenderer])
+@authentication_classes([UniversityAPIKeyAuthentication])
+@permission_classes([UniversityAccessPermission])
 def delete_accommodation(request):
     """
     Delete an accommodation by ID.
 
     Processes a POST request with JSON containing the accommodation ID.
     If the ID is valid and exists, the corresponding accommodation will be deleted.
+    Requires API key authentication - only university systems that created the accommodation can delete it.
 
     Args:
         request: HTTP POST request with JSON containing "id"
@@ -296,6 +352,8 @@ def delete_accommodation(request):
         accommodation_id = serializer.validated_data['id']
         try:
             accommodation = Accommodation.objects.get(id=accommodation_id)
+            
+            # 权限检查已经由权限类处理，不需要手动检查
             title = accommodation.title
             accommodation.delete()
             return Response(
@@ -753,94 +811,93 @@ class CancellationView(GenericAPIView):
             return Response({'success': False, 'message': 'Accommodation not found.'}, 
                             status=status.HTTP_404_NOT_FOUND)
 
-@extend_schema(
-    summary="Rate Accommodation",
-    description="Rate an accommodation with a value between 0 and 5. Requires userid and rating as query parameters.",
-    parameters=[
-        OpenApiParameter(
-            name="accommodation_id",
-            location=OpenApiParameter.PATH,
-            description="ID of the accommodation to rate",
-            type=int,
-            required=True,
-        ),
-        OpenApiParameter(
-            name="rating",
-            location=OpenApiParameter.QUERY,
-            description="Rating value (0 to 5)",
-            type=int,
-            required=True,
-        ),
-        OpenApiParameter(
-            name="userid",
-            location=OpenApiParameter.QUERY,
-            description="Unique identifier for the user",
-            type=str,
-            required=True,
-        )
-    ],
-    responses={
-        200: SuccessResponseSerializer,
-        400: ErrorResponseSerializer,
-        404: ErrorResponseSerializer
-    }
-)
-@api_view(['POST'])
-@parser_classes([JSONParser, FormParser])
-def rate_accommodation(request, accommodation_id):
-    """Rate an accommodation with userid verification"""
-    user_id = request.query_params.get('userid')
-    if not user_id:
-        return Response(
-            {"success": False, "message": "User ID is required."},
-            status=status.HTTP_400_BAD_REQUEST
-        )
-    rating_str = request.query_params.get('rating')
-    if not rating_str:
-        return Response(
-            {"success": False, "message": "Rating parameter is required."},
-            status=status.HTTP_400_BAD_REQUEST
-        )
-    try:
-        rating_value = int(rating_str)
-        if not 0 <= rating_value <= 5:
-            raise ValueError("Rating must be between 0 and 5.")
-    except ValueError:
-        return Response(
-            {"success": False, "message": "Invalid rating. Must be an integer between 0 and 5."},
-            status=status.HTTP_400_BAD_REQUEST
-        )
-    accommodation = get_object_or_404(Accommodation, id=accommodation_id)
-    if AccommodationRating.objects.filter(
-        accommodation=accommodation, user_identifier=user_id
-    ).exists():
-        return Response(
-            {"success": False, "message": "You have already rated this accommodation."},
-            status=status.HTTP_400_BAD_REQUEST
-        )
-    AccommodationRating.objects.create(
-        accommodation=accommodation,
-        user_identifier=user_id,
-        rating=rating_value
+class RatingView(GenericAPIView):
+    """
+    为住宿评分的视图。
+    学生使用的功能，不需要API密钥认证。
+    """
+    serializer_class = RatingSerializer  # 使用现有的RatingSerializer
+
+    @extend_schema(
+        summary="Rate Accommodation",
+        description="Rate an accommodation with a value between 0 and 5. Requires userid and rating as query parameters.",
+        parameters=[
+            OpenApiParameter(
+                name="rating",
+                location=OpenApiParameter.QUERY,
+                description="Rating value (0 to 5)",
+                type=int,
+                required=True,
+            ),
+            OpenApiParameter(
+                name="userid",
+                location=OpenApiParameter.QUERY,
+                description="Unique identifier for the user",
+                type=str,
+                required=True,
+            )
+        ],
+        responses={
+            200: SuccessResponseSerializer,
+            400: ErrorResponseSerializer,
+            404: ErrorResponseSerializer
+        }
     )
-    accommodation.rating_sum += rating_value
-    accommodation.rating_count += 1
-    accommodation.rating = (
-        round(accommodation.rating_sum / accommodation.rating_count, 1)
-        if accommodation.rating_count > 0
-        else 0.0
-    )
-    accommodation.save()
-    accommodation_serializer = AccommodationDetailSerializer(accommodation)
-    return Response(
-        {
-            "success": True,
-            "message": "Rating submitted successfully.",
-            "accommodation": accommodation_serializer.data
-        },
-        status=status.HTTP_200_OK
-    )
+    def post(self, request, accommodation_id):
+        """Rate an accommodation with userid verification"""
+        user_id = request.query_params.get('userid')
+        if not user_id:
+            return Response(
+                {"success": False, "message": "User ID is required."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        rating_str = request.query_params.get('rating')
+        if not rating_str:
+            return Response(
+                {"success": False, "message": "Rating parameter is required."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        try:
+            rating_value = int(rating_str)
+            if not 0 <= rating_value <= 5:
+                raise ValueError("Rating must be between 0 and 5.")
+        except ValueError:
+            return Response(
+                {"success": False, "message": "Invalid rating. Must be an integer between 0 and 5."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        accommodation = get_object_or_404(Accommodation, id=accommodation_id)
+        if AccommodationRating.objects.filter(
+            accommodation=accommodation, user_identifier=user_id
+        ).exists():
+            return Response(
+                {"success": False, "message": "You have already rated this accommodation."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        AccommodationRating.objects.create(
+            accommodation=accommodation,
+            user_identifier=user_id,
+            rating=rating_value
+        )
+        accommodation.rating_sum += rating_value
+        accommodation.rating_count += 1
+        accommodation.rating = (
+            round(accommodation.rating_sum / accommodation.rating_count, 1)
+            if accommodation.rating_count > 0
+            else 0.0
+        )
+        accommodation.save()
+        accommodation_serializer = AccommodationDetailSerializer(accommodation)
+        return Response(
+            {
+                "success": True,
+                "message": "Rating submitted successfully.",
+                "accommodation": accommodation_serializer.data
+            },
+            status=status.HTTP_200_OK
+        )
 
 # Create view functions from class-based views
 reserve_accommodation = ReservationView.as_view()
 cancel_reservation = CancellationView.as_view()
+rate_accommodation = RatingView.as_view()

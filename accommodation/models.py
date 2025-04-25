@@ -33,9 +33,9 @@ class Accommodation(models.Model):
     geo_address = models.CharField(max_length=200, blank=True)
 
     # 新增唯一识别字段
-    room_number = models.CharField(max_length=20, blank=True, null=True, help_text="房号，可为空")
-    floor_number = models.CharField(max_length=20, blank=True, null=True, help_text="楼层号")
-    flat_number  = models.CharField(max_length=20, blank=True, null=True, help_text="单元号")
+    room_number = models.CharField(max_length=20, blank=True, null=True)
+    floor_number = models.CharField(max_length=20, blank=True, null=True)
+    flat_number  = models.CharField(max_length=20, blank=True, null=True)
 
     rating = models.FloatField(default=0.0, validators=[MinValueValidator(0.0), MaxValueValidator(5.0)])
     rating_sum = models.FloatField(default=0.0)  
@@ -112,5 +112,24 @@ class AccommodationUniversity(models.Model):
     
     def __str__(self):
         return f"{self.accommodation.title} - {self.university.code}"
+
+class UniversityAPIKey(models.Model):
+    """管理大学系统的API密钥"""
+    university = models.OneToOneField(University, on_delete=models.CASCADE, related_name='api_key')
+    key = models.CharField(max_length=64, unique=True, help_text="API密钥，用于认证请求")
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    last_used = models.DateTimeField(null=True, blank=True)
+    
+    def __str__(self):
+        return f"{self.university.name} API Key"
+    
+    def save(self, *args, **kwargs):
+        # 如果没有指定key，生成一个随机的UUID作为key
+        if not self.key:
+            import uuid
+            self.key = str(uuid.uuid4()).replace('-', '')
+        super().save(*args, **kwargs)
+
 
 

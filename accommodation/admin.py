@@ -1,11 +1,19 @@
 from django.contrib import admin
 from django.contrib import messages
 from django.db import connection
-from .models import Accommodation, AccommodationRating, University, AccommodationUniversity
+from .models import Accommodation, AccommodationRating, University, AccommodationUniversity, UniversityAPIKey
 
 class AccommodationUniversityInline(admin.TabularInline):
     model = AccommodationUniversity
     extra = 1
+
+class UniversityAPIKeyInline(admin.StackedInline):
+    model = UniversityAPIKey
+    can_delete = False
+    max_num = 1
+    extra = 0
+    readonly_fields = ('created_at', 'last_used')
+    fields = ('key', 'is_active', 'created_at', 'last_used')
 
 @admin.register(Accommodation)
 class AccommodationAdmin(admin.ModelAdmin):
@@ -40,12 +48,39 @@ class AccommodationAdmin(admin.ModelAdmin):
 
 @admin.register(University)
 class UniversityAdmin(admin.ModelAdmin):
-    list_display = ('code', 'name', 'specialist_email')
+    list_display = ('code', 'name', 'specialist_email', 'has_api_key')
     search_fields = ('code', 'name')
+    inlines = [UniversityAPIKeyInline]
+    
+    def has_api_key(self, obj):
+        return hasattr(obj, 'api_key')
+    has_api_key.boolean = True
+    has_api_key.short_description = "API Key"
 
 @admin.register(AccommodationRating)
 class AccommodationRatingAdmin(admin.ModelAdmin):
     list_display = ('id', 'accommodation', 'user_identifier', 'rating', 'created_at')
     list_filter = ('rating',)
     search_fields = ('user_identifier', 'accommodation__title')
+
+@admin.register(UniversityAPIKey)
+class UniversityAPIKeyAdmin(admin.ModelAdmin):
+    list_display = ('university', 'key', 'is_active', 'created_at', 'last_used')
+    list_filter = ('is_active', 'university')
+    search_fields = ('university__name', 'university__code', 'key')
+    readonly_fields = ('created_at', 'last_used')
+    fieldsets = (
+        (None, {
+            'fields': ('university', 'key', 'is_active')
+        }),
+        ('Time Information', {
+            'fields': ('created_at', 'last_used'),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    def get_readonly_fields(self, request, obj=None):
+        if obj:
+            return self.readonly_fields + ('university',) 
+        return self.readonly_fields
 
