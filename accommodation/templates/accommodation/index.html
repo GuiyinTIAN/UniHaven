@@ -5,8 +5,28 @@
 {% block title %}{% trans "UniHaven - 非本地学生住宿解决方案" %}{% endblock %}
 {% block nav_title %}UniHaven{% endblock %}
 
+{% block body_class %}is-homepage{% endblock %}
+
 {% block home_button %}
 <!-- Home button not needed on homepage -->
+{% endblock %}
+
+{% block language_selector %}
+<div class="language-dropdown">
+    <form action="/i18n/setlang/" method="post">
+        {% csrf_token %}
+        <input name="next" type="hidden" value="{{ request.path }}">
+        <select name="language" onchange="this.form.submit()">
+            {% get_current_language as CURRENT_LANGUAGE %}
+            {% get_available_languages as LANGUAGES %}
+            {% for code, name in LANGUAGES %}
+                <option value="{{ code }}" {% if code == CURRENT_LANGUAGE %}selected{% endif %}>
+                    {{ name }}
+                </option>
+            {% endfor %}
+        </select>
+    </form>
+</div>
 {% endblock %}
 
 {% block extra_css %}
@@ -152,23 +172,6 @@
 
 {% block content %}
 <div class="hero-section">
-
-    <div class="language-selector">
-        <form action="/i18n/setlang/" method="post">
-            {% csrf_token %}
-            <input name="next" type="hidden" value="{{ request.path }}">
-            <select name="language" onchange="this.form.submit()">
-                {% get_current_language as CURRENT_LANGUAGE %}
-                {% get_available_languages as LANGUAGES %}
-                {% for code, name in LANGUAGES %}
-                    <option value="{{ code }}" {% if code == CURRENT_LANGUAGE %}selected{% endif %}>
-                        {{ name }}
-                    </option>
-                {% endfor %}
-            </select>
-        </form>
-    </div>
-    
     <h1 class="hero-title">{% trans "寻找理想的校外住宿" %}</h1>
     <p class="hero-subtitle">{% trans "为香港大学及其他大学的非本地学生提供便捷的租房服务" %}</p>
     <a href="{% url 'search_accommodation' %}" class="btn btn-secondary">{% trans "开始寻找住宿" %}</a>

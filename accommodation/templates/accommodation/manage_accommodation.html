@@ -1,0 +1,472 @@
+{% extends 'accommodation/base.html' %}
+{% load static %}
+
+{% block title %}UniHaven - Manage Accommodation{% endblock %}
+{% block nav_title %}Manage Accommodation{% endblock %}
+
+{% block extra_css %}
+<style>
+    .api-key-warning {
+        background-color: #fff3cd;
+        color: #856404;
+        padding: 10px 15px;
+        border-radius: 4px;
+        margin-bottom: 20px;
+        display: none;
+    }
+    
+    .api-key-warning a {
+        color: #533f03;
+        text-decoration: underline;
+        font-weight: bold;
+    }
+    
+    .accommodation-list {
+        margin-top: 20px;
+    }
+    
+    .accommodation-card {
+        background-color: white;
+        border-radius: 6px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        margin-bottom: 15px;
+        padding: 15px;
+        position: relative;
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+    
+    .accommodation-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    }
+    
+    .accommodation-title {
+        font-size: 1.2em;
+        margin: 0 0 10px 0;
+        color: var(--primary-color);
+    }
+    
+    .accommodation-details {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-bottom: 15px;
+    }
+    
+    .accommodation-detail {
+        font-size: 0.9em;
+        padding: 3px 8px;
+        background-color: #f0f0f0;
+        border-radius: 4px;
+    }
+    
+    .accommodation-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+    }
+    
+    .delete-btn {
+        background-color: #dc3545;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        padding: 6px 12px;
+        cursor: pointer;
+        transition: background-color 0.2s;
+    }
+    
+    .delete-btn:hover {
+        background-color: #bd2130;
+    }
+    
+    .view-btn {
+        background-color: var(--primary-color);
+        color: white;
+        border: none;
+        border-radius: 4px;
+        padding: 6px 12px;
+        cursor: pointer;
+        text-decoration: none;
+        display: inline-block;
+        transition: background-color 0.2s;
+    }
+    
+    .view-btn:hover {
+        background-color: #0056b3;
+    }
+    
+    .empty-message {
+        text-align: center;
+        padding: 30px;
+        background-color: #f8f9fa;
+        border-radius: 6px;
+        color: #6c757d;
+    }
+    
+    .loading-spinner {
+        text-align: center;
+        padding: 40px;
+    }
+    
+    .spinner {
+        border: 4px solid rgba(0, 0, 0, 0.1);
+        border-radius: 50%;
+        border-top: 4px solid var(--primary-color);
+        width: 40px;
+        height: 40px;
+        animation: spin 1s linear infinite;
+        margin: 0 auto 15px;
+    }
+    
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+    
+    .confirmation-modal {
+        display: none;
+        position: fixed;
+        z-index: 1000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0,0,0,0.5);
+    }
+    
+    .modal-content {
+        background-color: white;
+        margin: 15% auto;
+        padding: 20px;
+        width: 80%;
+        max-width: 500px;
+        border-radius: 5px;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    }
+    
+    .modal-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+        margin-top: 20px;
+    }
+    
+    .cancel-btn {
+        background-color: #6c757d;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        padding: 8px 16px;
+        cursor: pointer;
+    }
+    
+    .confirm-btn {
+        background-color: #dc3545;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        padding: 8px 16px;
+        cursor: pointer;
+    }
+    
+    .university-info {
+        background-color: #e7f5ff;
+        border-left: 4px solid var(--primary-color);
+        padding: 15px;
+        margin: 20px 0;
+        border-radius: 4px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+    
+    .university-name {
+        font-weight: bold;
+        color: var(--primary-color);
+        font-size: 1.1em;
+    }
+    
+    .university-code {
+        font-family: monospace;
+        background-color: rgba(0, 123, 255, 0.1);
+        padding: 3px 8px;
+        border-radius: 3px;
+        margin-left: 10px;
+    }
+    
+    .api-status {
+        display: flex;
+        align-items: center;
+    }
+    
+    .status-badge {
+        display: inline-block;
+        padding: 3px 10px;
+        border-radius: 20px;
+        font-size: 0.8em;
+        font-weight: 500;
+        margin-right: 10px;
+    }
+    
+    .status-badge.valid {
+        background-color: #d4edda;
+        color: #155724;
+    }
+    
+    .status-badge.invalid {
+        background-color: #f8d7da;
+        color: #721c24;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- API密钥警告 -->
+    <div id="apiKeyWarning" class="api-key-warning">
+        <strong>Attention!</strong> The API key was not detected. Deleting accommodation requires a valid API key for authentication.
+        <a href="{% url 'api_key_management' %}">Click here to set your API key</a>
+    </div>
+    
+    <!-- 大学信息面板 -->
+    <div id="universityInfo" class="university-info" style="display: none;">
+        <div>
+            <span>Organization:</span>
+            <span class="university-name" id="universityName">Loading...</span>
+            <span class="university-code" id="universityCode"></span>
+        </div>
+        <div class="api-status">
+            <span class="status-badge valid">API Key Valid</span>
+            <button onclick="clearApiKey()" class="btn btn-sm btn-outline-secondary">Change Key</button>
+        </div>
+    </div>
+    
+    <div class="page-info">
+        <h2>Manage Your Listed Accommodations</h2>
+        <p>This page shows all accommodations that realted to your organization and allows to delete them if needed.</p>
+    </div>
+    
+    <!-- 加载中显示 -->
+    <div id="loadingSpinner" class="loading-spinner">
+        <div class="spinner"></div>
+        <p>Loading your accommodations...</p>
+    </div>
+    
+    <!-- 住宿列表 -->
+    <div id="accommodationList" class="accommodation-list" style="display: none;"></div>
+    
+    <!-- 确认删除对话框 -->
+    <div id="confirmationModal" class="confirmation-modal">
+        <div class="modal-content">
+            <h3>Confirm Deletion</h3>
+            <p>Are you sure you want to delete "<span id="accommodationTitle"></span>"?</p>
+            <p><strong>Warning:</strong> This action cannot be undone.</p>
+            <div class="modal-actions">
+                <button class="cancel-btn" onclick="closeConfirmationModal()">Cancel</button>
+                <button class="confirm-btn" onclick="confirmDelete()">Delete</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let accommodationsData = [];
+    let selectedAccommodationId = null;
+    let universityData = null;
+    
+    document.addEventListener('DOMContentLoaded', async function() {
+        // 检查API密钥
+        const apiKey = localStorage.getItem('unihaven_api_key');
+        if (!apiKey) {
+            document.getElementById('apiKeyWarning').style.display = 'block';
+            document.getElementById('loadingSpinner').style.display = 'none';
+            document.getElementById('accommodationList').innerHTML = `
+                <div class="empty-message">
+                    <p>Please set your API key to view and manage your accommodations.</p>
+                </div>
+            `;
+            document.getElementById('accommodationList').style.display = 'block';
+            return;
+        }
+        
+        // 验证API密钥并获取大学信息
+        try {
+            const response = await fetch('/api/test-auth/', {
+                headers: {
+                    'X-API-Key': apiKey
+                }
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                universityData = data;
+                
+                // 显示大学信息
+                document.getElementById('universityName').textContent = data.university || 'Unknown University';
+                document.getElementById('universityCode').textContent = data.code || '';
+                document.getElementById('universityInfo').style.display = 'flex';
+            } else {
+                // API密钥无效，显示警告
+                document.getElementById('apiKeyWarning').style.display = 'block';
+            }
+        } catch (error) {
+            console.error('Error verifying API key:', error);
+        }
+        
+        // 获取可以删除的住宿列表（当前大学关联的）
+        await loadAccommodations(apiKey);
+    });
+    
+    // 清除API密钥
+    function clearApiKey() {
+        if (confirm('Are you sure you want to remove this API key?')) {
+            localStorage.removeItem('unihaven_api_key');
+            window.location.href = "{% url 'api_key_management' %}";
+        }
+    }
+    
+    // 加载住宿列表
+    async function loadAccommodations(apiKey) {
+        try {
+            // 首先获取住宿列表（获取所有住宿，前端过滤可编辑的）
+            const response = await fetch('/api/list-accommodation/?format=json', {
+                headers: {
+                    'X-API-Key': apiKey
+                }
+            });
+            
+            if (!response.ok) {
+                throw new Error('Failed to fetch accommodations');
+            }
+            
+            const data = await response.json();
+            accommodationsData = data.accommodations || [];
+            
+            // 隐藏加载中显示
+            document.getElementById('loadingSpinner').style.display = 'none';
+            
+            // 如果没有住宿，显示空消息
+            if (accommodationsData.length === 0) {
+                document.getElementById('accommodationList').innerHTML = `
+                    <div class="empty-message">
+                        <p>You haven't added any accommodations yet.</p>
+                        <a href="{% url 'add_accommodation' %}" class="btn btn-primary">Add Accommodation</a>
+                    </div>
+                `;
+                document.getElementById('accommodationList').style.display = 'block';
+                return;
+            }
+            
+            // 生成住宿卡片
+            let html = '';
+            for (const accommodation of accommodationsData) {
+                html += `
+                    <div class="accommodation-card">
+                        <h3 class="accommodation-title">${accommodation.title}</h3>
+                        <div class="accommodation-details">
+                            <span class="accommodation-detail">${accommodation.type}</span>
+                            <span class="accommodation-detail">$${accommodation.price}</span>
+                            <span class="accommodation-detail">${accommodation.beds} beds</span>
+                            <span class="accommodation-detail">${accommodation.region || 'Region N/A'}</span>
+                        </div>
+                        <div class="accommodation-actions">
+                            <a href="/api/accommodation_detail/${accommodation.id}/" class="view-btn">View Details</a>
+                            <button class="delete-btn" onclick="showDeleteConfirmation(${accommodation.id}, '${accommodation.title.replace(/'/g, "\\'")}')">Delete</button>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            document.getElementById('accommodationList').innerHTML = html;
+            document.getElementById('accommodationList').style.display = 'block';
+            
+        } catch (error) {
+            console.error('Error:', error);
+            document.getElementById('loadingSpinner').style.display = 'none';
+            document.getElementById('accommodationList').innerHTML = `
+                <div class="empty-message">
+                    <p>Error loading accommodations. Please try again later.</p>
+                </div>
+            `;
+            document.getElementById('accommodationList').style.display = 'block';
+        }
+    }
+    
+    // 显示删除确认对话框
+    function showDeleteConfirmation(id, title) {
+        selectedAccommodationId = id;
+        document.getElementById('accommodationTitle').textContent = title;
+        document.getElementById('confirmationModal').style.display = 'block';
+    }
+    
+    // 关闭确认对话框
+    function closeConfirmationModal() {
+        document.getElementById('confirmationModal').style.display = 'none';
+        selectedAccommodationId = null;
+    }
+    
+    // 确认删除
+    async function confirmDelete() {
+        if (!selectedAccommodationId) return;
+        
+        const apiKey = localStorage.getItem('unihaven_api_key');
+        if (!apiKey) {
+            alert('API key is required to delete accommodations');
+            closeConfirmationModal();
+            return;
+        }
+        
+        try {
+            const response = await fetch('/api/delete-accommodation/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-API-Key': apiKey,
+                    'X-CSRFToken': getCSRFToken()
+                },
+                body: JSON.stringify({
+                    id: selectedAccommodationId
+                })
+            });
+            
+            const data = await response.json();
+            
+            if (response.ok) {
+                alert('Accommodation deleted successfully');
+                // 重新加载住宿列表
+                closeConfirmationModal();
+                document.getElementById('loadingSpinner').style.display = 'block';
+                document.getElementById('accommodationList').style.display = 'none';
+                await loadAccommodations(apiKey);
+            } else {
+                alert(`Error: ${data.message || 'Failed to delete accommodation'}`);
+                closeConfirmationModal();
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            alert('An error occurred while deleting the accommodation');
+            closeConfirmationModal();
+        }
+    }
+    
+    // 获取CSRF令牌
+    function getCSRFToken() {
+        return getCookie('csrftoken');
+    }
+    
+    // 获取Cookie
+    function getCookie(name) {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.startsWith(name + '=')) {
+                return cookie.substring(name.length + 1);
+            }
+        }
+        return '';
+    }
+</script>
+{% endblock %}

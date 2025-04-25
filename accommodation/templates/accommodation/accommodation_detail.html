@@ -4,6 +4,102 @@
 {% block title %}UniHaven - {{ accommodation.title }}{% endblock %}
 {% block nav_title %}Accommodation Details{% endblock %}
 
+{% block extra_css %}
+<style>
+    /* 添加删除确认模态框样式 */
+    .modal {
+        display: none;
+        position: fixed;
+        z-index: 1000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0,0,0,0.5);
+    }
+    
+    .modal-content {
+        background-color: white;
+        margin: 15% auto;
+        padding: 20px;
+        width: 80%;
+        max-width: 500px;
+        border-radius: 5px;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    }
+    
+    .admin-section {
+        margin-top: 20px;
+        padding-top: 15px;
+        border-top: 1px solid #eee;
+        display: none;
+    }
+    
+    .delete-btn {
+        background-color: #dc3545;
+        color: white;
+    }
+    
+    .delete-btn:hover {
+        background-color: #bd2130;
+    }
+
+    /* 评分样式 */
+    .rating-summary {
+        display: flex;
+        align-items: center;
+        margin-bottom: 20px;
+        /* 添加居中对齐 */
+        justify-content: center;
+    }
+    
+    .average-rating {
+        text-align: center;
+    }
+    
+    .rating-value {
+        font-size: 2em;
+        font-weight: bold;
+        color: var(--primary-color);
+    }
+    
+    .stars {
+        font-size: 1.5em;
+        color: #ccc;
+        margin: 5px 0;
+    }
+    
+    .star {
+        cursor: pointer;
+    }
+    
+    .star.filled {
+        color: #ffcc00;
+    }
+    
+    .star.half-filled {
+        position: relative;
+        display: inline-block;
+        color: #ccc;
+    }
+    
+    .star.half-filled:before {
+        content: "★";
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 50%;
+        overflow: hidden;
+        color: #ffcc00;
+    }
+    
+    .rating-count {
+        color: #666;
+        font-size: 0.9em;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="detail-container">
     <div class="detail-header">
@@ -45,6 +141,17 @@
                 <div class="detail-label">Address:</div>
                 <div class="detail-value">{{ accommodation.formatted_address }}</div>
             </div>
+            
+            {% if accommodation.floor_number or accommodation.flat_number or accommodation.room_number %}
+            <div class="detail-item">
+                <div class="detail-label">Unit Details:</div>
+                <div class="detail-value">
+                    {% if accommodation.floor_number %}Floor: {{ accommodation.floor_number }}{% endif %}
+                    {% if accommodation.flat_number %}{% if accommodation.floor_number %}, {% endif %}Flat: {{ accommodation.flat_number }}{% endif %}
+                    {% if accommodation.room_number %}{% if accommodation.floor_number or accommodation.flat_number %}, {% endif %}Room: {{ accommodation.room_number }}{% endif %}
+                </div>
+            </div>
+            {% endif %}
         </div>
         
         <div class="detail-section">
@@ -57,12 +164,49 @@
                 <div class="detail-label">Available To:</div>
                 <div class="detail-value">{{ accommodation.available_to }}</div>
             </div>
+            
+            {% if accommodation.affiliated_universities.exists %}
+            <div class="detail-item">
+                <div class="detail-label">Affiliated Universities:</div>
+                <div class="detail-value">
+                    {% for uni in accommodation.affiliated_universities.all %}
+                        {{ uni.name }}{% if not forloop.last %}, {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+            <div class="detail-item info-note">
+                <p><i>This accommodation is specifically available to students from the above-listed universities.</i></p>
+            </div>
+            {% endif %}
         </div>
+
+        <!-- 添加评分详情部分 -->
+        <div class="detail-section">
+            <h2>Ratings</h2>
+            <div class="rating-summary">
+                <div class="average-rating">
+                    <span class="rating-value">{{ accommodation.rating }}</span>
+                    <div class="stars">
+                        {% for i in "12345" %}
+                            {% if forloop.counter <= accommodation.rating %}
+                                <span class="star filled">★</span>
+                            {% elif forloop.counter <= accommodation.rating|add:0.5 %}
+                                <span class="star half-filled">★</span>
+                            {% else %}
+                                <span class="star">☆</span>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                    <div class="rating-count">{{ accommodation.rating_count }} ratings</div>
+                </div>
+            </div>
+        </div>
+        
         <div style="display: flex; justify-content: center; margin-top: 15px;">
             <!-- Reserve button -->
-            <a href="javascript:void(0);" onclick="reserveAccommodation('{{ accommodation.id }}')" class="btn btn-primary back-button">Reserve</a>
+            <a href="javascript:void(0);" onclick="showUserIdPrompt('reserve', '{{ accommodation.id }}')" class="btn btn-primary back-button">Reserve</a>
             <!-- Cancel button -->
-            <a href="javascript:void(0);" onclick="cancelReservation('{{ accommodation.id }}')" class="btn btn-secondary back-button" style="background-color: red;">Cancel</a>
+            <a href="javascript:void(0);" onclick="showUserIdPrompt('cancel', '{{ accommodation.id }}')" class="btn btn-secondary back-button" style="background-color: red;">Cancel</a>
         </div>
         
         <div class="button-group" style="display: flex; gap: 10px; justify-content: center; margin-top: 15px;">
@@ -71,19 +215,58 @@
             <!-- Back to Search button -->
             <a href="{% url 'search_accommodation' %}" class="btn btn-secondary back-button">Back to Search</a>
         </div>
-
+        
+        <!-- 管理员功能区（需要API密钥） -->
+        <div id="adminSection" class="admin-section">
+            <h3>Specialist</h3>
+            <div style="display: flex; justify-content: center; margin-top: 10px;">
+                <button onclick="showDeleteModal()" class="btn delete-btn">Delete Accommodation</button>
+            </div>
+        </div>
     </div>
+</div>
 
-
+<!-- 删除确认模态框 -->
+<div id="deleteModal" class="modal">
+    <div class="modal-content">
+        <h3>Confirm deletion</h3>
+        <p>Are you sure you want to delete "{{ accommodation.title }}"？</p>
+        <p>This operation is <strong>irreversible</strong>, Data cannot be recovered after deletion.</p>
+        <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 15px;">
+            <button onclick="hideDeleteModal()" class="btn btn-secondary">Cancel</button>
+            <button onclick="deleteAccommodation('{{ accommodation.id }}')" class="btn delete-btn">Confirm Delete</button>
+        </div>
+    </div>
 </div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
-    async function reserveAccommodation(accommodationId) {
+    // 检查是否有API密钥，显示管理员功能
+    document.addEventListener('DOMContentLoaded', function() {
+        const apiKey = localStorage.getItem('unihaven_api_key');
+        if (apiKey) {
+            document.getElementById('adminSection').style.display = 'block';
+        }
+    });
+    
+    // 显示用户ID输入提示
+    function showUserIdPrompt(action, accommodationId) {
+        let userId = prompt("请输入您的用户ID (例如: HKU_12345678):");
+        if (!userId) return; // 用户取消了输入
+        
+        if (action === 'reserve') {
+            reserveAccommodation(accommodationId, userId);
+        } else if (action === 'cancel') {
+            cancelReservation(accommodationId, userId);
+        }
+    }
+    
+    // 预订住宿
+    async function reserveAccommodation(accommodationId, userId) {
         const csrfToken = getCSRFToken();
         try {
-            const response = await fetch(`/reserve_accommodation/?id=${accommodationId}`, {
+            const response = await fetch(`/reserve_accommodation/?id=${accommodationId}&User%20ID=${encodeURIComponent(userId)}`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -91,24 +274,25 @@
                 }
             });
 
+            const data = await response.json();
+            
             if (response.ok) {
-                const data = await response.json();
-                alert(data.message); // Show success message
-                // Optionally, update the UI to reflect the reservation
+                alert(data.message);
+                location.reload(); // 刷新页面以显示预订状态
             } else {
-                const errorData = await response.json();
-                alert(`Failed to reserve accommodation: ${errorData.message}`);
+                alert(`预订失败: ${data.message}`);
             }
         } catch (error) {
             console.error('Error reserving accommodation:', error);
-            alert('An error occurred while reserving the accommodation.');
+            alert('预订住宿时发生错误。');
         }
     }
 
-    async function cancelReservation(accommodationId) {
+    // 取消预订
+    async function cancelReservation(accommodationId, userId) {
         const csrfToken = getCSRFToken();
         try {
-            const response = await fetch(`/cancel_reservation/?id=${accommodationId}`, {
+            const response = await fetch(`/cancel_reservation/?id=${accommodationId}&User%20ID=${encodeURIComponent(userId)}`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -116,31 +300,75 @@
                 }
             });
 
+            const data = await response.json();
+            
             if (response.ok) {
-                const data = await response.json();
-                alert(data.message); // Show success message
-                // Optionally, update the UI to reflect the cancellation
+                alert(data.message);
+                location.reload(); // 刷新页面以显示预订状态
             } else {
-                const errorData = await response.json();
-                alert(`Failed to cancel reservation: ${errorData.message}`);
+                alert(`取消预订失败: ${data.message}`);
             }
         } catch (error) {
             console.error('Error canceling reservation:', error);
-            alert('An error occurred while canceling the reservation.');
+            alert('取消预订时发生错误。');
+        }
+    }
+    
+    // 显示删除确认模态框
+    function showDeleteModal() {
+        document.getElementById('deleteModal').style.display = 'block';
+    }
+    
+    // 隐藏删除确认模态框
+    function hideDeleteModal() {
+        document.getElementById('deleteModal').style.display = 'none';
+    }
+    
+    // 删除住宿
+    async function deleteAccommodation(accommodationId) {
+        const apiKey = localStorage.getItem('unihaven_api_key');
+        if (!apiKey) {
+            alert('需要有效的API密钥才能删除住宿！');
+            hideDeleteModal();
+            return;
+        }
+        
+        try {
+            // 修复: 添加URL尾部斜杠，以符合Django的APPEND_SLASH设置
+            const response = await fetch('/api/delete-accommodation/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-API-Key': apiKey,
+                    'X-CSRFToken': getCSRFToken()
+                },
+                body: JSON.stringify({
+                    id: accommodationId
+                })
+            });
+            
+            const data = await response.json();
+            
+            if (response.ok) {
+                alert('住宿已成功删除！');
+                window.location.href = "{% url 'list_accommodation' %}";
+            } else {
+                alert(`删除失败: ${data.message}`);
+                hideDeleteModal();
+            }
+        } catch (error) {
+            console.error('Error deleting accommodation:', error);
+            alert('删除住宿时发生错误。');
+            hideDeleteModal();
         }
     }
 
+    // 获取CSRF令牌
     function getCSRFToken() {
         return getCookie('csrftoken');
     }
 
-    function setCookie(name, value, days) {
-        const date = new Date();
-        date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000)); // Convert days to milliseconds
-        const expires = "expires=" + date.toUTCString();
-        document.cookie = name + "=" + value + ";" + expires + ";path=/";
-    }
-
+    // 获取Cookie
     function getCookie(name) {
         const cookies = document.cookie.split(';');
         for (let i = 0; i < cookies.length; i++) {
@@ -149,7 +377,7 @@
                 return cookie.substring(name.length + 1);
             }
         }
-        return null; // Return null if the cookie is not found
+        return null;
     }
 
     document.addEventListener('DOMContentLoaded', function () {

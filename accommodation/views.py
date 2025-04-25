@@ -28,7 +28,7 @@ from rest_framework.generics import GenericAPIView
 from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiResponse
 from drf_spectacular.types import OpenApiTypes
 
-from .models import Accommodation, AccommodationRating
+from .models import Accommodation, AccommodationRating, UniversityAPIKey
 from .forms import AccommodationForm
 from .serializers import (
     AccommodationSerializer, 
@@ -195,7 +195,7 @@ def lookup_address(request):
 #------------------------------------------------------------------------------
 @extend_schema(
     summary="Add Accommodation",
-    description="Add new accommodation information. Requires API key authentication.",
+    description="Add new accommodation information. Requires API key authentication for POST.",
     request=AddAccommodationSerializer,
     parameters=API_KEY_PARAMETER,
     responses={
@@ -206,27 +206,57 @@ def lookup_address(request):
         500: ErrorResponseSerializer
     }
 )
-@api_view(['POST'])
+@api_view(['GET', 'POST'])  # 添加GET方法支持
 @parser_classes([JSONParser, FormParser, MultiPartParser])
-@renderer_classes([JSONRenderer])
-@authentication_classes([UniversityAPIKeyAuthentication])
-@permission_classes([UniversityAccessPermission])
+@renderer_classes([JSONRenderer, TemplateHTMLRenderer])  # 添加模板渲染器
 def add_accommodation(request):
     """
     Add new accommodation information.
 
-    Processes accommodation data submitted via POST request.
-    When a valid form is submitted, the address is geocoded using the HK government API.
-    Requires API key authentication - only university systems can add accommodations.
-    
-    Args:
-        request: HTTP POST request containing accommodation data
-        
-    Returns:
-        - JSON confirmation message on success
-        - JSON error message on failure
+    supports both GET and POST methods.
+    - GET: Returns the accommodation form for adding new accommodation.
+    - POST: Processes the form submission to add new accommodation information.
     """
-    # 获取认证的大学对象
+    # GET请求直接返回表单页面
+    if request.method == 'GET':
+        form = AccommodationForm()
+        return Response({'form': form}, template_name='accommodation/add_accommodation.html')
+    
+    # POST请求需要API密钥认证
+    if not hasattr(request, 'auth') or not request.auth:
+        # 检查是否有API密钥
+        api_key = request.META.get('HTTP_X_API_KEY') or request.query_params.get('api_key')
+        
+        # 记录收到的API密钥（可能为空）
+        print(f"DEBUG - Received API key: {api_key}")
+        
+        if not api_key:
+            return Response(
+                {"success": False, "message": "API key is required for adding accommodations"},
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+        
+        # 尝试查找API密钥
+        try:
+            api_key_obj = UniversityAPIKey.objects.get(key=api_key, is_active=True)
+            print(f"DEBUG - Found API key object: {api_key_obj}, University: {api_key_obj.university.name}")
+            
+            # 修正：如果找到了有效的API密钥，手动设置request.user和request.auth
+            # 这样可以继续处理请求而不是返回401错误
+            request.user = api_key_obj.university
+            request.auth = api_key_obj
+            
+        except UniversityAPIKey.DoesNotExist:
+            print(f"DEBUG - API key not found in database or inactive: {api_key}")
+            return Response(
+                {"success": False, "message": "Invalid API key"},
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+        
+    # 如果通过了身份验证，记录认证信息
+    print(f"DEBUG - Authentication successful: University {request.user.name} ({request.user.code})")
+    
+    # 原有的POST请求处理逻辑
     university = request.user
     
     serializer = AddAccommodationSerializer(data=request.data)
@@ -401,6 +431,12 @@ def delete_accommodation(request):
             type=OpenApiTypes.STR,
             required=False,
         ),
+        OpenApiParameter(
+            name="order_by",
+            description="Specify sorting order. Valid values: 'distance', 'price_asc', 'price_desc', 'rating', 'beds'.",
+            type=OpenApiTypes.STR,
+            required=False,
+        ),
     ],
     responses={
         200: AccommodationListResponseSerializer,
@@ -434,6 +470,7 @@ def list_accommodation(request):
     min_bedrooms = request.query_params.get("min_bedrooms", "")
     max_price = request.query_params.get("max_price", "")
     max_distance = request.query_params.get("distance", "")
+    order_by = request.query_params.get("order_by", "")
     order_by_distance = request.query_params.get("order_by_distance", "false").lower() == "true"
     campus = request.query_params.get("campus", "HKU_main")  # Default to "HKU_main" campus
     user_id = request.query_params.get("user_id", "")  # 获取用户ID
@@ -501,7 +538,19 @@ def list_accommodation(request):
         max_distance = float(max_distance)
         accommodations = accommodations.filter(distance__lte=max_distance)
 
-    if order_by_distance:
+    # 处理排序参数
+    if order_by:
+        if order_by == 'distance':
+            accommodations = accommodations.order_by('distance')
+        elif order_by == 'price_asc':
+            accommodations = accommodations.order_by('price')
+        elif order_by == 'price_desc':
+            accommodations = accommodations.order_by('-price')
+        elif order_by == 'rating':
+            accommodations = accommodations.order_by('-rating')
+        elif order_by == 'beds':
+            accommodations = accommodations.order_by('-beds')
+    elif order_by_distance:
         accommodations = accommodations.order_by('distance')
 
     if request.headers.get('Accept') == 'application/json' or request.query_params.get('format') == 'json':
@@ -518,8 +567,9 @@ def list_accommodation(request):
         'min_bedrooms': min_bedrooms,
         'max_price': max_price,
         'max_distance': max_distance,
+        'order_by': order_by,
         'order_by_distance': order_by_distance,
-        'user_id': user_id,  # 传递用户ID到模板
+        'user_id': user_id, 
     })
 
 @extend_schema(
@@ -837,6 +887,7 @@ class RatingView(GenericAPIView):
                 required=True,
             )
         ],
+        request=None, 
         responses={
             200: SuccessResponseSerializer,
             400: ErrorResponseSerializer,
@@ -901,3 +952,27 @@ class RatingView(GenericAPIView):
 reserve_accommodation = ReservationView.as_view()
 cancel_reservation = CancellationView.as_view()
 rate_accommodation = RatingView.as_view()
+
+@api_view(['GET'])
+@renderer_classes([TemplateHTMLRenderer])
+def api_key_management(request):
+    """API密钥管理页面视图"""
+    return Response(template_name='accommodation/api_key_management.html')
+
+@api_view(['GET'])
+@renderer_classes([TemplateHTMLRenderer])
+def manage_accommodations(request):
+    """住宿管理页面视图，用于删除住宿"""
+    return Response(template_name='accommodation/manage_accommodation.html')
+
+@api_view(['GET'])
+@authentication_classes([UniversityAPIKeyAuthentication])
+def test_api_key(request):
+    """测试API密钥是否有效"""
+    university = request.user
+    return Response({
+        "success": True,
+        "message": "API密钥有效",
+        "university": university.name,
+        "code": university.code
+    })

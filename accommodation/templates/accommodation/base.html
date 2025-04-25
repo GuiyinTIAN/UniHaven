@@ -13,6 +13,54 @@
             display: flex;
             flex-direction: column;
         }
+        
+        /* 重新设计导航栏，保持原高度 */
+        .navbar {
+            position: relative;
+            /* 去掉固定高度，让内容自然决定高度 */
+            padding: 0 20px;
+            background-color: var(--primary-color);
+            color: white;
+            display: flex;
+            align-items: center;
+        }
+        
+        /* 标题居中定位 */
+        .navbar h1 {
+            position: absolute;
+            left: 0;
+            right: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            text-align: center;
+            margin: 0;
+            padding: 15px 0; /* 恢复原来的内边距 */
+            white-space: nowrap;
+            z-index: 10;
+        }
+        
+        /* 左侧元素 */
+        .nav-left {
+            position: relative; /* 改为相对定位 */
+            z-index: 20;
+            height: 60px; /* 为navbar设置一个明确的高度 */
+            display: flex;
+            align-items: center;
+        }
+        
+        /* 右侧元素 */
+        .nav-right {
+            position: absolute;
+            right: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 20;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        /* 主页按钮样式 */
         .home-btn {
             background-color: transparent;
             border: none;
@@ -20,33 +68,164 @@
             font-size: 1.5em;
             padding: 5px 10px;
             margin-right: 10px;
+            transition: transform 0.2s;
         }
         
         .home-btn:hover {
             background-color: rgba(255, 255, 255, 0.2);
             transform: translateY(-2px);
         }
-
+        
+        /* 统一下拉菜单样式 */
+        .dropdown-container {
+            position: relative;
+            margin-right: 5px;
+        }
+        
+        .dropdown-toggle {
+            background-color: rgba(255, 255, 255, 0.1);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 8px 15px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            font-size: 0.9em;
+            transition: background-color 0.2s;
+        }
+        
+        .dropdown-toggle:hover {
+            background-color: rgba(255, 255, 255, 0.2);
+        }
+        
+        .dropdown-icon {
+            margin-left: 8px;
+        }
+        
+        .dropdown-menu {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            background-color: white;
+            border-radius: 4px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            width: 200px;
+            display: none;
+            z-index: 1000;
+            list-style: none;
+            margin: 5px 0 0 0;
+            padding: 0;
+        }
+        
+        .dropdown-menu.show {
+            display: block;
+        }
+        
+        .dropdown-menu li {
+            margin: 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        
+        .dropdown-menu li:last-child {
+            border-bottom: none;
+        }
+        
+        .dropdown-menu a, .dropdown-menu button {
+            color: var(--primary-color);
+            text-decoration: none;
+            font-weight: 500;
+            display: block;
+            padding: 12px 15px;
+            transition: background-color 0.3s;
+            width: 100%;
+            text-align: left;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 1em;
+        }
+        
+        .dropdown-menu a:hover, .dropdown-menu button:hover {
+            background-color: #f5f5f5;
+        }
+        
+        /* 语言下拉菜单样式 */
+        .language-dropdown {
+            position: relative;
+        }
+        
+        .language-dropdown select {
+            appearance: none;
+            background-color: rgba(255, 255, 255, 0.1);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 8px 28px 8px 15px;
+            font-size: 0.9em;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        
+        .language-dropdown select:hover {
+            background-color: rgba(255, 255, 255, 0.2);
+        }
+        
+        .language-dropdown::after {
+            content: "▼";
+            color: white;
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            pointer-events: none;
+            font-size: 0.7em;
+        }
+        
+        .language-dropdown select option {
+            background-color: white;
+            color: #333;
+        }
+        
         .footer {
             background-color: var(--primary-color);
             color: white;
             text-align: center;
             padding: 10px 0;
             font-size: 0.9em;
-        }
-        .content-wrapper {
-            flex: 1;
+            margin-top: auto; /* 确保footer始终在底部 */
         }
     </style>
     {% block extra_css %}{% endblock %}
 </head>
-<body class="page-transition">
+<body class="page-transition {% block body_class %}{% endblock %}">
     <div class="navbar">
-        {% block home_button %}
-        <a href="{% url 'index' %}" class="home-btn btn btn-secondary">🏠</a>
-        {% endblock %}
+        <div class="nav-left">
+            {% block home_button %}
+            <a href="{% url 'index' %}" class="home-btn btn btn-secondary">🏠</a>
+            {% endblock %}
+        </div>
+        
         <h1>{% block nav_title %}UniHaven{% endblock %}</h1>
-        <div class="nav-right"></div><!-- 添加空元素以保持对称 -->
+        
+        <div class="nav-right">
+            <!-- 通用语言切换器占位 -->
+            {% block language_selector %}{% endblock %}
+            
+            <!-- 导航菜单 -->
+            <div class="dropdown-container">
+                <button id="menuToggle" class="dropdown-toggle">
+                    Menu <span class="dropdown-icon">▼</span>
+                </button>
+                <ul id="navMenu" class="dropdown-menu">
+                    <li><a href="{% url 'search_accommodation' %}">Search</a></li>
+                    <li><a href="{% url 'list_accommodation' %}">List</a></li>
+                    <li><a href="{% url 'add_accommodation' %}">Add Accommodation</a></li>
+                    <li><a href="{% url 'manage_accommodations' %}">Manage Accommodation</a></li>
+                    <li><a href="{% url 'api_key_management' %}">API Key</a></li>
+                </ul>
+            </div>
+        </div>
     </div>
     
     <div class="content-wrapper">
@@ -56,6 +235,38 @@
     <div class="footer">
         <p>UniHaven &copy; 2025 - HKU COMP3297</p>
     </div>
+    
+    <script>
+        // 下拉菜单功能
+        document.addEventListener('DOMContentLoaded', function() {
+            const menuToggle = document.getElementById('menuToggle');
+            const navMenu = document.getElementById('navMenu');
+            
+            if (menuToggle && navMenu) {
+                menuToggle.addEventListener('click', function(event) {
+                    event.stopPropagation();
+                    navMenu.classList.toggle('show');
+                    
+                    // 切换箭头方向
+                    // const menuIcon = menuToggle.querySelector('.dropdown-icon');
+                    // if (menuIcon) {
+                    //     menuIcon.textContent = navMenu.classList.contains('show') ? '▲' : '▼';
+                    // }
+                });
+                
+                // 点击菜单外部关闭菜单
+                document.addEventListener('click', function(event) {
+                    if (!menuToggle.contains(event.target) && !navMenu.contains(event.target)) {
+                        navMenu.classList.remove('show');
+                        const menuIcon = menuToggle.querySelector('.dropdown-icon');
+                        if (menuIcon) {
+                            menuIcon.textContent = '▼';
+                        }
+                    }
+                });
+            }
+        });
+    </script>
     
     {% block extra_js %}{% endblock %}
 </body>
