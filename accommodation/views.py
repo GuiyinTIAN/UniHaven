@@ -54,14 +54,14 @@ from .utils import get_university_from_user_id
 
 # Geographic coordinates of The University of Hong Kong (used for distance calculations)
 CAMPUS_LOCATIONS = {
-    "main": {"latitude": 22.28405, "longitude": 114.13784},
-    "sassoon": {"latitude": 22.2675, "longitude": 114.12881},
-    "swire": {"latitude": 22.20805, "longitude": 114.26021},
-    "kadoorie": {"latitude": 22.43022, "longitude": 114.11429},
-    "dentistry": {"latitude": 22.28649, "longitude": 114.14426},
+    "HKU_main": {"latitude": 22.28405, "longitude": 114.13784},
+    "HKU_sassoon": {"latitude": 22.2675, "longitude": 114.12881},
+    "HKU_swire": {"latitude": 22.20805, "longitude": 114.26021},
+    "KHU_kadoorie": {"latitude": 22.43022, "longitude": 114.11429},
+    "HKU_dentistry": {"latitude": 22.28649, "longitude": 114.14426},
     # 添加其他大学的主校区
-    "hkust": {"latitude": 22.33584, "longitude": 114.26355},
-    "cuhk": {"latitude": 22.41907, "longitude": 114.20693},
+    "HKUST": {"latitude": 22.33584, "longitude": 114.26355},
+    "HKUST": {"latitude": 22.41907, "longitude": 114.20693},
 }
 
 #------------------------------------------------------------------------------
@@ -331,8 +331,8 @@ def delete_accommodation(request):
             name="campus",
             description=(
                 "Specify the campus location to calculate distances from. "
-                "Valid values: 'main', 'sassoon', 'swire', 'kadoorie', 'dentistry', 'hkust', 'cuhk'. "
-                "Defaults to 'main' if not provided."
+                "Valid values: 'HKU_main', 'HKU_sassoon', 'HKU_swire', 'HKU_kadoorie', 'HKU_dentistry', 'HKUST', 'CUHK'. "
+                "Defaults to 'HKU_main' if not provided."
             ),
             type=OpenApiTypes.STR,
             required=False,
@@ -377,7 +377,7 @@ def list_accommodation(request):
     max_price = request.query_params.get("max_price", "")
     max_distance = request.query_params.get("distance", "")
     order_by_distance = request.query_params.get("order_by_distance", "false").lower() == "true"
-    campus = request.query_params.get("campus", "main")  # Default to "main" campus
+    campus = request.query_params.get("campus", "HKU_main")  # Default to "HKU_main" campus
     user_id = request.query_params.get("user_id", "")  # 获取用户ID
     
     # 如果提供了用户ID，根据用户所属大学筛选住宿
@@ -388,7 +388,7 @@ def list_accommodation(request):
             accommodations = accommodations.filter(affiliated_universities=university)
     
     if campus not in CAMPUS_LOCATIONS:
-        campus = "main"  # Default to "main" if campus is invalid
+        campus = "HKU_main"  # Default to "HKU_main" if campus is invalid
     # Get selected campus coordinates
     campus_coords = CAMPUS_LOCATIONS[campus]
     campus_latitude = campus_coords["latitude"]
@@ -481,8 +481,8 @@ def list_accommodation(request):
             name="campus",
             description=(
                 "Specify the campus location to calculate distances from. "
-                "Valid values: 'main', 'sassoon', 'swire', 'kadoorie', 'dentistry', 'hkust', 'cuhk'. "
-                "Defaults to 'main' if not provided."
+                "Valid values: 'HKU_main', 'HKU_sassoon', 'HKU_swire', 'HKU_kadoorie', 'HKU_dentistry', 'HKUST', 'CUHK'. "
+                "Defaults to 'HKU_main' if not provided."
             ),
             type=OpenApiTypes.STR,
             required=False,
@@ -582,7 +582,9 @@ class ReservationView(GenericAPIView):
         description="Reserve an accommodation using query parameter id and user id",
         parameters=[
             OpenApiParameter(name="id", location=OpenApiParameter.QUERY, description="Accommodation ID", type=int, required=True),
-            OpenApiParameter(name="User ID", location=OpenApiParameter.QUERY, description="User ID", type=str, required=True)
+            OpenApiParameter(name="User ID", location=OpenApiParameter.QUERY, 
+                    description="User ID, you need to assign which school you are from,e.g. If from HKU, that is HKU_XXX, if HKUST, that is HKUST_xxx, if CUHK, CUHK_xxx", 
+                    type=str, required=True)
         ],
         responses={
             200: ReservationResponseSerializer,
@@ -602,7 +604,7 @@ class ReservationView(GenericAPIView):
             - Error responses for various failure conditions
         """
         accommodation_id = request.query_params.get('id')
-        user_id = request.query_params.get('cookie')
+        user_id = request.query_params.get('User ID')
 
         if not accommodation_id:
             return Response({'success': False, 'message': 'Accommodation ID is required'}, 
@@ -618,18 +620,30 @@ class ReservationView(GenericAPIView):
                     'success': False,
                     'message': f'Accommodation "{accommodation.title}" is already reserved by [{accommodation.userID}].'
                 }, status=status.HTTP_400_BAD_REQUEST)
-            accommodation.reserved = True
-            accommodation.userID = user_id
-            accommodation.save()
             
             # 获取用户所属大学
             university = get_university_from_user_id(user_id)
             
+            # 检查用户是否有资格预订该住宿（是否属于关联大学）
+            if university and accommodation.affiliated_universities.exists():
+                if not accommodation.affiliated_universities.filter(id=university.id).exists():
+                    university_codes = [u.code for u in accommodation.affiliated_universities.all()]
+                    return Response({
+                        'success': False,
+                        'message': f'You are not eligible to reserve this accommodation. It is only available to students from: {", ".join(university_codes)}.'
+                    }, status=status.HTTP_403_FORBIDDEN)
+            
+            accommodation.reserved = True
+            accommodation.userID = user_id
+            accommodation.save()
+            
+            student_name = student_name = user_id.split('_')[1]
+            
             # 发送邮件给学生
-            student_email = f"{user_id}@example.com"  
+            student_email = f"{student_name}@example.com"  
             send_mail(
                 subject="Reservation Confirmed - UniHaven",
-                message=f"Hi {user_id},\n\nYour reservation for '{accommodation.title}' is confirmed.\nThank you!",
+                message=f"Hi {student_name},\n\nYour reservation for '{accommodation.title}' is confirmed.\nThank you!",
                 from_email=settings.DEFAULT_FROM_EMAIL,
                 recipient_list=[student_email],
             )
@@ -644,7 +658,7 @@ class ReservationView(GenericAPIView):
                 
             send_mail(
                 subject=f"[UniHaven] New Reservation Alert - {university_name}",
-                message=f"Dear {university_name} Housing Specialist,\n\nStudent {user_id} has reserved the accommodation: '{accommodation.title}'.\nPlease follow up for contract processing.\n\nRegards,\nUniHaven System",
+                message=f"Dear {university_name} Housing Specialist,\n\nStudent {student_name} has reserved the accommodation: '{accommodation.title}'.\nPlease follow up for contract processing.\n\nRegards,\nUniHaven System",
                 from_email=settings.DEFAULT_FROM_EMAIL,
                 recipient_list=[specialist_email],
             )
@@ -674,7 +688,9 @@ class CancellationView(GenericAPIView):
         description="Cancel an accommodation reservation using query parameter id and user id",
         parameters=[
             OpenApiParameter(name="id", location=OpenApiParameter.QUERY, description="Accommodation ID", type=int, required=True),
-            OpenApiParameter(name="User ID", location=OpenApiParameter.QUERY, description="User ID", type=str, required=True)
+            OpenApiParameter(name="User ID", location=OpenApiParameter.QUERY, 
+                             description="User ID, you need to assign which school you are from,e. if you from HKU, that is HKU_XXX, if HKUST, that is HKUST_xxx, if CUHK, CUHK_xxx", 
+                             type=str, required=True)
         ],
         responses={
             200: ReservationResponseSerializer,
@@ -686,7 +702,7 @@ class CancellationView(GenericAPIView):
     def post(self, request):
         """Cancel an accommodation reservation using query parameter id."""
         accommodation_id = request.query_params.get('id')
-        user_id = request.query_params.get('cookie')
+        user_id = request.query_params.get('User ID')
 
         if not accommodation_id:
             return Response({'success': False, 'message': 'Accommodation ID is required'}, 
@@ -710,17 +726,19 @@ class CancellationView(GenericAPIView):
             accommodation.reserved = False
             accommodation.userID = ""
             accommodation.save()
-            student_email = f"{user_id}@example.com"
+
+            student_name = user_id.split('_')[1]
+            student_email = f"{student_name}@example.com"
             send_mail(
                 subject="Reservation Cancelled - UniHaven",
-                message=f"Hi {user_id},\n\nYour reservation for '{accommodation.title}' has been cancelled.",
+                message=f"Hi {student_name},\n\nYour reservation for '{accommodation.title}' has been cancelled.",
                 from_email=settings.DEFAULT_FROM_EMAIL,
                 recipient_list=[student_email],
             )
             specialist_email = "cedars@hku.hk"  
             send_mail(
                 subject="[UniHaven] Reservation Cancelled",
-                message=f"Dear CEDARS,\n\nStudent {user_id} has cancelled their reservation for '{accommodation.title}'.\nNo further action is required.\n\nRegards,\nUniHaven System",
+                message=f"Dear CEDARS,\n\nStudent {student_name} has cancelled their reservation for '{accommodation.title}'.\nNo further action is required.\n\nRegards,\nUniHaven System",
                 from_email=settings.DEFAULT_FROM_EMAIL,
                 recipient_list=[specialist_email],
             )
