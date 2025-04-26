@@ -97,6 +97,31 @@
         color: #666;
         font-size: 0.9em;
     }
+
+    /* 预订状态样式 - 使用统一的标签样式 */
+    .status-badge {
+        display: inline-block;
+        padding: 3px 10px;
+        border-radius: 20px;
+        font-size: 0.8em;
+        font-weight: 500;
+    }
+    
+    .status-badge.status-reserved {
+        background-color: #f8d7da;
+        color: #721c24;
+    }
+    
+    .status-badge.status-available {
+        background-color: #d4edda;
+        color: #155724;
+    }
+    
+    .api-status {
+        display: flex;
+        align-items: center;
+        gap: 10px; 
+    }
 </style>
 {% endblock %}
 
@@ -180,25 +205,33 @@
             {% endif %}
         </div>
 
-        <!-- 添加评分详情部分 -->
+        <!-- 修改评分详情部分，将评分和预订状态水平显示 -->
         <div class="detail-section">
-            <h2>Ratings</h2>
-            <div class="rating-summary">
-                <div class="average-rating">
-                    <span class="rating-value">{{ accommodation.rating }}</span>
-                    <div class="stars">
-                        {% for i in "12345" %}
-                            {% if forloop.counter <= accommodation.rating %}
-                                <span class="star filled">★</span>
-                            {% elif forloop.counter <= accommodation.rating|add:0.5 %}
-                                <span class="star half-filled">★</span>
-                            {% else %}
-                                <span class="star">☆</span>
-                            {% endif %}
-                        {% endfor %}
+            <h2>Ratings and Availability</h2>
+            <div style="display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 25px; margin-bottom: 20px;">
+                <div class="rating-summary">
+                    <div class="average-rating">
+                        <span class="rating-value">{{ accommodation.rating }}</span>
+                        <div class="stars">
+                            {% for i in "12345" %}
+                                {% if forloop.counter <= accommodation.rating %}
+                                    <span class="star filled">★</span>
+                                {% elif forloop.counter <= accommodation.rating|add:0.5 %}
+                                    <span class="star half-filled">★</span>
+                                {% else %}
+                                    <span class="star">☆</span>
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+                        <div class="rating-count">{{ accommodation.rating_count }} ratings</div>
                     </div>
-                    <div class="rating-count">{{ accommodation.rating_count }} ratings</div>
                 </div>
+                
+                <!-- 预订状态标签 - 使用统一样式 -->
+                <span class="status-badge {% if accommodation.reserved %}status-reserved{% else %}status-available{% endif %}">
+                    <i class="fas {% if accommodation.reserved %}fa-calendar-times{% else %}fa-calendar-check{% endif %}"></i>
+                    {% if accommodation.reserved %}Reserved{% else %}Available{% endif %}
+                </span>
             </div>
         </div>
         
@@ -210,8 +243,8 @@
         </div>
         
         <div class="button-group" style="display: flex; gap: 10px; justify-content: center; margin-top: 15px;">
-            <!-- Back to Listings button -->
-            <a href="{% url 'list_accommodation' %}" class="btn btn-primary back-button">Back to Listings</a>
+            <!-- Back to Listings button with all original query parameters -->
+            <a href="{% url 'list_accommodation' %}?{{ query_string }}" class="btn btn-primary back-button">Back to Listings</a>
             <!-- Back to Search button -->
             <a href="{% url 'search_accommodation' %}" class="btn btn-secondary back-button">Back to Search</a>
         </div>
@@ -266,7 +299,7 @@
     async function reserveAccommodation(accommodationId, userId) {
         const csrfToken = getCSRFToken();
         try {
-            const response = await fetch(`/reserve_accommodation/?id=${accommodationId}&User%20ID=${encodeURIComponent(userId)}`, {
+            const response = await fetch(`/api/reserve_accommodation/?id=${accommodationId}&User%20ID=${encodeURIComponent(userId)}`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -292,7 +325,7 @@
     async function cancelReservation(accommodationId, userId) {
         const csrfToken = getCSRFToken();
         try {
-            const response = await fetch(`/cancel_reservation/?id=${accommodationId}&User%20ID=${encodeURIComponent(userId)}`, {
+            const response = await fetch(`/api/cancel_reservation/?id=${accommodationId}&User%20ID=${encodeURIComponent(userId)}`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

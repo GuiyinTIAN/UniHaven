@@ -665,10 +665,16 @@ def accommodation_detail(request, id):
     try:
         accommodation = get_object_or_404(Accommodation, pk=id)
         
+        # 保存所有查询参数以传递给模板
+        query_string = request.META.get('QUERY_STRING', '')
+        
         if request.headers.get('Accept') == 'application/json' or request.query_params.get('format') == 'json':
             serializer = AccommodationDetailSerializer(accommodation)
             return Response(serializer.data)
-        return render(request, 'accommodation/accommodation_detail.html', {'accommodation': accommodation})
+        return render(request, 'accommodation/accommodation_detail.html', {
+            'accommodation': accommodation,
+            'query_string': query_string  # 传递所有查询参数
+        })
     except Accommodation.DoesNotExist:
         return Response({'error': 'Accommodation not found.'}, status=status.HTTP_404_NOT_FOUND)
     

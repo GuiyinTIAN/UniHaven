@@ -223,6 +223,32 @@
     .meta-icon {
         margin-right: 4px;
     }
+
+    /* 添加状态徽章样式 */
+    .status-badge {
+        display: inline-block;
+        padding: 3px 8px;
+        border-radius: 12px;
+        font-size: 0.8em;
+        font-weight: 500;
+        margin-left: 10px;
+    }
+    .status-badge.status-reserved {
+        background-color: #f8d7da;
+        color: #721c24;
+    }
+    .status-badge.status-available {
+        background-color: #d4edda;
+        color: #155724;
+    }
+
+    /* 卡片标题和状态布局 */
+    .card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 10px;
+    }
 </style>
 {% endblock %}
 
@@ -261,6 +287,7 @@
                     <option value="beds" {% if order_by == 'beds' %}selected{% endif %}>
                         <span class="sort-option-icon">🛏️</span>Number of Beds
                     </option>
+
                 </select>
                 <span class="sort-select-arrow">▼</span>
             </div>
@@ -275,7 +302,12 @@
         {% for accommodation in accommodations %}
         <div class="card">
             <div class="card-content">
-                <h2 class="card-title">{{ accommodation.title }}</h2>
+                <div class="card-header">
+                    <h2 class="card-title">{{ accommodation.title }}</h2>
+                    <span class="status-badge {% if accommodation.reserved %}status-reserved{% else %}status-available{% endif %}">
+                        {% if accommodation.reserved %}Reserved{% else %}Available{% endif %}
+                    </span>
+                </div>
                 <p class="card-description">{{ accommodation.description }}</p>
                 
                 <div class="rating-display">
@@ -306,7 +338,9 @@
                     {% endif %}
                 </div>
                 
-                <a href="{% url 'accommodation_detail' accommodation.pk %}" class="btn btn-primary">View Details</a>
+                <div style="text-align: center;">
+                    <a href="{% url 'accommodation_detail' accommodation.pk %}?{{ request.GET.urlencode }}" class="btn btn-primary">View Details</a>
+                </div>
             </div>
         </div>
         {% endfor %}
@@ -466,6 +500,34 @@
             params.set('order_by', sortValue);
         }
         window.location.href = `${window.location.pathname}?${params.toString()}`;
+    }
+    
+    function removeFilter(paramName) {
+        const params = new URLSearchParams(window.location.search);
+        
+        params.delete(paramName);
+        
+        const sortValue = params.get('order_by');
+        
+        if (isFilterEmpty(params)) {
+            const cleanParams = new URLSearchParams();
+            if (sortValue) {
+                cleanParams.set('order_by', sortValue);
+            }
+            window.location.href = `${window.location.pathname}?${cleanParams.toString()}`;
+        } else {
+            window.location.href = `${window.location.pathname}?${params.toString()}`;
+        }
+    }
+    
+    function isFilterEmpty(params) {
+        const ignoredParams = ['order_by', 'order_by_distance', 'page', 'campus'];
+        for (const [key, value] of params.entries()) {
+            if (!ignoredParams.includes(key) && value) {
+                return false;
+            }
+        }
+        return true;
     }
 </script>
 {% endblock %}
