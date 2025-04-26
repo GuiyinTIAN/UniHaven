@@ -4,7 +4,7 @@ from .models import Accommodation
 
 class AddAccommodationSerializer(serializers.ModelSerializer):
     """Serializer specifically for creating new accommodation"""
-    address = serializers.CharField(
+    building_name = serializers.CharField(
         help_text="Full address to be looked up via government API"
     )
     room_number = serializers.CharField(
@@ -30,7 +30,7 @@ class AddAccommodationSerializer(serializers.ModelSerializer):
         model = Accommodation
         fields = [
             'title', 'description', 'type', 'price', 'beds', 'bedrooms',
-            'available_from', 'available_to', 'address',
+            'available_from', 'available_to', 'building_name',
             'room_number', 'floor_number', 'flat_number',
             'contact_phone', 'contact_email'
         ]

@@ -334,6 +334,13 @@
                     {% if accommodation.distance %}
                     <div class="meta-item"><span class="meta-icon">📍</span> {{ accommodation.distance|floatformat:2 }} km</div>
                     {% endif %}
+                    {% if accommodation.affiliated_universities.exists %}
+                    <div class="meta-item"><span class="meta-icon">🎓</span> 
+                        {% for uni in accommodation.affiliated_universities.all %}
+                            {{ uni.code }}{% if not forloop.last %}, {% endif %}
+                        {% endfor %}
+                    </div>
+                    {% endif %}
                 </div>
                 
                 <div style="text-align: center;">
