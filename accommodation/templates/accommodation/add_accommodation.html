@@ -1,185 +1,540 @@
+{% extends 'accommodation/base.html' %}
 {% load static %}
-<!DOCTYPE html>
-<html>
-<head>
-    <title>UniHaven - Add New Accommodation</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="{% static 'accommodation/css/main.css' %}">
-</head>
-<body class="page-transition">
-    <div class="navbar">
-        <a href="{% url 'index' %}" class="home-btn btn btn-secondary">🏠</a>
-        <h1>Add New Accommodation</h1>
+
+{% block title %}UniHaven - Add New Accommodation{% endblock %}
+{% block nav_title %}Add New Accommodation{% endblock %}
+
+{% block extra_css %}
+<style>
+    .api-key-warning {
+        background-color: #fff3cd;
+        color: #856404;
+        padding: 10px 15px;
+        border-radius: 4px;
+        margin-bottom: 20px;
+        display: none;
+    }
+    
+    .api-key-warning a {
+        color: #533f03;
+        text-decoration: underline;
+        font-weight: bold;
+    }
+    
+    .unique-identifier-info {
+        background-color: #e8f4fd;
+        border-left: 4px solid #17a2b8;
+        padding: 10px 15px;
+        margin: 10px 0 20px 0;
+        font-size: 0.9em;
+        border-radius: 6px;
+    }
+
+    .form-row {
+        display: flex;
+        gap: 20px;
+        margin-bottom: 15px;
+    }
+    
+    .form-row .form-group {
+        flex: 1;
+        margin-bottom: 0;
+    }
+    
+    .form-group small {
+        display: block;
+        margin-top: 5px;
+    }
+
+    .university-info {
+        background-color: #e7f5ff;
+        border-left: 4px solid var(--primary-color);
+        padding: 15px;
+        margin: 20px 0;
+        border-radius: 4px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+    
+    .university-name {
+        font-weight: bold;
+        color: var(--primary-color);
+        font-size: 1.1em;
+    }
+    
+    .university-code {
+        font-family: monospace;
+        background-color: rgba(0, 123, 255, 0.1);
+        padding: 3px 8px;
+        border-radius: 3px;
+        margin-left: 10px;
+    }
+    
+    .api-status {
+        display: flex;
+        align-items: center;
+    }
+    
+    .status-badge {
+        display: inline-block;
+        padding: 3px 10px;
+        border-radius: 20px;
+        font-size: 0.8em;
+        font-weight: 500;
+        margin-right: 10px;
+    }
+    
+    .status-badge.valid {
+        background-color: #d4edda;
+        color: #155724;
+    }
+    
+    .status-badge.invalid {
+        background-color: #f8d7da;
+        color: #721c24;
+    }
+
+    /* Add duplicate accommodation info box styles */
+    .duplicate-info {
+        background-color: #e7f1ff;
+        border-left: 4px solid #3498db;
+        padding: 10px 15px;
+        margin: 10px 0 20px 0;
+        font-size: 0.9em;
+        border-radius: 6px;
+    }
+
+    .duplicate-property {
+        background-color: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+        padding: 10px;
+        margin-top: 10px;
+    }
+
+    .duplicate-property h4 {
+        color: #3498db;
+        margin-bottom: 8px;
+    }
+
+    .link-existing-btn {
+        background-color: #28a745;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        padding: 5px 10px;
+        margin-top: 8px;
+        cursor: pointer;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- API key warning -->
+    <div id="apiKeyWarning" class="api-key-warning">
+        <strong>Attention!</strong> The API key was not detected. Adding accommodation requires a valid API key for authentication.
+        <a href="{% url 'api_key_management' %}">Click here to set your API key</a>
     </div>
     
-    <div class="container">
-        <div class="form-card">
-            <form method="post">
-                {% csrf_token %}
-                <div class="form-grid">
-                    <div class="section-title">Basic Information</div>
-                    
-                    <div class="form-group">
-                        <label for="{{ form.title.id_for_label }}">Title:</label>
-                        {{ form.title }}
-                        {% if form.title.errors %}
-                            <ul class="errorlist">
-                                {% for error in form.title.errors %}
-                                    <li>{{ error }}</li>
-                                {% endfor %}
-                            </ul>
-                        {% endif %}
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="{{ form.type.id_for_label }}">Accommodation Type:</label>
-                        {{ form.type }}
-                        {% if form.type.errors %}
-                            <ul class="errorlist">
-                                {% for error in form.type.errors %}
-                                    <li>{{ error }}</li>
-                                {% endfor %}
-                            </ul>
-                        {% endif %}
-                    </div>
-                    
-                    <div class="form-group full-width">
-                        <label for="{{ form.description.id_for_label }}">Description:</label>
-                        {{ form.description }}
-                        {% if form.description.errors %}
-                            <ul class="errorlist">
-                                {% for error in form.description.errors %}
-                                    <li>{{ error }}</li>
-                                {% endfor %}
-                            </ul>
-                        {% endif %}
-                    </div>
-                    
-                    <div class="section-title">Property Details</div>
-                    
-                    <div class="form-group">
-                        <label for="{{ form.beds.id_for_label }}">Number of Beds:</label>
-                        {{ form.beds }}
-                        {% if form.beds.errors %}
-                            <ul class="errorlist">
-                                {% for error in form.beds.errors %}
-                                    <li>{{ error }}</li>
-                                {% endfor %}
-                            </ul>
-                        {% endif %}
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="{{ form.bedrooms.id_for_label }}">Number of Bedrooms:</label>
-                        {{ form.bedrooms }}
-                        {% if form.bedrooms.errors %}
-                            <ul class="errorlist">
-                                {% for error in form.bedrooms.errors %}
-                                    <li>{{ error }}</li>
-                                {% endfor %}
-                            </ul>
-                        {% endif %}
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="{{ form.price.id_for_label }}">Price (HKD):</label>
-                        {{ form.price }}
-                        {% if form.price.errors %}
-                            <ul class="errorlist">
-                                {% for error in form.price.errors %}
-                                    <li>{{ error }}</li>
-                                {% endfor %}
-                            </ul>
-                        {% endif %}
-                    </div>
-                    
-                    <div class="form-group full-width">
-                        <label for="{{ form.address.id_for_label }}">Address:</label>
-                        {{ form.address }}
-                        {% if form.address.errors %}
-                            <ul class="errorlist">
-                                {% for error in form.address.errors %}
-                                    <li>{{ error }}</li>
-                                {% endfor %}
-                            </ul>
-                        {% endif %}
-                    </div>
-                    
-                    <div class="section-title">Availability</div>
-                    
-                    <div class="form-group">
-                        <label for="{{ form.available_from.id_for_label }}">Available From:</label>
-                        {{ form.available_from }}
-                        {% if form.available_from.errors %}
-                            <ul class="errorlist">
-                                {% for error in form.available_from.errors %}
-                                    <li>{{ error }}</li>
-                                {% endfor %}
-                            </ul>
-                        {% endif %}
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="{{ form.available_to.id_for_label }}">Available To:</label>
-                        {{ form.available_to }}
-                        {% if form.available_to.errors %}
-                            <ul class="errorlist">
-                                {% for error in form.available_to.errors %}
-                                    <li>{{ error }}</li>
-                                {% endfor %}
-                            </ul>
-                        {% endif %}
-                    </div>
-                    
-                    {% if form.non_field_errors %}
-                        <div class="full-width">
-                            <ul class="errorlist">
-                                {% for error in form.non_field_errors %}
-                                    <li>{{ error }}</li>
-                                {% endfor %}
-                            </ul>
-                        </div>
-                    {% endif %}
-                    
-                    <div class="submit-row">
-                        <button type="submit" class="btn btn-primary btn-full">Add Accommodation</button>
-                    </div>
-                </div>
-            </form>
+    <!--  university information panel -->
+    <div id="universityInfo" class="university-info" style="display: none;">
+        <div>
+            <span>Organization:</span>
+            <span class="university-name" id="universityName">Loading...</span>
+            <span class="university-code" id="universityCode"></span>
+        </div>
+        <div class="api-status">
+            <span class="status-badge valid">API Key Valid</span>
+            <button onclick="clearApiKey()" class="btn btn-sm btn-outline-secondary">Change Key</button>
         </div>
     </div>
-
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const today = new Date();
-            const yyyy = today.getFullYear();
-            const mm = String(today.getMonth() + 1).padStart(2, '0');
-            const dd = String(today.getDate()).padStart(2, '0');
-            const todayFormatted = `${yyyy}-${mm}-${dd}`;
-            
-            const fromDateInput = document.getElementById('{{ form.available_from.id_for_label }}');
-            fromDateInput.min = todayFormatted;
-            
-            const toDateInput = document.getElementById('{{ form.available_to.id_for_label }}');
-            toDateInput.min = todayFormatted;
-            
-            fromDateInput.addEventListener('change', function() {
-                if (fromDateInput.value) {
-                    toDateInput.min = fromDateInput.value;
+    
+    <!-- Add duplicate accommodation detection info area -->
+    <div id="duplicateAccommodationInfo" class="duplicate-info" style="display: none;">
+        <h4><i class="fas fa-info-circle"></i> Similar Accommodation Detected</h4>
+        <p>The system has found the following accommodations similar to the one you are adding. If it's the same accommodation, you can choose to associate with it instead of creating a new one.</p>
+        <div id="duplicatePropertiesList"></div>
+    </div>
+    
+    <div class="form-card">
+        <form method="post" id="accommodationForm">
+            {% csrf_token %}
+            <div class="form-grid">
+                <div class="section-title">Basic Information</div>
+                
+                <div class="form-group">
+                    <label for="id_title">Title: <span class="required">*</span></label>
+                    <input type="text" name="title" id="id_title" class="form-control" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="id_type">Accommodation Type: <span class="required">*</span></label>
+                    <select name="type" id="id_type" class="form-control" required>
+                        <option value="">-- Select Type --</option>
+                        <option value="APARTMENT">Apartment</option>
+                        <option value="HOUSE">House</option>
+                        <option value="HOSTEL">Hostel</option>
+                    </select>
+                </div>
+                
+                <div class="form-group full-width">
+                    <label for="id_description">Description: <span class="required">*</span></label>
+                    <textarea name="description" id="id_description" class="form-control" rows="4" required></textarea>
+                </div>
+                
+                <div class="section-title">Property Details</div>
+                
+                <div class="form-group">
+                    <label for="id_beds">Number of Beds: <span class="required">*</span></label>
+                    <input type="number" name="beds" id="id_beds" class="form-control" min="1" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="id_bedrooms">Number of Bedrooms: <span class="required">*</span></label>
+                    <input type="number" name="bedrooms" id="id_bedrooms" class="form-control" min="1" required>
+                </div>
+                
+                <div class="form-row full-width">
+                    <div class="form-group">
+                        <label for="id_price">Price (HKD): <span class="required">*</span></label>
+                        <input type="number" name="price" id="id_price" class="form-control" step="0.01" min="0" required>
+                    </div>
                     
-                    if (toDateInput.value && toDateInput.value < fromDateInput.value) {
-                        toDateInput.value = fromDateInput.value;
+                    <div class="form-group">
+                        <label for="id_address">Building Name: <span class="required">*</span></label>
+                        <input type="text" name="building_name" id="id_building_name" class="form-control" required
+                               placeholder="Enter the building name">
+                    </div>
+                </div>
+                
+                <div class="unique-identifier-info">
+                    <p><strong>Unit Identification</strong> - These fields help uniquely identify the specific unit:</p>
+                </div>
+                
+                <div class="form-group">
+                    <label for="id_floor_number">Floor Number:</label>
+                    <input type="text" name="floor_number" id="id_floor_number" class="form-control">
+                </div>
+                
+                <div class="form-group">
+                    <label for="id_flat_number">Flat/Unit Number:</label>
+                    <input type="text" name="flat_number" id="id_flat_number" class="form-control">
+                </div>
+                
+                <div class="form-group">
+                    <label for="id_room_number">Room Number:</label>
+                    <input type="text" name="room_number" id="id_room_number" class="form-control">
+                </div>
+                
+                <div class="section-title">Availability</div>
+                
+                <div class="form-group">
+                    <label for="id_available_from">Available From: <span class="required">*</span></label>
+                    <input type="date" name="available_from" id="id_available_from" class="form-control" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="id_available_to">Available To: <span class="required">*</span></label>
+                    <input type="date" name="available_to" id="id_available_to" class="form-control" required>
+                </div>
+                
+                <div class="section-title">Contact Information</div>
+                
+                <div class="form-group">
+                    <label for="id_contact_phone">Contact Phone:</label>
+                    <input type="tel" name="contact_phone" id="id_contact_phone" class="form-control">
+                </div>
+                
+                <div class="form-group">
+                    <label for="id_contact_email">Contact Email:</label>
+                    <input type="email" name="contact_email" id="id_contact_email" class="form-control">
+                </div>
+                
+                <div class="submit-row">
+                    <button type="submit" class="btn btn-primary btn-full">Add Accommodation</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', async function() {
+        const apiKey = localStorage.getItem('unihaven_api_key');
+        if (!apiKey) {
+            document.getElementById('apiKeyWarning').style.display = 'block';
+        } else {
+            try {
+                const response = await fetch('/api/test-auth/', {
+                    headers: {
+                        'X-API-Key': apiKey
                     }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    // display the university name and code
+                    document.getElementById('universityName').textContent = data.university || 'Unknown University';
+                    document.getElementById('universityCode').textContent = data.code || '';
+                    document.getElementById('universityInfo').style.display = 'flex';
+                } else {
+                    // The API key is invalid and a warning is displayed
+                    document.getElementById('apiKeyWarning').style.display = 'block';
                 }
-            });
-            
-            toDateInput.addEventListener('change', function() {
-                if (toDateInput.value && fromDateInput.value && fromDateInput.value > toDateInput.value) {
-                    alert('The end date must be after the start date.');
+            } catch (error) {
+                console.error('Error verifying API key:', error);
+                document.getElementById('apiKeyWarning').style.display = 'block';
+            }
+        }
+        
+        //  function of clearing API keys
+        window.clearApiKey = function() {
+            if (confirm('Are you sure you want to remove this API key?')) {
+                localStorage.removeItem('unihaven_api_key');
+                window.location.href = "{% url 'api_key_management' %}";
+            }
+        };
+        
+        // Date range verification
+        const today = new Date();
+        const yyyy = today.getFullYear();
+        const mm = String(today.getMonth() + 1).padStart(2, '0');
+        const dd = String(today.getDate()).padStart(2, '0');
+        const todayFormatted = `${yyyy}-${mm}-${dd}`;
+        
+        const fromDateInput = document.getElementById('id_available_from');
+        fromDateInput.min = todayFormatted;
+        
+        const toDateInput = document.getElementById('id_available_to');
+        toDateInput.min = todayFormatted;
+        
+        fromDateInput.addEventListener('change', function() {
+            if (fromDateInput.value) {
+                toDateInput.min = fromDateInput.value;
+                
+                if (toDateInput.value && toDateInput.value < fromDateInput.value) {
                     toDateInput.value = fromDateInput.value;
                 }
-            });
+            }
         });
-    </script>
-</body>
-</html>
+        
+        toDateInput.addEventListener('change', function() {
+            if (toDateInput.value && fromDateInput.value && fromDateInput.value > toDateInput.value) {
+                alert('The end date must be after the start date.');
+                toDateInput.value = fromDateInput.value;
+            }
+        });
+        
+        // API key inspection and form submission modification
+        const apiKeyWarning = document.getElementById('apiKeyWarning');
+        const form = document.getElementById('accommodationForm');
+        
+        // check if API key is set
+        if (!apiKey) {
+            apiKeyWarning.style.display = 'block';
+        }
+        
+        // Function to check for duplicate accommodation
+        function checkForDuplicateAccommodation() {
+            const apiKey = localStorage.getItem('unihaven_api_key');
+            if (!apiKey) return;
+            
+            const buildingName = document.getElementById('id_building_name').value;
+            const floorNumber = document.getElementById('id_floor_number').value;
+            const flatNumber = document.getElementById('id_flat_number').value;
+            const roomNumber = document.getElementById('id_room_number').value;
+            
+            // If the address is empty, do not perform the check
+            if (!buildingName) return;
+            
+            // Build query parameters
+            const params = new URLSearchParams({
+                building_name: buildingName
+            });
+            
+            if (floorNumber) params.append('floor_number', floorNumber);
+            if (flatNumber) params.append('flat_number', flatNumber);
+            if (roomNumber) params.append('room_number', roomNumber);
+            
+            return fetch(`/api/check-duplicate-accommodation/?${params.toString()}`, {
+                headers: {
+                    'X-API-Key': apiKey
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                // If already associated with an identical accommodation, show alert and redirect
+                if (data.already_associated) {
+                    alert(`Your university is already associated with an identical accommodation: "${data.accommodation_title}". Redirecting to view it.`);
+                    window.location.href = `/api/accommodation_detail/${data.accommodation_id}/`;
+                    return null; // Stop further processing
+                }
+                return data;
+            })
+            .catch(error => {
+                console.error('Error checking for duplicates:', error);
+                return { success: false, duplicates: [] };
+            });
+        }
+        
+        // Function to associate with existing accommodation
+        window.linkToExistingAccommodation = function(accommodationId) {
+            const apiKey = localStorage.getItem('unihaven_api_key');
+            if (!apiKey) {
+                alert('A valid API key is required to associate with an accommodation!');
+                return;
+            }
+            
+            if (confirm('Are you sure you want to associate with this accommodation?')) {
+                fetch(`/api/link-accommodation/${accommodationId}/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-API-Key': apiKey,
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('Successfully associated with existing accommodation!');
+                        window.location.href = `/api/accommodation_detail/${accommodationId}/`;
+                    } else {
+                        alert(`Association failed: ${data.message || 'Unknown error'}`);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error linking accommodation:', error);
+                    alert('An error occurred during the association process');
+                });
+            }
+        };
+        
+        // Modify form submission event
+        form.addEventListener('submit', async function(event) {
+            event.preventDefault();
+            
+            // If API key does not exist, show warning and return
+            if (!apiKey) {
+                alert('A valid API key is required to add accommodation! Please set your key on the API Key Management page.');
+                return;
+            }
+            
+            // Check for duplicate accommodation before submission
+            const duplicateResult = await checkForDuplicateAccommodation();
+            if (!duplicateResult) {
+                // Already handled by checkForDuplicateAccommodation (redirect case)
+                return;
+            }
+            
+            if (duplicateResult.success && duplicateResult.duplicates && duplicateResult.duplicates.length > 0) {
+                // Duplicate accommodation detected, show confirmation window
+                if (confirm(`Similar accommodations detected. Do you want to view existing accommodations or still create a new one?\nClick "OK" to view existing accommodations, click "Cancel" to create a new one.`)) {
+                    // User chooses to view existing accommodations
+                    const duplicateInfo = document.getElementById('duplicateAccommodationInfo');
+                    const propertiesList = document.getElementById('duplicatePropertiesList');
+                    
+                    // Clear existing list
+                    propertiesList.innerHTML = '';
+                    
+                    // Add matching accommodations with conditional button
+                    duplicateResult.duplicates.forEach(property => {
+                        const propertyDiv = document.createElement('div');
+                        propertyDiv.className = 'duplicate-property';
+                        
+                        let actionButton = '';
+                        if (property.already_associated) {
+                            actionButton = `
+                                <button class="btn btn-secondary" disabled>
+                                    Already Associated
+                                </button>
+                                <a href="/api/accommodation_detail/${property.id}/" class="btn btn-primary">
+                                    View Details
+                                </a>
+                            `;
+                        } else {
+                            actionButton = `
+                                <button 
+                                    class="link-existing-btn" 
+                                    data-id="${property.id}"
+                                    onclick="linkToExistingAccommodation(${property.id})">
+                                    Associate with this Accommodation
+                                </button>
+                            `;
+                        }
+                        
+                        propertyDiv.innerHTML = `
+                            <h4>${property.title}</h4>
+                            <p><strong>Geo Address:</strong> ${property.geo_address}</p>
+                            <p><strong>Address:</strong> ${property.formatted_address}</p>
+                            <p><strong>Unit Details:</strong> Floor ${property.floor_number || 'Not specified'}, 
+                               Unit ${property.flat_number || 'Not specified'}, 
+                               Room ${property.room_number || 'Not specified'}</p>
+                            <p><strong>Associated Universities:</strong> ${property.universities.join(', ')}</p>
+                            <div class="button-group">
+                                ${actionButton}
+                            </div>
+                        `;
+                        propertiesList.appendChild(propertyDiv);
+                    });
+                    
+                    // Show duplicate accommodation info
+                    duplicateInfo.style.display = 'block';
+                    duplicateInfo.scrollIntoView({
+                        behavior: 'smooth'
+                    });
+                    return; // Stop form submission
+                } else {
+                    // User insists on creating new accommodation, continue normal submission
+                    // Create FormData object
+                    const formData = new FormData(form);
+                    
+                    // Add a flag indicating this is creating new accommodation instead of associating
+                    formData.append('create_new', 'true');
+                    formData.append('force_create', 'true'); // Force creation even if duplicates exist
+                    
+                    submitForm(formData);
+                }
+            } else {
+                // No duplicates found, normal submission
+                const formData = new FormData(form);
+                formData.append('create_new', 'true');
+                submitForm(formData);
+            }
+        });
+        
+        // Extract form submission logic into a separate function
+        function submitForm(formData) {
+            fetch('/api/add-accommodation/', {
+                method: 'POST',
+                headers: {
+                    'X-API-Key': apiKey
+                },
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Accommodation added successfully!');
+                    window.location.href = `/api/accommodation_detail/${data.id}/`;
+                } else {
+                    let errorMessage = data.message || '';
+                    if (data.errors) {
+                        errorMessage += '\n' + Object.entries(data.errors)
+                            .map(([key, value]) => `${key}: ${value.join(', ')}`)
+                            .join('\n');
+                    }
+                    alert(`Failed to add:\n${errorMessage}`);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while submitting the form');
+            });
+        }
+    });
+</script>
+{% endblock %}

@@ -33,9 +33,9 @@ paths:
               schema:
                 $ref: '#/components/schemas/MessageResponse'
           description: ''
-  /api/accommodation/{id}/:
+  /api/accommodation_detail/{id}/:
     get:
-      operationId: api_accommodation_retrieve
+      operationId: api_accommodation_detail_retrieve
       description: View accommodation details
       summary: Accommodation Details
       parameters:
@@ -106,31 +106,96 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
           description: ''
-  /api/cancel_reservation/:
+  /api/cancel_reservation/{id}/:
     post:
       operationId: api_cancel_reservation_create
-      description: Cancel an accommodation reservation using query parameter id
-      summary: Cancel Reservation
+      description: Cancel a specific accommodation reservation.
+      summary: Cancel Accommodation by ID
       parameters:
-      - in: query
-        name: id
-        schema:
-          type: integer
-        description: Accommodation ID
-        required: true
+        - in: path
+          name: id
+          schema:
+            type: integer
+          required: true
+          description: The ID of the accommodation to cancel.
+        - in: cookie
+          name: user_identifier
+          schema:
+            type: string
+          required: true
+          description: The identifier of the user making the cancellation request.
+      tags:
+        - api
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: Successfully canceled the reservation.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Reservation for accommodation 'Beautiful Garden' has been canceled.
+                  accommodation:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                        example: 8
+                      reserved:
+                        type: boolean
+                        example: false
+        # '400':
+        #   description: Invalid request or missing parameters.
+        #   content:
+        #     application/json:
+        #       schema:
+        #         $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Unauthorized to cancel this reservation.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: You are not authorized to cancel this reservation.
+        '404':
+          description: Accommodation not found.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: page not found.
+
+  /api/delete-accommodation/:
+    post:
+      operationId: api_delete_accommodation_create
+      description: Delete an accommodation by ID using POST method
+      summary: Delete Accommodation
       tags:
       - api
       requestBody:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ReservationResponse'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/ReservationResponse'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/ReservationResponse'
+              $ref: '#/components/schemas/DeleteAccommodationRequest'
         required: true
       security:
       - cookieAuth: []
@@ -141,15 +206,9 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ReservationResponse'
+                $ref: '#/components/schemas/SuccessResponse'
           description: ''
         '400':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-          description: ''
-        '403':
           content:
             application/json:
               schema:
@@ -264,17 +323,17 @@ paths:
           description: No results found
         '500':
           description: API error
-  /api/reserve_accommodation/:
+  /api/rate/{accommodation_id}/:
     post:
-      operationId: api_reserve_accommodation_create
-      description: Reserve an accommodation using query parameter id
-      summary: Reserve Accommodation
+      operationId: api_rate_create
+      description: Rate an accommodation with a value between 0 and 5
+      summary: Rate Accommodation
       parameters:
-      - in: query
-        name: id
+      - in: path
+        name: accommodation_id
         schema:
           type: integer
-        description: Accommodation ID
+        description: ID of the accommodation to rate
         required: true
       tags:
       - api
@@ -282,13 +341,10 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ReservationResponse'
+              $ref: '#/components/schemas/Rating'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/ReservationResponse'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/ReservationResponse'
+              $ref: '#/components/schemas/Rating'
         required: true
       security:
       - cookieAuth: []
@@ -299,7 +355,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ReservationResponse'
+                $ref: '#/components/schemas/SuccessResponse'
           description: ''
         '400':
           content:
@@ -313,6 +369,85 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
           description: ''
+  /api/reserve_accommodation/{id}/:
+    post:
+      operationId: reserve_accommodation_create
+      description: Reserves a specific accommodation.
+      summary: Reserve Accommodation by ID
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: integer
+          required: true
+          description: The ID of the accommodation to reserve.
+        - in: cookie
+          name: user_identifier
+          schema:
+            type: string
+          required: true
+          description: The identifier of the user making the reservation.
+      tags:
+        - api
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: Successfully reserved the accommodation.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Accommodation 'Beautiful Garden' has been reserved.
+                  accommodation:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                        example: 8
+                      reserved:
+                        type: boolean
+                        example: true
+      
+        # '400':
+        #   description: Invalid request or missing parameters.
+        #   content:
+        #     application/json:
+        #       schema:
+        #         $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized to reserve the accommodation.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: You are not authorized to reserve this accommodation.
+        '404':
+          description: Not Found.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: Page not found.
+                    
   /api/search-accommodation/:
     get:
       operationId: api_search_accommodation_retrieve
@@ -447,6 +582,14 @@ components:
           format: email
           nullable: true
           maxLength: 254
+        rating:
+          type: number
+          format: double
+        rating_count:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: -9223372036854775808
+          format: int64
       required:
       - address
       - bedrooms
@@ -518,6 +661,14 @@ components:
           format: email
           nullable: true
           maxLength: 254
+        rating:
+          type: number
+          format: double
+        rating_count:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: -9223372036854775808
+          format: int64
       required:
       - bedrooms
       - beds
@@ -555,6 +706,14 @@ components:
       - ChineseAddress
       - EnglishAddress
       - GeospatialInformation
+    DeleteAccommodationRequest:
+      type: object
+      description: Serializer for delete accommodation request
+      properties:
+        id:
+          type: integer
+      required:
+      - id
     ErrorResponse:
       type: object
       description: Serializer for error responses
@@ -577,6 +736,16 @@ components:
           type: string
       required:
       - message
+    Rating:
+      type: object
+      description: Serializer for validating accommodation rating input
+      properties:
+        rating:
+          type: integer
+          maximum: 5
+          minimum: 0
+      required:
+      - rating
     ReservationResponse:
       type: object
       description: Serializer for reservation and cancellation responses

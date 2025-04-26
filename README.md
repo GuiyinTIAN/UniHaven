@@ -13,19 +13,21 @@ UniHaven is a Django-based project designed to provide off-campus accommodation 
 6. [View Accommodation Details](#view-accommodation-details)
 7. [Reserve Accommodation](#reserve-accommodation)
 8. [Cancel Reservation](#cancel-reservation)
+9. [Delete Accommodation](#delete-accommodation)
+10. [Rate Accommodation](#rate-accommodation)
 
 ---
 
 ### Home
 
-**URL**: `/`  
+**URL**: `/api/`  
 **Method**: `GET`  
 **Header**: `-H "Accept:application/json"` (for JSON response)  
 **Description**: Displays the homepage with navigation options to search for accommodations or add new accommodations.
 
 #### Example
 ```bash
-curl -X GET "http://127.0.0.1:8000/" -H "Accept: application/json"
+curl -X GET "http://127.0.0.1:8000/api/" -H "Accept: application/json"
 ```
 ```json
 {
@@ -36,7 +38,7 @@ curl -X GET "http://127.0.0.1:8000/" -H "Accept: application/json"
 
 ### Address Lookup API
 
-**URL**: `/lookup-address/`  
+**URL**: `/api/lookup-address/`  
 **Method**: `GET`  
 **Description**: Queries the Hong Kong government API to retrieve detailed address information.
 
@@ -45,7 +47,7 @@ curl -X GET "http://127.0.0.1:8000/" -H "Accept: application/json"
 
 #### Example
 ```bash
-curl -X GET "http://127.0.0.1:8000/lookup-address/?address=HKU"
+curl -X GET "http://127.0.0.1:8000/api/lookup-address/?address=HKU"
 ```
 
 #### Response Example
@@ -81,7 +83,7 @@ curl -X GET "http://127.0.0.1:8000/lookup-address/?address=HKU"
 
 ### Add Accommodation
 
-**URL**: `/add-accommodation/`  
+**URL**: `/api/add-accommodation/`  
 **Method**: `POST`  
 **Header**: `-H "Content-Type:application/json"`  
 **Header**: `-H "X-CSRFToken: <your-csrf-token>"` (optional, CSRF protection is enabled in development)  
@@ -104,7 +106,7 @@ curl -X GET "http://127.0.0.1:8000/lookup-address/?address=HKU"
 
 #### Example
 ```bash
-curl -X POST "http://127.0.0.1:8000/add-accommodation/" \
+curl -X POST "http://127.0.0.1:8000/api/add-accommodation/" \
      -H "Content-Type: application/json" \
      -d '{
          "title": "New Apartment",
@@ -133,7 +135,7 @@ curl -X POST "http://127.0.0.1:8000/add-accommodation/" \
 
 ### View Accommodation List
 
-**URL**: `/list-accommodation/`  
+**URL**: `/api/list-accommodation/`  
 **Method**: `GET`  
 **Description**: Retrieves a list of all accommodations with optional filters.
 
@@ -153,7 +155,7 @@ curl -X POST "http://127.0.0.1:8000/add-accommodation/" \
 
 #### Example
 ```bash
-curl -X GET "http://127.0.0.1:8000/list-accommodation/?type=APARTMENT&max_price=8000&distance=3&order_by_distance=true" -H "Accept: application/json"
+curl -X GET "http://127.0.0.1:8000/api/list-accommodation/?type=APARTMENT&max_price=8000&distance=3&order_by_distance=true" -H "Accept: application/json"
 ```
 
 #### Response Example
@@ -185,34 +187,34 @@ curl -X GET "http://127.0.0.1:8000/list-accommodation/?type=APARTMENT&max_price=
 
 ### Search Accommodation
 
-**URL**: `/search-accommodation/`  
+**URL**: `/api/search-accommodation/`  
 **Method**: `GET`  
 **Header**: `-H "Accept:application/json"` or parameter `format=json`  
 **Description**: Searches for accommodations based on specified criteria (redirects to list_accommodation).
 
 #### Example
 ```bash
-curl -X GET "http://127.0.0.1:8000/search-accommodation/?type=HOUSE&region=HK&distance=10" -H "Accept: application/json"
+curl -X GET "http://127.0.0.1:8000/api/search-accommodation/?type=HOUSE&region=HK&distance=10" -H "Accept: application/json"
 ```
 
 Or using format parameter:
 
 ```bash
-curl -X GET "http://127.0.0.1:8000/search-accommodation/?type=HOUSE&region=HK&distance=10&format=json"
+curl -X GET "http://127.0.0.1:8000/api/search-accommodation/?type=HOUSE&region=HK&distance=10&format=json"
 ```
 
 ---
 
 ### View Accommodation Details
 
-**URL**: `/accommodation/<id>/`  
+**URL**: `/api/accommodation_detail/<id>/`  
 **Method**: `GET`  
 **Header**: `-H "Accept: application/json"` (for JSON response)  
 **Description**: Retrieves detailed information about a specific accommodation.
 
 #### Example
 ```bash
-curl -X GET "http://127.0.0.1:8000/accommodation/1/" -H "Accept: application/json"
+curl -X GET "http://127.0.0.1:8000/api/accommodation_detail/1/" -H "Accept: application/json"
 ```
 
 #### Response Example
@@ -241,14 +243,14 @@ curl -X GET "http://127.0.0.1:8000/accommodation/1/" -H "Accept: application/jso
 
 ### Reserve Accommodation
 
-**URL**: `/reserve_accommodation/`  
+**URL**: `/api/reserve_accommodation/`  
 **Method**: `POST`  
 **Parameter**: `id` - Accommodation ID  
 **Description**: Reserves a specific accommodation. Requires user_identifier cookie.
 
 #### Example
 ```bash
-curl -X POST "http://127.0.0.1:8000/reserve_accommodation/?id=1" \
+curl -X POST "http://127.0.0.1:8000/api/reserve_accommodation/?id=1" \
      -H "Content-Type: application/json" \
      -b "user_identifier=student123"
 ```
@@ -282,14 +284,14 @@ curl -X POST "http://127.0.0.1:8000/reserve_accommodation/?id=1" \
 
 ### Cancel Reservation
 
-**URL**: `/cancel_reservation/`  
+**URL**: `/api/cancel_reservation/`  
 **Method**: `POST`  
 **Parameter**: `id` - Accommodation ID  
 **Description**: Cancels the reservation for a specific accommodation. Requires user_identifier cookie.
 
 #### Example
 ```bash
-curl -X POST "http://127.0.0.1:8000/cancel_reservation/?id=1" \
+curl -X POST "http://127.0.0.1:8000/api/cancel_reservation/?id=1" \
      -H "Content-Type: application/json" \
      -b "user_identifier=student123"
 ```
@@ -321,13 +323,69 @@ curl -X POST "http://127.0.0.1:8000/cancel_reservation/?id=1" \
 
 ---
 
+### Delete Accommodation
+
+**URL**: `/api/delete-accommodation/`  
+**Method**: `POST`  
+**Parameter**: `id` - Accommodation ID  
+**Description**: Deletes a specific accommodation.
+
+#### Example
+```bash
+curl -X POST "http://127.0.0.1:8000/api/delete-accommodation/?id=1" \
+     -H "Content-Type: application/json"
+```
+
+#### Response Example
+```json
+{
+    "success": true,
+    "message": "Accommodation 'Cozy Apartment' has been deleted."
+}
+```
+
+---
+
+### Rate Accommodation
+
+**URL**: `/api/rate/<accommodation_id>/`  
+**Method**: `POST`  
+**Description**: Rates a specific accommodation.
+
+#### Parameters
+| Parameter         | Type     | Description                              |
+|-------------------|----------|------------------------------------------|
+| `accommodation_id`| Integer  | ID of the accommodation to rate          |
+| `rating`          | Integer  | Rating value (e.g., 1-5)                 |
+| `comment`         | String   | Review comment (optional)                |
+
+#### Example
+```bash
+curl -X POST "http://127.0.0.1:8000/api/rate/1/" \
+     -H "Content-Type: application/json" \
+     -d '{
+         "rating": 5,
+         "comment": "Excellent place to stay!"
+     }'
+```
+
+#### Response Example
+```json
+{
+    "success": true,
+    "message": "Thank you for rating this accommodation!"
+}
+```
+
+---
+
 ## Notes
 
 1. **CSRF Token**:
    - If CSRF protection is enabled, ensure that the `X-CSRFToken` header and `csrftoken` cookie are included in the request.
    - Example:
      ```bash
-     curl -b cookies.txt -X POST "http://127.0.0.1:8000/add-accommodation/" \
+     curl -b cookies.txt -X POST "http://127.0.0.1:8000/api/add-accommodation/" \
           -H "Content-Type: application/json" \
           -H "X-CSRFToken: <your-csrf-token>" \
           -d '{...}'

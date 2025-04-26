@@ -1,0 +1,295 @@
+{% extends 'accommodation/base.html' %}
+{% load static %}
+
+{% block title %}UniHaven - API Key Management{% endblock %}
+{% block nav_title %}API Key Management{% endblock %}
+
+{% block extra_css %}
+<style>
+    .input-group {
+        display: flex;
+        align-items: stretch;
+        width: 100%;
+        position: relative;
+    }
+    
+    .input-group .form-control {
+        flex: 1;
+        border-top-right-radius: 0;
+        border-bottom-right-radius: 0;
+        height: 38px;
+        border: 1px solid #ced4da;
+    }
+    
+    .input-group .btn {
+        margin-left: -1px;
+        border-top-left-radius: 0;
+        border-bottom-left-radius: 0;
+        position: relative;
+        z-index: 2; 
+    }
+    
+    #toggleVisibility {
+        width: 46px;
+        height: 38px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background-color: #e9ecef;
+        border: 1px solid #ced4da;
+        color: #495057;
+        padding: 0; 
+    }
+    
+    #toggleVisibility:hover {
+        background-color: #dee2e6;
+    }
+    
+    .input-group .form-control:focus {
+        z-index: 3;
+        position: relative;
+    }
+    
+    .form-card {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 30px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        border-radius: 8px;
+    }
+    
+    .api-key-section {
+        background-color: #f8f9fa;
+        padding: 25px;
+        border-radius: 8px;
+        margin-bottom: 30px;
+        border: 1px solid #e9ecef;
+    }
+    
+    .info-section {
+        background-color: #e7f3ff;
+        padding: 25px;
+        border-radius: 8px;
+        border-left: 4px solid var(--primary-color);
+    }
+    
+    .button-group {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+    
+    .status-badge {
+        display: inline-block;
+        padding: 5px 10px;
+        border-radius: 20px;
+        font-size: 14px;
+        font-weight: 500;
+    }
+    
+    .status-badge.not-set {
+        background-color: #f8d7da;
+        color: #721c24;
+    }
+    
+    .status-badge.set {
+        background-color: #d4edda;
+        color: #155724;
+    }
+    
+    .section-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 15px;
+    }
+    
+    .description {
+        font-size: 16px;
+        line-height: 1.6;
+        margin-bottom: 25px;
+        color: #555;
+    }
+    
+    @media (max-width: 768px) {
+        .button-group {
+            flex-direction: column;
+        }
+        
+        .button-group button {
+            width: 100%;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="form-card">
+        <p class="description">API keys are used for university system authentication, allowing the addition and deletion of accommodation information.</p>
+        
+        <div class="api-key-section">
+            <div class="section-header">
+                <h3>API Key</h3>
+                <div id="keyStatus" class="status-badge not-set">Not Set</div>
+            </div>
+            
+            <div class="input-group">
+                <input type="password" id="apiKeyInput" placeholder="Enter your API key" class="form-control">
+                <button id="toggleVisibility" class="btn btn-secondary">👁️</button>
+            </div>
+            
+            <div class="button-group" style="margin-top: 15px;">
+                <button id="saveApiKey" class="btn btn-primary">Save API Key</button>
+                <button id="clearApiKey" class="btn btn-secondary">Clear API Key</button>
+                <button id="testApiKey" class="btn btn-secondary">Test API Key</button>
+            </div>
+            
+            <div id="testResult" class="test-result" style="margin-top: 20px; display: none;"></div>
+        </div>
+        
+        <div class="info-section">
+            <h3>What is an API Key?</h3>
+            <p>An API key is a secure token used by university systems to authenticate with the UniHaven platform. With an API key, universities can:</p>
+            <ul>
+                <li>Add new accommodation information</li>
+                <li>Delete existing accommodation information</li>
+                <li>Manage university affiliations with accommodations</li>
+            </ul>
+            <p>Please contact your university administrator to obtain an API key.</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const apiKeyInput = document.getElementById('apiKeyInput');
+        const keyStatus = document.getElementById('keyStatus');
+        const toggleButton = document.getElementById('toggleVisibility');
+        const saveButton = document.getElementById('saveApiKey');
+        const clearButton = document.getElementById('clearApiKey');
+        const testButton = document.getElementById('testApiKey');
+        const testResult = document.getElementById('testResult');
+        
+        // Load stored API key
+        const savedKey = localStorage.getItem('unihaven_api_key');
+        if (savedKey) {
+            apiKeyInput.value = savedKey;
+            keyStatus.textContent = 'Set';
+            keyStatus.classList.remove('not-set');
+            keyStatus.classList.add('set');
+        }
+        
+        // Toggle API key visibility
+        toggleButton.addEventListener('click', function() {
+            if (apiKeyInput.type === 'password') {
+                apiKeyInput.type = 'text';
+                toggleButton.textContent = '🔒';
+            } else {
+                apiKeyInput.type = 'password';
+                toggleButton.textContent = '👁️';
+            }
+        });
+        
+        // Save API key
+        saveButton.addEventListener('click', function() {
+            const key = apiKeyInput.value.trim();
+            if (key) {
+                localStorage.setItem('unihaven_api_key', key);
+                keyStatus.textContent = 'Set';
+                keyStatus.classList.remove('not-set');
+                keyStatus.classList.add('set');
+                alert('API key saved successfully!');
+            } else {
+                alert('Please enter a valid API key');
+            }
+        });
+        
+        // Clear API key
+        clearButton.addEventListener('click', function() {
+            if (confirm('Are you sure you want to clear the current API key?')) {
+                localStorage.removeItem('unihaven_api_key');
+                apiKeyInput.value = '';
+                keyStatus.textContent = 'Not Set';
+                keyStatus.classList.remove('set');
+                keyStatus.classList.add('not-set');
+                testResult.style.display = 'none';
+                alert('API key cleared successfully!');
+                
+                // Refresh the page to update menu status
+                window.location.reload();
+            }
+        });
+        
+        // Test API key
+        testButton.addEventListener('click', async function() {
+            const key = apiKeyInput.value.trim();
+            if (!key) {
+                alert('Please enter an API key first');
+                return;
+            }
+            
+            testResult.innerHTML = '<p>Testing...</p>';
+            testResult.style.display = 'block';
+            
+            try {
+                const response = await fetch('/api/test-auth/', {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json',
+                        'X-API-Key': key
+                    }
+                });
+                
+                let data;
+                const contentType = response.headers.get('content-type');
+                if (contentType && contentType.includes('application/json')) {
+                    data = await response.json();
+                } else {
+                    throw new Error('Server did not return a JSON response, possibly due to API path misconfiguration');
+                }
+                
+                if (response.ok) {
+                    testResult.innerHTML = `
+                        <div style="padding: 10px; background-color: #d4edda; color: #155724; border-radius: 4px;text-align: center;">
+                            <h4>✅ API Key Valid!</h4>
+                            <p>University: ${data.university || 'Unknown'}</p>
+                            <p>Code: ${data.code || 'Unknown'}</p>
+                            <button id="refreshPageBtn" class="btn btn-primary mt-2" style="display: block; margin: 0 auto;">Refresh Page to Update Menu</button>
+                        </div>
+                    `;
+                    
+                    localStorage.setItem('unihaven_api_key', key);
+                    keyStatus.textContent = 'Set';
+                    keyStatus.classList.remove('not-set');
+                    keyStatus.classList.add('set');
+                    
+                    // Add refresh button click event
+                    document.getElementById('refreshPageBtn').addEventListener('click', function() {
+                        window.location.reload();
+                    });
+                } else {
+                    testResult.innerHTML = `
+                        <div style="padding: 10px; background-color: #f8d7da; color: #721c24; border-radius: 4px;">
+                            <h4>❌ Invalid API Key</h4>
+                            <p>${data.message || 'Authentication failed'}</p>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error('API test error:', error);
+                testResult.innerHTML = `
+                    <div style="padding: 10px; background-color: #f8d7da; color: #721c24; border-radius: 4px;">
+                        <h4>❌ Test Request Failed</h4>
+                        <p>Unable to connect to server or API misconfigured</p>
+                        <p>Error details: ${error.message}</p>
+                        <p>Suggestion: Please check the API path and related view function configuration</p>
+                    </div>
+                `;
+            }
+        });
+    });
+</script>
+{% endblock %}

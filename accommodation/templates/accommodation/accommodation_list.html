@@ -4,20 +4,295 @@
 {% block title %}UniHaven - Accommodation List{% endblock %}
 {% block nav_title %}Accommodation List{% endblock %}
 
+{% block extra_css %}
+<style>
+    .sort-options {
+        margin: 20px 0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 15px;
+        background-color: #f8f9fa;
+        border-radius: 8px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.08);
+        transition: box-shadow 0.3s;
+    }
+    
+    .sort-options:hover {
+        box-shadow: 0 3px 8px rgba(0,0,0,0.12);
+    }
+    
+    .sort-label {
+        color: #555;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        font-size: 0.95rem;
+    }
+    
+    .sort-label i {
+        margin-right: 6px;
+        color: var(--primary-color);
+    }
+    
+    .sort-select-wrapper {
+        position: relative;
+        margin-left: 10px;
+    }
+    
+    .sort-select {
+        padding: 10px 35px 10px 15px;
+        border: 1px solid #d0d0d0;
+        border-radius: 6px;
+        background-color: white;
+        min-width: 240px;
+        appearance: none;
+        cursor: pointer;
+        font-size: 0.95rem;
+        color: #333;
+        transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    
+    .sort-select:hover {
+        border-color: #b3d7ff;
+    }
+    
+    .sort-select:focus {
+        outline: none;
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.15);
+    }
+    
+    .sort-select-arrow {
+        position: absolute;
+        right: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #777;
+        pointer-events: none;
+        transition: transform 0.2s;
+    }
+    
+    .sort-select:focus + .sort-select-arrow {
+        transform: translateY(-50%) rotate(180deg);
+        color: var(--primary-color);
+    }
+    
+    .sort-option-icon {
+        margin-right: 8px;
+        color: var(--primary-color);
+        width: 18px;
+        display: inline-block;
+        text-align: center;
+    }
+    
+    .result-count {
+        font-size: 0.9em;
+        color: #666;
+        background-color: #e9e9e9;
+        padding: 5px 12px;
+        border-radius: 20px;
+        font-weight: 500;
+    }
+    
+    @media (max-width: 768px) {
+        .sort-options {
+            flex-direction: column;
+            align-items: stretch;
+            gap: 15px;
+        }
+        
+        .sort-options-left {
+            width: 100%;
+            justify-content: space-between;
+        }
+        
+        .sort-select {
+            width: 100%;
+            min-width: unset;
+        }
+    }
+    
+    .filter-tags {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-bottom: 20px;
+    }
+    
+    .filter-tag {
+        background-color: #e9f2ff;
+        border: 1px solid #b3d7ff;
+        border-radius: 20px;
+        padding: 5px 12px;
+        font-size: 0.85em;
+        color: #0056b3;
+        display: flex;
+        align-items: center;
+    }
+    
+    .filter-tag.highlight {
+        background-color: #d4edda;
+        border-color: #c3e6cb;
+        color: #155724;
+    }
+    
+    .distance-reference {
+        font-weight: bold;
+        margin-left: 5px;
+    }
+    
+    .filter-tag .remove {
+        margin-left: 5px;
+        cursor: pointer;
+        font-weight: bold;
+    }
+    
+    .card {
+        transition: transform 0.2s;
+    }
+    
+    .card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    
+    .rating-display {
+        display: flex;
+        align-items: center;
+        margin: 10px 0;
+    }
+    
+    .rating-stars {
+        color: #ccc;
+        margin-right: 8px;
+    }
+    
+    .star-filled {
+        color: #ffcc00;
+    }
+    
+    .star-half {
+        position: relative;
+        display: inline-block;
+        color: #ccc;
+    }
+    
+    .star-half:before {
+        content: "★";
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 50%;
+        overflow: hidden;
+        color: #ffcc00;
+    }
+    
+    .rating-count {
+        font-size: 0.85em;
+        color: #666;
+    }
+    
+    .no-rating {
+        font-size: 0.85em;
+        color: #999;
+        font-style: italic;
+    }
+    
+    .card-details {
+        margin-bottom: 12px;
+    }
+    
+    .card-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        align-items: center;
+        margin: 10px 0;
+    }
+    
+    .meta-item {
+        display: flex;
+        align-items: center;
+        background-color: #f8f9fa;
+        padding: 3px 8px;
+        border-radius: 4px;
+        font-size: 0.85em;
+    }
+    
+    .meta-icon {
+        margin-right: 4px;
+    }
+
+    .status-badge {
+        display: inline-block;
+        padding: 3px 8px;
+        border-radius: 12px;
+        font-size: 0.8em;
+        font-weight: 500;
+        margin-left: 10px;
+    }
+    .status-badge.status-reserved {
+        background-color: #f8d7da;
+        color: #721c24;
+    }
+    .status-badge.status-available {
+        background-color: #d4edda;
+        color: #155724;
+    }
+    
+    .card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 10px;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="container">
-    <h1>Accommodation List</h1>
+    <div class="filter-tags" id="activeFilters">
+    </div>
 
-    <!-- Sort by Distance Link -->
     <div class="sort-options">
-        <a href="?{% if order_by_distance %}order_by_distance=false{% else %}order_by_distance=true{% endif %}"
-            class="btn btn-secondary">
-            {% if order_by_distance %}
-            Remove Distance Sorting
-            {% else %}
-            Sort by Distance
-            {% endif %}
-        </a>
+        <div class="sort-options-left">
+            <span class="sort-label"><i class="fa fa-sort"></i>Sort by:</span>
+            <div class="sort-select-wrapper">
+                <select id="sortSelect" class="sort-select" onchange="applySorting(this.value)">
+                    <option value=""><span class="sort-option-icon">📋</span>Default (No sorting)</option>
+                    <option value="distance" {% if order_by == 'distance' %}selected{% endif %}>
+                        <span class="sort-option-icon">📍</span>Distance 
+                        (from {% if campus == "HKU_main" %}HKU Main
+                        {% elif campus == "HKU_sassoon" %}HKU Sassoon
+                        {% elif campus == "HKU_swire" %}HKU Swire
+                        {% elif campus == "HKU_kadoorie" %}HKU Kadoorie
+                        {% elif campus == "HKU_dentistry" %}HKU Dentistry
+                        {% elif campus == "HKUST" %}HKUST
+                        {% elif campus == "CUHK" %}CUHK
+                        {% else %}selected campus
+                        {% endif %})
+                    </option>
+                    <option value="price_asc" {% if order_by == 'price_asc' %}selected{% endif %}>
+                        <span class="sort-option-icon">💲</span>Price (Low to High)
+                    </option>
+                    <option value="price_desc" {% if order_by == 'price_desc' %}selected{% endif %}>
+                        <span class="sort-option-icon">💰</span>Price (High to Low)
+                    </option>
+                    <option value="rating" {% if order_by == 'rating' %}selected{% endif %}>
+                        <span class="sort-option-icon">⭐</span>Rating (Highest first)
+                    </option>
+                    <option value="beds" {% if order_by == 'beds' %}selected{% endif %}>
+                        <span class="sort-option-icon">🛏️</span>Number of Beds
+                    </option>
+
+                </select>
+                <span class="sort-select-arrow">▼</span>
+            </div>
+        </div>
+        <div class="result-count">
+            {{ accommodations.count }} results found
+        </div>
     </div>
 
     {% if accommodations %}
@@ -25,10 +300,52 @@
         {% for accommodation in accommodations %}
         <div class="card">
             <div class="card-content">
-                <h2 class="card-title">{{ accommodation.title }}</h2>
+                <div class="card-header">
+                    <h2 class="card-title">{{ accommodation.title }}</h2>
+                    <span class="status-badge {% if accommodation.reserved %}status-reserved{% else %}status-available{% endif %}">
+                        {% if accommodation.reserved %}Reserved{% else %}Available{% endif %}
+                    </span>
+                </div>
                 <p class="card-description">{{ accommodation.description }}</p>
-                <p>Distance: {{ accommodation.distance|floatformat:2 }} km</p> <!-- Display distance -->
-                <a href="{% url 'accommodation_detail' accommodation.pk %}" class="btn btn-primary">View Details</a>
+                
+                <div class="rating-display">
+                    <div class="rating-stars">
+                        {% if accommodation.rating > 0 %}
+                            {% for i in "12345" %}
+                                {% if forloop.counter <= accommodation.rating %}
+                                    <span class="star-filled">★</span>
+                                {% elif forloop.counter <= accommodation.rating|add:0.5 %}
+                                    <span class="star-half">★</span>
+                                {% else %}
+                                    <span>☆</span>
+                                {% endif %}
+                            {% endfor %}
+                            <span class="rating-count">({{ accommodation.rating_count }} reviews)</span>
+                        {% else %}
+                            <span class="no-rating">No ratings yet</span>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="card-meta">
+                    <div class="meta-item"><span class="meta-icon">🏠</span> {{ accommodation.get_type_display }}</div>
+                    <div class="meta-item"><span class="meta-icon">💰</span> HK${{ accommodation.price }}</div>
+                    <div class="meta-item"><span class="meta-icon">🛏️</span> {{ accommodation.beds }} beds</div>
+                    {% if accommodation.distance %}
+                    <div class="meta-item"><span class="meta-icon">📍</span> {{ accommodation.distance|floatformat:2 }} km</div>
+                    {% endif %}
+                    {% if accommodation.affiliated_universities.exists %}
+                    <div class="meta-item"><span class="meta-icon">🎓</span> 
+                        {% for uni in accommodation.affiliated_universities.all %}
+                            {{ uni.code }}{% if not forloop.last %}, {% endif %}
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <div style="text-align: center;">
+                    <a href="{% url 'accommodation_detail' accommodation.pk %}?{{ request.GET.urlencode }}" class="btn btn-primary">View Details</a>
+                </div>
             </div>
         </div>
         {% endfor %}
@@ -40,4 +357,182 @@
     </div>
     {% endif %}
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        displayActiveFilters();
+        
+        const sortSelect = document.getElementById('sortSelect');
+        const options = sortSelect.querySelectorAll('option');
+        
+        options.forEach(option => {
+            const iconMatch = option.innerHTML.match(/<span class="sort-option-icon">(.*?)<\/span>/);
+            if (iconMatch && iconMatch[1]) {
+                const iconText = iconMatch[1];
+                option.innerHTML = option.innerHTML.replace(/<span class="sort-option-icon">(.*?)<\/span>/, '');
+                option.setAttribute('data-icon', iconText);
+            }
+        });
+        
+        sortSelect.addEventListener('focus', function() {
+            document.querySelector('.sort-select-arrow').classList.add('active');
+        });
+        
+        sortSelect.addEventListener('blur', function() {
+            document.querySelector('.sort-select-arrow').classList.remove('active');
+        });
+    });
+    
+    function getBaseUrlParams() {
+        const urlParams = new URLSearchParams(window.location.search);
+        urlParams.delete('order_by_distance');
+        urlParams.delete('order_by');
+        return urlParams;
+    }
+    
+    function applySorting(sortValue) {
+        const params = getBaseUrlParams();
+        if (sortValue) {
+            params.set('order_by', sortValue);
+        }
+        window.location.href = `${window.location.pathname}?${params.toString()}`;
+    }
+    
+    function displayActiveFilters() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const filterContainer = document.getElementById('activeFilters');
+        const ignoredParams = ['order_by', 'order_by_distance', 'page', 'campus'];
+        let hasFilters = false;
+        
+        for (const [key, value] of urlParams.entries()) {
+            if (ignoredParams.includes(key) || !value) continue;
+            
+            if (key === 'distance') {
+                const campus = urlParams.get('campus') || 'HKU_main';
+                const campusName = getCampusDisplayName(campus);
+                
+                filterContainer.appendChild(createFilterTag(
+                    `${value} km from ${campusName}`, 
+                    key
+                ));
+                hasFilters = true;
+                continue;
+            }
+            
+            hasFilters = true;
+            let displayName = formatFilterName(key);
+            let displayValue = formatFilterValue(key, value);
+            
+            filterContainer.appendChild(createFilterTag(`${displayName}: ${displayValue}`, key));
+        }
+        
+        if (hasFilters) {
+            const clearAll = document.createElement('div');
+            clearAll.className = 'filter-tag';
+            clearAll.innerHTML = `
+                <strong>Clear All</strong>
+                <span class="remove" onclick="clearAllFilters()">&times;</span>
+            `;
+            filterContainer.appendChild(clearAll);
+        }
+    }
+    
+    function createFilterTag(text, paramName) {
+        const tag = document.createElement('div');
+        tag.className = 'filter-tag';
+        tag.innerHTML = `
+            ${text}
+            <span class="remove" onclick="removeFilter('${paramName}')">&times;</span>
+        `;
+        return tag;
+    }
+    
+    function formatFilterName(key) {
+        const nameMap = {
+            'type': 'Type',
+            'region': 'Region',
+            'max_price': 'Max Price',
+            'min_beds': 'Min Beds',
+            'min_bedrooms': 'Min Bedrooms',
+            'available_from': 'From',
+            'available_to': 'To',
+            'user_id': 'Student ID'
+        };
+        
+        return nameMap[key] || key.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
+    }
+    
+    function formatFilterValue(key, value) {
+        if (key === 'max_price') return `HK$${value}`;
+        if (key === 'type') {
+            const typeMap = {
+                'APARTMENT': 'Apartment',
+                'HOUSE': 'House', 
+                'HOSTEL': 'Hostel'
+            };
+            return typeMap[value] || value;
+        }
+        if (key === 'region') {
+            const regionMap = {
+                'HK': 'Hong Kong Island',
+                'KL': 'Kowloon',
+                'NT': 'New Territories'
+            };
+            return regionMap[value] || value;
+        }
+        return value;
+    }
+    
+    function getCampusDisplayName(campusCode) {
+        const campusMap = {
+            'HKU_main': 'HKU Main Campus',
+            'HKU_sassoon': 'HKU Sassoon Road',
+            'HKU_swire': 'HKU Swire Campus',
+            'HKU_kadoorie': 'HKU Kadoorie',
+            'HKU_dentistry': 'HKU Dentistry',
+            'HKUST': 'HKUST',
+            'CUHK': 'CUHK'
+        };
+        return campusMap[campusCode] || 'University Campus';
+    }
+    
+    function clearAllFilters() {
+        const params = new URLSearchParams();
+        const sortValue = new URLSearchParams(window.location.search).get('order_by');
+        if (sortValue) {
+            params.set('order_by', sortValue);
+        }
+        window.location.href = `${window.location.pathname}?${params.toString()}`;
+    }
+    
+    function removeFilter(paramName) {
+        const params = new URLSearchParams(window.location.search);
+        
+        params.delete(paramName);
+        
+        const sortValue = params.get('order_by');
+        
+        if (isFilterEmpty(params)) {
+            const cleanParams = new URLSearchParams();
+            if (sortValue) {
+                cleanParams.set('order_by', sortValue);
+            }
+            window.location.href = `${window.location.pathname}?${cleanParams.toString()}`;
+        } else {
+            window.location.href = `${window.location.pathname}?${params.toString()}`;
+        }
+    }
+    
+    function isFilterEmpty(params) {
+        const ignoredParams = ['order_by', 'order_by_distance', 'page', 'campus'];
+        for (const [key, value] of params.entries()) {
+            if (!ignoredParams.includes(key) && value) {
+                return false;
+            }
+        }
+        return true;
+    }
+</script>
 {% endblock %}
