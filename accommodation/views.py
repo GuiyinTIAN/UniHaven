@@ -314,19 +314,19 @@ def add_accommodation(request):
                     # 将该住宿与当前认证的大学关联
                     accommodation.affiliated_universities.add(university)
                     
-                    print(f"住宿保存成功: ID={accommodation.id}, 标题={accommodation.title}")
+                    print(f"The accommodation was successfully preserved: ID={accommodation.id}, 标题={accommodation.title}")
                     return Response(
                         {"success": True, "message": "Accommodation added successfully!", "id": accommodation.id}, 
                         status=status.HTTP_201_CREATED
                     )
                 except Exception as e:
-                    print(f"保存住宿时出错: {str(e)}")
+                    print(f"An error occurred when saving the accommodation: {str(e)}")
                     return Response(
                         {"success": False, "message": f"Error saving accommodation: {str(e)}"}, 
                         status=status.HTTP_500_INTERNAL_SERVER_ERROR
                     )
             else:
-                print("地址API未返回有效地址")
+                print("The address API did not return a valid address")
                 return Response(
                     {"success": False, "message": "Could not geocode the provided address. Please provide a valid Hong Kong address."}, 
                     status=status.HTTP_400_BAD_REQUEST
@@ -383,7 +383,6 @@ def delete_accommodation(request):
         try:
             accommodation = Accommodation.objects.get(id=accommodation_id)
             
-            # 权限检查已经由权限类处理，不需要手动检查
             title = accommodation.title
             accommodation.delete()
             return Response(
@@ -452,15 +451,20 @@ def list_accommodation(request):
     Distance calculation uses the Haversine formula.
 
     If user_id is provided, only shows accommodations affiliated with the user's university.
-
-    Args:
-        request: HTTP request with optional filter parameters
-        
-    Returns:
-        - HTML listing page with filtered accommodations
-        - JSON list of accommodations if requested
     """
     accommodations = Accommodation.objects.all()
+    
+    # Check if the request has an API key in the header or query parameters
+    api_key = request.META.get('HTTP_X_API_KEY') or request.query_params.get('api_key')
+    if api_key:
+        try:
+            api_key_obj = UniversityAPIKey.objects.get(key=api_key, is_active=True)
+            university = api_key_obj.university
+            accommodations = accommodations.filter(affiliated_universities=university)
+            print(f"Use API key filtering: Only display and {university.name} Related accommodation")
+        except UniversityAPIKey.DoesNotExist:
+            print(f"Invalid API key: {api_key}")
+    
     building_name = request.query_params.get("building_name", "")
     accommodation_type = request.query_params.get("type", "")
     region = request.query_params.get("region", "")
@@ -962,19 +966,19 @@ rate_accommodation = RatingView.as_view()
 @api_view(['GET'])
 @renderer_classes([TemplateHTMLRenderer])
 def api_key_management(request):
-    """API密钥管理页面视图"""
+    """ATest whether the API key is valid"""
     return Response(template_name='accommodation/api_key_management.html')
 
 @api_view(['GET'])
 @renderer_classes([TemplateHTMLRenderer])
 def manage_accommodations(request):
-    """住宿管理页面视图，用于删除住宿"""
+    """The dormitory administrator page view is used to delete accommodation"""
     return Response(template_name='accommodation/manage_accommodation.html')
 
 @api_view(['GET'])
 @authentication_classes([UniversityAPIKeyAuthentication])
 def test_api_key(request):
-    """测试API密钥是否有效"""
+    """Test whether the API key is valid"""
     university = request.user
     return Response({
         "success": True,
