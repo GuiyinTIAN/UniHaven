@@ -6,7 +6,6 @@
 
 {% block extra_css %}
 <style>
-    /* 添加删除确认模态框样式 */
     .modal {
         display: none;
         position: fixed;
@@ -44,12 +43,10 @@
         background-color: #bd2130;
     }
 
-    /* 评分样式 */
     .rating-summary {
         display: flex;
         align-items: center;
         margin-bottom: 20px;
-        /* 添加居中对齐 */
         justify-content: center;
     }
     
@@ -98,7 +95,6 @@
         font-size: 0.9em;
     }
 
-    /* 预订状态样式 - 使用统一的标签样式 */
     .status-badge {
         display: inline-block;
         padding: 3px 10px;
@@ -205,7 +201,6 @@
             {% endif %}
         </div>
 
-        <!-- 修改评分详情部分，将评分和预订状态水平显示 -->
         <div class="detail-section">
             <h2>Ratings and Availability</h2>
             <div style="display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 25px; margin-bottom: 20px;">
@@ -227,7 +222,6 @@
                     </div>
                 </div>
                 
-                <!-- 预订状态标签 - 使用统一样式 -->
                 <span class="status-badge {% if accommodation.reserved %}status-reserved{% else %}status-available{% endif %}">
                     <i class="fas {% if accommodation.reserved %}fa-calendar-times{% else %}fa-calendar-check{% endif %}"></i>
                     {% if accommodation.reserved %}Reserved{% else %}Available{% endif %}
@@ -249,7 +243,7 @@
             <a href="{% url 'search_accommodation' %}" class="btn btn-secondary back-button">Back to Search</a>
         </div>
         
-        <!-- 管理员功能区（需要API密钥） -->
+        <!-- Administrator Function Area (API key required) -->
         <div id="adminSection" class="admin-section">
             <h3>Specialist</h3>
             <div style="display: flex; justify-content: center; margin-top: 10px;">
@@ -283,9 +277,9 @@
         }
     });
     
-    // 显示用户ID输入提示
+    // Display the prompt for user ID input
     function showUserIdPrompt(action, accommodationId) {
-        let userId = prompt("请输入您的用户ID (例如: HKU_12345678):");
+        let userId = prompt("Please Enter you User ID (例如: HKU_12345678):");
         if (!userId) return; // 用户取消了输入
         
         if (action === 'reserve') {
@@ -295,7 +289,7 @@
         }
     }
     
-    // 预订住宿
+    // Reserve accommodation
     async function reserveAccommodation(accommodationId, userId) {
         const csrfToken = getCSRFToken();
         try {
@@ -311,17 +305,17 @@
             
             if (response.ok) {
                 alert(data.message);
-                location.reload(); // 刷新页面以显示预订状态
+                location.reload();
             } else {
                 alert(`预订失败: ${data.message}`);
             }
         } catch (error) {
             console.error('Error reserving accommodation:', error);
-            alert('预订住宿时发生错误。');
+            alert('An error occurred when booking accommodation.');
         }
     }
 
-    // 取消预订
+    // cancel reservation
     async function cancelReservation(accommodationId, userId) {
         const csrfToken = getCSRFToken();
         try {
@@ -337,13 +331,13 @@
             
             if (response.ok) {
                 alert(data.message);
-                location.reload(); // 刷新页面以显示预订状态
+                location.reload();
             } else {
-                alert(`取消预订失败: ${data.message}`);
+                alert(`Failed to cancel the reservation: ${data.message}`);
             }
         } catch (error) {
             console.error('Error canceling reservation:', error);
-            alert('取消预订时发生错误。');
+            alert('An error occurred when canceling the reservation.');
         }
     }
     
@@ -357,17 +351,16 @@
         document.getElementById('deleteModal').style.display = 'none';
     }
     
-    // 删除住宿
+    // delete accommodation
     async function deleteAccommodation(accommodationId) {
         const apiKey = localStorage.getItem('unihaven_api_key');
         if (!apiKey) {
-            alert('需要有效的API密钥才能删除住宿！');
+            alert('A valid API key is required to delete the accommodation！');
             hideDeleteModal();
             return;
         }
         
         try {
-            // 修复: 添加URL尾部斜杠，以符合Django的APPEND_SLASH设置
             const response = await fetch('/api/delete-accommodation/', {
                 method: 'POST',
                 headers: {
@@ -383,15 +376,15 @@
             const data = await response.json();
             
             if (response.ok) {
-                alert('住宿已成功删除！');
+                alert('The accommodation has been successfully deleted！');
                 window.location.href = "{% url 'list_accommodation' %}";
             } else {
-                alert(`删除失败: ${data.message}`);
+                alert(`Fail to delete: ${data.message}`);
                 hideDeleteModal();
             }
         } catch (error) {
             console.error('Error deleting accommodation:', error);
-            alert('删除住宿时发生错误。');
+            alert('An error occurred when deleting the accommodation.');
             hideDeleteModal();
         }
     }

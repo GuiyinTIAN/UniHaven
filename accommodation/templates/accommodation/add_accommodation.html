@@ -100,13 +100,13 @@
 
 {% block content %}
 <div class="container">
-    <!-- API密钥警告 -->
+    <!-- API key warning -->
     <div id="apiKeyWarning" class="api-key-warning">
         <strong>Attention!</strong> The API key was not detected. Adding accommodation requires a valid API key for authentication.
         <a href="{% url 'api_key_management' %}">Click here to set your API key</a>
     </div>
     
-    <!-- 添加大学信息面板 -->
+    <!--  university information panel -->
     <div id="universityInfo" class="university-info" style="display: none;">
         <div>
             <span>Organization:</span>
@@ -157,7 +157,6 @@
                     <input type="number" name="bedrooms" id="id_bedrooms" class="form-control" min="1" required>
                 </div>
                 
-                <!-- 将Price和Address放在同一行 -->
                 <div class="form-row full-width">
                     <div class="form-group">
                         <label for="id_price">Price (HKD): <span class="required">*</span></label>
@@ -227,14 +226,10 @@
 {% block extra_js %}
 <script>
     document.addEventListener('DOMContentLoaded', async function() {
-        // 检查API密钥和验证
         const apiKey = localStorage.getItem('unihaven_api_key');
-        
         if (!apiKey) {
-            // 显示API密钥缺失警告
             document.getElementById('apiKeyWarning').style.display = 'block';
         } else {
-            // 验证API密钥并获取大学信息
             try {
                 const response = await fetch('/api/test-auth/', {
                     headers: {
@@ -244,13 +239,12 @@
                 
                 if (response.ok) {
                     const data = await response.json();
-                    
-                    // 显示大学信息
+                    // display the university name and code
                     document.getElementById('universityName').textContent = data.university || 'Unknown University';
                     document.getElementById('universityCode').textContent = data.code || '';
                     document.getElementById('universityInfo').style.display = 'flex';
                 } else {
-                    // API密钥无效，显示警告
+                    // The API key is invalid and a warning is displayed
                     document.getElementById('apiKeyWarning').style.display = 'block';
                 }
             } catch (error) {
@@ -259,7 +253,7 @@
             }
         }
         
-        // 添加清除API密钥的功能
+        //  function of clearing API keys
         window.clearApiKey = function() {
             if (confirm('Are you sure you want to remove this API key?')) {
                 localStorage.removeItem('unihaven_api_key');
@@ -267,7 +261,7 @@
             }
         };
         
-        // 日期范围验证
+        // Date range verification
         const today = new Date();
         const yyyy = today.getFullYear();
         const mm = String(today.getMonth() + 1).padStart(2, '0');
@@ -297,39 +291,36 @@
             }
         });
         
-        // API密钥检查和表单提交修改
+        // API key inspection and form submission modification
         const apiKeyWarning = document.getElementById('apiKeyWarning');
         const form = document.getElementById('accommodationForm');
         
-        // 检查是否有API密钥
+        // check if API key is set
         if (!apiKey) {
             apiKeyWarning.style.display = 'block';
         }
         
-        // 拦截表单提交
+        // form submission event
         form.addEventListener('submit', function(event) {
             event.preventDefault();
             
-            // 如果没有API密钥，显示警告
+            // if API key is not set, show warning and return
             if (!apiKey) {
                 alert('A valid API key is required to add accommodations! Please set your key on the API Key Management page.');
                 return;
             }
             
-            // 创建FormData对象
+            // create FormData object from the form
             const formData = new FormData(form);
             
-            // 修正API请求URL，URL应该是/api/add-accommodation/而不是/accommodation/add-accommodation/
             fetch('/api/add-accommodation/', {
                 method: 'POST',
                 headers: {
                     'X-API-Key': apiKey
-                    // 注意：使用FormData时不要手动设置Content-Type，让浏览器自动处理
                 },
                 body: formData
             })
             .then(response => {
-                // 增加错误日志以便调试
                 console.log('Response status:', response.status);
                 return response.json();
             })
@@ -338,7 +329,6 @@
                     alert('Accommodation added successfully!');
                     window.location.href = `/api/accommodation_detail/${data.id}/`;
                 } else {
-                    // 处理错误
                     let errorMessage = data.message || '';
                     if (data.errors) {
                         errorMessage += '\n' + Object.entries(data.errors)

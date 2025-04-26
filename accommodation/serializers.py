@@ -19,11 +19,11 @@ class AddAccommodationSerializer(serializers.ModelSerializer):
         allow_null=True,
         help_text="Floor number of the building"
     )
-    flat_number = serializers.CharField(  # 修改字段名 is_number -> flat_number
+    flat_number = serializers.CharField(
         required=False, 
         allow_blank=True, 
         allow_null=True,
-        help_text="Flat/unit number on the floor"  # 修正帮助文本
+        help_text="Flat/unit number on the floor"
     )
     
     class Meta:
@@ -31,7 +31,7 @@ class AddAccommodationSerializer(serializers.ModelSerializer):
         fields = [
             'title', 'description', 'type', 'price', 'beds', 'bedrooms',
             'available_from', 'available_to', 'address',
-            'room_number', 'floor_number', 'flat_number',  # 修改字段名
+            'room_number', 'floor_number', 'flat_number',
             'contact_phone', 'contact_email'
         ]
 
@@ -39,10 +39,10 @@ class AddAccommodationSerializer(serializers.ModelSerializer):
         """
         Check that the accommodation with same unique identifier doesn't already exist
         """
-        # 如果有提供GeoAddress，检查是否已经存在相同的住宿
+        # If a GeoAddress is provided, check whether the same accommodation already exists
         if 'geo_address' in self.initial_data:
             geo_address = self.initial_data['geo_address']
-            flat_number = data.get('flat_number')  # 修改字段名
+            flat_number = data.get('flat_number') 
             floor_number = data.get('floor_number')
             room_number = data.get('room_number')
             
@@ -79,7 +79,7 @@ class AccommodationSerializer(serializers.ModelSerializer):
         return obj.formatted_address()
 
     def to_representation(self, instance):
-        """添加住宿的完整地址信息"""
+        """Add the complete address information of the accommodation"""
         representation = super().to_representation(instance)
         representation['address_details'] = {
             'room_number': instance.room_number,
@@ -108,7 +108,7 @@ class AccommodationDetailSerializer(serializers.ModelSerializer):
         
     @extend_schema_field(serializers.ListField(child=serializers.CharField()))
     def get_affiliated_university_codes(self, obj):
-        """获取关联大学的代码列表"""
+        """Get the code list of the associated university"""
         return [univ.code for univ in obj.affiliated_universities.all()]
 
 class AccommodationListSerializer(serializers.ModelSerializer):

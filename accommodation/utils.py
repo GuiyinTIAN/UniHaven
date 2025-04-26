@@ -2,26 +2,26 @@ from .models import University
 
 def get_university_from_user_id(user_id):
     """
-    根据用户ID判断所属大学
+    Determine the affiliated university based on th
     
     Args:
-        user_id (str): 用户ID，例如 "HKU_123456" 或 "HKUST_789123"
+        user_id (str): User ID，for example "HKU_123456" or "HKUST_789123" or "CUHK_456789"
         
     Returns:
-        University: 用户所属大学对象，如果找不到则返回None
+        University: If the university object to which the user belongs cannot be found, return None
     """
     if not user_id:
         return None
         
-    # 获取所有大学的代码
+    # Get all university codes from the database
     university_codes = list(University.objects.values_list('code', flat=True))
     
-    # 检查用户ID是否以任何大学代码开头
+    # check if user_id starts with any of the university codes
     for code in university_codes:
         if user_id.upper().startswith(code.upper() + "_"):
             return University.objects.get(code=code)
     
-    # 如果没有匹配项，尝试找HKU作为默认值
+    # if no match found, set default to HKU
     try:
         return University.objects.get(code='HKU')
     except University.DoesNotExist:

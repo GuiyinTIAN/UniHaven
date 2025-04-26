@@ -61,7 +61,7 @@ CAMPUS_LOCATIONS = {
     "HKU_swire": {"latitude": 22.20805, "longitude": 114.26021},
     "KHU_kadoorie": {"latitude": 22.43022, "longitude": 114.11429},
     "HKU_dentistry": {"latitude": 22.28649, "longitude": 114.14426},
-    # 添加其他大学的主校区
+    # other campuses can be added here
     "HKUST": {"latitude": 22.33584, "longitude": 114.26355},
     "HKUST": {"latitude": 22.41907, "longitude": 114.20693},
 }
@@ -206,9 +206,9 @@ def lookup_address(request):
         500: ErrorResponseSerializer
     }
 )
-@api_view(['GET', 'POST'])  # 添加GET方法支持
+@api_view(['GET', 'POST']) 
 @parser_classes([JSONParser, FormParser, MultiPartParser])
-@renderer_classes([JSONRenderer, TemplateHTMLRenderer])  # 添加模板渲染器
+@renderer_classes([JSONRenderer, TemplateHTMLRenderer]) 
 def add_accommodation(request):
     """
     Add new accommodation information.
@@ -217,17 +217,17 @@ def add_accommodation(request):
     - GET: Returns the accommodation form for adding new accommodation.
     - POST: Processes the form submission to add new accommodation information.
     """
-    # GET请求直接返回表单页面
+    # GET method returns the accommodation form
     if request.method == 'GET':
         form = AccommodationForm()
         return Response({'form': form}, template_name='accommodation/add_accommodation.html')
     
-    # POST请求需要API密钥认证
+    # POST method need API key authentication
     if not hasattr(request, 'auth') or not request.auth:
-        # 检查是否有API密钥
+        # check if the request has an API key in the header or query parameters
         api_key = request.META.get('HTTP_X_API_KEY') or request.query_params.get('api_key')
         
-        # 记录收到的API密钥（可能为空）
+        # record the API key for debugging
         print(f"DEBUG - Received API key: {api_key}")
         
         if not api_key:
@@ -236,13 +236,10 @@ def add_accommodation(request):
                 status=status.HTTP_401_UNAUTHORIZED
             )
         
-        # 尝试查找API密钥
         try:
             api_key_obj = UniversityAPIKey.objects.get(key=api_key, is_active=True)
             print(f"DEBUG - Found API key object: {api_key_obj}, University: {api_key_obj.university.name}")
             
-            # 修正：如果找到了有效的API密钥，手动设置request.user和request.auth
-            # 这样可以继续处理请求而不是返回401错误
             request.user = api_key_obj.university
             request.auth = api_key_obj
             
@@ -253,10 +250,8 @@ def add_accommodation(request):
                 status=status.HTTP_401_UNAUTHORIZED
             )
         
-    # 如果通过了身份验证，记录认证信息
     print(f"DEBUG - Authentication successful: University {request.user.name} ({request.user.code})")
     
-    # 原有的POST请求处理逻辑
     university = request.user
     
     serializer = AddAccommodationSerializer(data=request.data)
@@ -290,7 +285,7 @@ def add_accommodation(request):
                 accommodation.district = eng_address.get("EngDistrict", {}).get("DcDistrict", "")
                 accommodation.region = eng_address.get("Region", "")
 
-                # 保存前检查是否已存在相同属性组合的记录
+                # check if the accommodation already exists
                 room_number = serializer.validated_data.get('room_number')
                 floor_number = serializer.validated_data.get('floor_number')
                 flat_number = serializer.validated_data.get('flat_number')
@@ -307,14 +302,13 @@ def add_accommodation(request):
                         status=status.HTTP_400_BAD_REQUEST
                     )
                 
-                # 保存房产信息
                 try:
                     accommodation.save()
                     
-                    # 将该住宿与当前认证的大学关联
+                    # add the university to the accommodation's affiliated universities
                     accommodation.affiliated_universities.add(university)
                     
-                    print(f"The accommodation was successfully preserved: ID={accommodation.id}, 标题={accommodation.title}")
+                    print(f"The accommodation was successfully preserved: ID={accommodation.id}, titile={accommodation.title}")
                     return Response(
                         {"success": True, "message": "Accommodation added successfully!", "id": accommodation.id}, 
                         status=status.HTTP_201_CREATED

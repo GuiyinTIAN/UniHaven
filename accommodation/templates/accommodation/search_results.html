@@ -228,7 +228,6 @@
         // Set form values from URL parameters
         const urlParams = new URLSearchParams(window.location.search);
         for (const [key, value] of urlParams) {
-            // 忽略order_by参数，因为它已经移到结果页面
             if (key === 'order_by' || key === 'order_by_distance') continue;
             
             const element = document.getElementById(key);

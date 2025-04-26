@@ -10,5 +10,4 @@ class AccommodationConfig(AppConfig):
     name = "accommodation"
     
     def ready(self):
-        # 使用信号注册SQLite函数
         connection_created.connect(register_sqlite_functions)
