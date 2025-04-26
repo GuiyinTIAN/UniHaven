@@ -217,6 +217,9 @@
                 keyStatus.classList.add('not-set');
                 testResult.style.display = 'none';
                 alert('API key cleared successfully!');
+                
+                // Refresh the page to update menu status
+                window.location.reload();
             }
         });
         
@@ -250,10 +253,11 @@
                 
                 if (response.ok) {
                     testResult.innerHTML = `
-                        <div style="padding: 10px; background-color: #d4edda; color: #155724; border-radius: 4px;">
+                        <div style="padding: 10px; background-color: #d4edda; color: #155724; border-radius: 4px;text-align: center;">
                             <h4>✅ API Key Valid!</h4>
                             <p>University: ${data.university || 'Unknown'}</p>
                             <p>Code: ${data.code || 'Unknown'}</p>
+                            <button id="refreshPageBtn" class="btn btn-primary mt-2" style="display: block; margin: 0 auto;">Refresh Page to Update Menu</button>
                         </div>
                     `;
                     
@@ -261,6 +265,11 @@
                     keyStatus.textContent = 'Set';
                     keyStatus.classList.remove('not-set');
                     keyStatus.classList.add('set');
+                    
+                    // Add refresh button click event
+                    document.getElementById('refreshPageBtn').addEventListener('click', function() {
+                        window.location.reload();
+                    });
                 } else {
                     testResult.innerHTML = `
                         <div style="padding: 10px; background-color: #f8d7da; color: #721c24; border-radius: 4px;">

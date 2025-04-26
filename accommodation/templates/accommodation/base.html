@@ -211,9 +211,9 @@
                 </button>
                 <ul id="navMenu" class="dropdown-menu">
                     <li><a href="{% url 'search_accommodation' %}">Search</a></li>
-                    <li><a href="{% url 'list_accommodation' %}">List</a></li>
-                    <li><a href="{% url 'add_accommodation' %}">Add Accommodation</a></li>
-                    <li><a href="{% url 'manage_accommodations' %}">Manage Accommodation</a></li>
+                    <li id="listMenuItem" style="display: none;"><a href="{% url 'list_accommodation' %}">List</a></li>
+                    <li id="addMenuItem" style="display: none;"><a href="{% url 'add_accommodation' %}">Add Accommodation</a></li>
+                    <li id="manageMenuItem" style="display: none;"><a href="{% url 'manage_accommodations' %}">Manage Accommodation</a></li>
                     <li><a href="{% url 'api_key_management' %}">API Key</a></li>
                     <li><a href="{% url 'swagger-ui' %}">API DOC</a></li>
                 </ul>
@@ -234,16 +234,29 @@
             const menuToggle = document.getElementById('menuToggle');
             const navMenu = document.getElementById('navMenu');
             
+            // check if the user is specialist or not
+            // If the user is a specialist, show the specialist menu item
+            const apiKey = localStorage.getItem('unihaven_api_key');
+            const listMenuItem = document.getElementById('listMenuItem');
+            const addMenuItem = document.getElementById('addMenuItem');
+            const manageMenuItem = document.getElementById('manageMenuItem');
+            
+            if (apiKey) {
+                // specialist user
+                listMenuItem.style.display = 'block';
+                addMenuItem.style.display = 'block';
+                manageMenuItem.style.display = 'block';
+            } else {
+                // non-specialist user
+                listMenuItem.style.display = 'none';
+                addMenuItem.style.display = 'none';
+                manageMenuItem.style.display = 'none';
+            }
+            
             if (menuToggle && navMenu) {
                 menuToggle.addEventListener('click', function(event) {
                     event.stopPropagation();
                     navMenu.classList.toggle('show');
-                    
-                    // change the icon based on the menu state
-                    // const menuIcon = menuToggle.querySelector('.dropdown-icon');
-                    // if (menuIcon) {
-                    //     menuIcon.textContent = navMenu.classList.contains('show') ? '▲' : '▼';
-                    // }
                 });
                 
                 document.addEventListener('click', function(event) {
