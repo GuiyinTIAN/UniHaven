@@ -25,11 +25,16 @@
         margin-top: 20px;
     }
     
+    .cards-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 20px;
+    }
+    
     .accommodation-card {
         background-color: white;
         border-radius: 6px;
         box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        margin-bottom: 15px;
         padding: 15px;
         position: relative;
         transition: transform 0.2s, box-shadow 0.2s;
@@ -40,10 +45,43 @@
         box-shadow: 0 4px 8px rgba(0,0,0,0.15);
     }
     
+    .card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
     .accommodation-title {
         font-size: 1.2em;
-        margin: 0 0 10px 0;
+        margin: 0;
         color: var(--primary-color);
+    }
+    
+    .status-badge {
+        display: inline-block;
+        padding: 3px 10px;
+        border-radius: 20px;
+        font-size: 0.8em;
+        font-weight: 500;
+    }
+    
+    .status-badge.status-reserved {
+        background-color: #f8d7da;
+        color: #721c24;
+    }
+    
+    .status-badge.status-available {
+        background-color: #d4edda;
+        color: #155724;
+    }
+    
+    .status-badge.valid {
+        background-color: #d4edda;
+        color: #155724;
+    }
+    
+    .card-body {
+        margin-top: 10px;
     }
     
     .accommodation-details {
@@ -53,17 +91,37 @@
         margin-bottom: 15px;
     }
     
-    .accommodation-detail {
-        font-size: 0.9em;
-        padding: 3px 8px;
-        background-color: #f0f0f0;
-        border-radius: 4px;
+    .detail-group {
+        display: flex;
+        align-items: center;
+        gap: 5px;
     }
     
-    .accommodation-actions {
+    .detail-icon {
+        font-size: 1.2em;
+        color: var(--primary-color);
+    }
+    
+    .detail-text {
+        font-size: 0.9em;
+    }
+    
+    .card-meta {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 10px;
+    }
+    
+    .meta-item {
+        font-size: 0.9em;
+        color: #6c757d;
+    }
+    
+    .card-footer {
         display: flex;
         justify-content: flex-end;
         gap: 10px;
+        margin-top: 15px;
     }
     
     .delete-btn {
@@ -198,25 +256,7 @@
     .api-status {
         display: flex;
         align-items: center;
-    }
-    
-    .status-badge {
-        display: inline-block;
-        padding: 3px 10px;
-        border-radius: 20px;
-        font-size: 0.8em;
-        font-weight: 500;
-        margin-right: 10px;
-    }
-    
-    .status-badge.valid {
-        background-color: #d4edda;
-        color: #155724;
-    }
-    
-    .status-badge.invalid {
-        background-color: #f8d7da;
-        color: #721c24;
+        gap: 10px; 
     }
 </style>
 {% endblock %}
@@ -331,7 +371,6 @@
     // 加载住宿列表
     async function loadAccommodations(apiKey) {
         try {
-            // 首先获取住宿列表（获取所有住宿，前端过滤可编辑的）
             const response = await fetch('/api/list-accommodation/?format=json', {
                 headers: {
                     'X-API-Key': apiKey
@@ -345,10 +384,8 @@
             const data = await response.json();
             accommodationsData = data.accommodations || [];
             
-            // 隐藏加载中显示
             document.getElementById('loadingSpinner').style.display = 'none';
-            
-            // 如果没有住宿，显示空消息
+
             if (accommodationsData.length === 0) {
                 document.getElementById('accommodationList').innerHTML = `
                     <div class="empty-message">
@@ -360,25 +397,71 @@
                 return;
             }
             
-            // 生成住宿卡片
-            let html = '';
+            // generate accommodation cards
+            let html = '<div class="cards-grid">';
             for (const accommodation of accommodationsData) {
+                const ratingDisplay = accommodation.rating > 0 
+                    ? accommodation.rating.toFixed(1) 
+                    : 'No Ratings';
+                   
+                const distanceDisplay = typeof accommodation.distance === 'number' 
+                    ? accommodation.distance.toFixed(1) + ' km' 
+                    : 'Distance N/A';
+                
+                const typeIcon = getAccommodationTypeIcon(accommodation.type);
+                
+                const reservedClass = accommodation.reserved ? 'status-reserved' : 'status-available';
+                const reservedText = accommodation.reserved ? 'Reserved' : 'Available';
+                
                 html += `
                     <div class="accommodation-card">
-                        <h3 class="accommodation-title">${accommodation.title}</h3>
-                        <div class="accommodation-details">
-                            <span class="accommodation-detail">${accommodation.type}</span>
-                            <span class="accommodation-detail">$${accommodation.price}</span>
-                            <span class="accommodation-detail">${accommodation.beds} beds</span>
-                            <span class="accommodation-detail">${accommodation.region || 'Region N/A'}</span>
+                        <div class="card-header">
+                            <h3 class="accommodation-title">
+                                <i class="${typeIcon}"></i> ${accommodation.title}
+                            </h3>
+                            <span class="status-badge ${reservedClass}">${reservedText}</span>
                         </div>
-                        <div class="accommodation-actions">
-                            <a href="/api/accommodation_detail/${accommodation.id}/" class="view-btn">View Details</a>
-                            <button class="delete-btn" onclick="showDeleteConfirmation(${accommodation.id}, '${accommodation.title.replace(/'/g, "\\'")}')">Delete</button>
+                        <div class="card-body">
+                            <div class="accommodation-details">
+                                <div class="detail-group">
+                                    <span class="detail-icon"><i class="fas fa-home"></i></span>
+                                    <span class="detail-text">${formatAccommodationType(accommodation.type)}</span>
+                                </div>
+                                <div class="detail-group">
+                                    <span class="detail-icon"><i class="fas fa-dollar-sign"></i></span>
+                                    <span class="detail-text">$${accommodation.price}</span>
+                                </div>
+                                <div class="detail-group">
+                                    <span class="detail-icon"><i class="fas fa-bed"></i></span>
+                                    <span class="detail-text">${accommodation.beds} beds</span>
+                                </div>
+                                <div class="detail-group">
+                                    <span class="detail-icon"><i class="fas fa-map-marker-alt"></i></span>
+                                    <span class="detail-text">${accommodation.region || 'Region N/A'}</span>
+                                </div>
+                            </div>
+                            
+                            <div class="card-meta">
+                                <div class="meta-item">
+                                    <i class="fas fa-location-arrow"></i> ${distanceDisplay}
+                                </div>
+                                <div class="meta-item">
+                                    <i class="fas fa-star"></i> ${ratingDisplay}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-footer">
+                            <a href="/api/accommodation_detail/${accommodation.id}/" class="view-btn">
+                                <i class="fas fa-eye"></i> View Details
+                            </a>
+                            <button class="delete-btn" onclick="showDeleteConfirmation(${accommodation.id}, '${accommodation.title.replace(/'/g, "\\'")}')">
+                                <i class="fas fa-trash"></i> Delete
+                            </button>
                         </div>
                     </div>
                 `;
             }
+            html += '</div>';
             
             document.getElementById('accommodationList').innerHTML = html;
             document.getElementById('accommodationList').style.display = 'block';
@@ -395,20 +478,17 @@
         }
     }
     
-    // 显示删除确认对话框
     function showDeleteConfirmation(id, title) {
         selectedAccommodationId = id;
         document.getElementById('accommodationTitle').textContent = title;
         document.getElementById('confirmationModal').style.display = 'block';
     }
     
-    // 关闭确认对话框
     function closeConfirmationModal() {
         document.getElementById('confirmationModal').style.display = 'none';
         selectedAccommodationId = null;
     }
     
-    // 确认删除
     async function confirmDelete() {
         if (!selectedAccommodationId) return;
         
@@ -436,7 +516,6 @@
             
             if (response.ok) {
                 alert('Accommodation deleted successfully');
-                // 重新加载住宿列表
                 closeConfirmationModal();
                 document.getElementById('loadingSpinner').style.display = 'block';
                 document.getElementById('accommodationList').style.display = 'none';
@@ -467,6 +546,25 @@
             }
         }
         return '';
+    }
+    
+    // 添加这些辅助函数到现有JavaScript中
+    function getAccommodationTypeIcon(type) {
+        switch(type) {
+            case 'APARTMENT': return 'fas fa-building';
+            case 'HOUSE': return 'fas fa-home';
+            case 'HOSTEL': return 'fas fa-hotel';
+            default: return 'fas fa-home';
+        }
+    }
+
+    function formatAccommodationType(type) {
+        switch(type) {
+            case 'APARTMENT': return 'Apartment';
+            case 'HOUSE': return 'House';
+            case 'HOSTEL': return 'Hostel';
+            default: return type;
+        }
     }
 </script>
 {% endblock %}

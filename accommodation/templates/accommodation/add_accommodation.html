@@ -45,6 +45,56 @@
         display: block;
         margin-top: 5px;
     }
+
+    /* 添加大学信息面板样式 */
+    .university-info {
+        background-color: #e7f5ff;
+        border-left: 4px solid var(--primary-color);
+        padding: 15px;
+        margin: 20px 0;
+        border-radius: 4px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+    
+    .university-name {
+        font-weight: bold;
+        color: var(--primary-color);
+        font-size: 1.1em;
+    }
+    
+    .university-code {
+        font-family: monospace;
+        background-color: rgba(0, 123, 255, 0.1);
+        padding: 3px 8px;
+        border-radius: 3px;
+        margin-left: 10px;
+    }
+    
+    .api-status {
+        display: flex;
+        align-items: center;
+    }
+    
+    .status-badge {
+        display: inline-block;
+        padding: 3px 10px;
+        border-radius: 20px;
+        font-size: 0.8em;
+        font-weight: 500;
+        margin-right: 10px;
+    }
+    
+    .status-badge.valid {
+        background-color: #d4edda;
+        color: #155724;
+    }
+    
+    .status-badge.invalid {
+        background-color: #f8d7da;
+        color: #721c24;
+    }
 </style>
 {% endblock %}
 
@@ -54,6 +104,19 @@
     <div id="apiKeyWarning" class="api-key-warning">
         <strong>Attention!</strong> The API key was not detected. Adding accommodation requires a valid API key for authentication.
         <a href="{% url 'api_key_management' %}">Click here to set your API key</a>
+    </div>
+    
+    <!-- 添加大学信息面板 -->
+    <div id="universityInfo" class="university-info" style="display: none;">
+        <div>
+            <span>Organization:</span>
+            <span class="university-name" id="universityName">Loading...</span>
+            <span class="university-code" id="universityCode"></span>
+        </div>
+        <div class="api-status">
+            <span class="status-badge valid">API Key Valid</span>
+            <button onclick="clearApiKey()" class="btn btn-sm btn-outline-secondary">Change Key</button>
+        </div>
     </div>
     
     <div class="form-card">
@@ -163,7 +226,47 @@
 
 {% block extra_js %}
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
+    document.addEventListener('DOMContentLoaded', async function() {
+        // 检查API密钥和验证
+        const apiKey = localStorage.getItem('unihaven_api_key');
+        
+        if (!apiKey) {
+            // 显示API密钥缺失警告
+            document.getElementById('apiKeyWarning').style.display = 'block';
+        } else {
+            // 验证API密钥并获取大学信息
+            try {
+                const response = await fetch('/api/test-auth/', {
+                    headers: {
+                        'X-API-Key': apiKey
+                    }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    
+                    // 显示大学信息
+                    document.getElementById('universityName').textContent = data.university || 'Unknown University';
+                    document.getElementById('universityCode').textContent = data.code || '';
+                    document.getElementById('universityInfo').style.display = 'flex';
+                } else {
+                    // API密钥无效，显示警告
+                    document.getElementById('apiKeyWarning').style.display = 'block';
+                }
+            } catch (error) {
+                console.error('Error verifying API key:', error);
+                document.getElementById('apiKeyWarning').style.display = 'block';
+            }
+        }
+        
+        // 添加清除API密钥的功能
+        window.clearApiKey = function() {
+            if (confirm('Are you sure you want to remove this API key?')) {
+                localStorage.removeItem('unihaven_api_key');
+                window.location.href = "{% url 'api_key_management' %}";
+            }
+        };
+        
         // 日期范围验证
         const today = new Date();
         const yyyy = today.getFullYear();
@@ -199,7 +302,6 @@
         const form = document.getElementById('accommodationForm');
         
         // 检查是否有API密钥
-        const apiKey = localStorage.getItem('unihaven_api_key');
         if (!apiKey) {
             apiKeyWarning.style.display = 'block';
         }
