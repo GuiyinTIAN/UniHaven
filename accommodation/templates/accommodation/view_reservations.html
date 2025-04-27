@@ -176,7 +176,6 @@
     // Function to cancel a reservation
     function showUserIdPrompt(action, accommodationId, userId) {
         if (action === 'cancel') {
-            // 使用已经从表单获取的user_id，无需再次输入
             if (confirm('Are you sure you want to cancel this reservation?')) {
                 cancelReservation(accommodationId, userId);
             }
@@ -209,9 +208,7 @@
         }
     }
     
-    // 清空表单并刷新页面
     function clearForm() {
-        // 清空表单并重定向到不带任何参数的页面
         window.location.href = "{% url 'view_reservations' %}";
     }
 </script>

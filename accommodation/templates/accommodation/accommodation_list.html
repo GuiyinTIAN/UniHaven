@@ -248,7 +248,6 @@
         margin-bottom: 10px;
     }
 
-    /* 添加专家视图的样式 */
     .api-key-warning {
         background-color: #fff3cd;
         color: #856404;
@@ -427,7 +426,6 @@
         {% endfor %}
     </div>
 
-    <!-- 在搜索结果后添加的橙色"View My Reservation"按钮 -->
     <div style="display: flex; justify-content: center; margin: 20px 0;">
         {% if user_id %}
         <form method="post" action="{% url 'view_reservations' %}">
@@ -508,7 +506,6 @@
         });
     });
     
-    // 添加：验证API Key并显示大学信息的函数
     async function verifyApiKeyAndDisplayUniversity(apiKey) {
         try {
             const response = await fetch('/api/test-auth/', {
