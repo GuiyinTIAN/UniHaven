@@ -286,14 +286,14 @@
         }
     });
     
-    // Display the prompt for user ID input
     function showUserIdPrompt(action, accommodationId) {
-        let userId = prompt("Please Enter you User ID (例如: HKU_12345678):");
-        if (!userId) return; // 用户取消了输入
-        
         if (action === 'reserve') {
+            const urlParams = new URLSearchParams(window.location.search);
+            let userId = urlParams.get('user_id');
             reserveAccommodation(accommodationId, userId);
         } else if (action === 'cancel') {
+            let userId = prompt("Please enter your User ID to cancel the reservation");
+            if (!userId) return;
             cancelReservation(accommodationId, userId);
         }
     }
@@ -314,7 +314,24 @@
             
             if (response.ok) {
                 alert(data.message);
-                location.reload();
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = "{% url 'view_reservations' %}";
+                
+                const csrfInput = document.createElement('input');
+                csrfInput.type = 'hidden';
+                csrfInput.name = 'csrfmiddlewaretoken';
+                csrfInput.value = csrfToken;
+                form.appendChild(csrfInput);
+                
+                const userIdInput = document.createElement('input');
+                userIdInput.type = 'hidden';
+                userIdInput.name = 'user_id';
+                userIdInput.value = userId;
+                form.appendChild(userIdInput);
+                
+                document.body.appendChild(form);
+                form.submit();
             } else {
                 alert(`Fail to Reserve: ${data.message}`);
             }
@@ -340,7 +357,28 @@
             
             if (response.ok) {
                 alert(data.message);
-                location.reload();
+                // location.reload();
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = "{% url 'view_reservations' %}";
+                
+                // 添加CSRF token
+                const csrfInput = document.createElement('input');
+                csrfInput.type = 'hidden';
+                csrfInput.name = 'csrfmiddlewaretoken';
+                csrfInput.value = csrfToken;
+                form.appendChild(csrfInput);
+                
+                // Pass the user ID to the form
+                const userIdInput = document.createElement('input');
+                userIdInput.type = 'hidden';
+                userIdInput.name = 'user_id';
+                userIdInput.value = userId;
+                form.appendChild(userIdInput);
+                
+                // Add to the page and submit
+                document.body.appendChild(form);
+                form.submit();
             } else {
                 alert(`Failed to cancel the reservation: ${data.message}`);
             }

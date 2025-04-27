@@ -228,7 +228,7 @@ def add_accommodation(request):
         api_key = request.META.get('HTTP_X_API_KEY') or request.query_params.get('api_key')
         
         # record the API key for debugging
-        print(f"DEBUG - Received API key: {api_key}")
+        print(f"[DEBUG-Backend] Received API key: {api_key}")
         
         if not api_key:
             return Response(
@@ -238,19 +238,19 @@ def add_accommodation(request):
         
         try:
             api_key_obj = UniversityAPIKey.objects.get(key=api_key, is_active=True)
-            print(f"DEBUG - Found API key object: {api_key_obj}, University: {api_key_obj.university.name}")
+            print(f"[DEBUG-Backend] Found API key object: {api_key_obj}, University: {api_key_obj.university.name}")
             
             request.user = api_key_obj.university
             request.auth = api_key_obj
             
         except UniversityAPIKey.DoesNotExist:
-            print(f"DEBUG - API key not found in database or inactive: {api_key}")
+            print(f"[DEBUG-Backend] API key not found in database or inactive: {api_key}")
             return Response(
                 {"success": False, "message": "Invalid API key"},
                 status=status.HTTP_401_UNAUTHORIZED
             )
         
-    print(f"DEBUG - Authentication successful: University {request.user.name} ({request.user.code})")
+    print(f"[DEBUG-Backend] Authentication successful: University {request.user.name} ({request.user.code})")
     
     university = request.user
     
@@ -308,31 +308,31 @@ def add_accommodation(request):
                     # add the university to the accommodation's affiliated universities
                     accommodation.affiliated_universities.add(university)
                     
-                    print(f"The accommodation was successfully preserved: ID={accommodation.id}, titile={accommodation.title}")
+                    print(f"[DEBUG-Backend] The accommodation was successfully preserved: ID={accommodation.id}, titile={accommodation.title}")
                     return Response(
                         {"success": True, "message": "Accommodation added successfully!", "id": accommodation.id}, 
                         status=status.HTTP_201_CREATED
                     )
                 except Exception as e:
-                    print(f"An error occurred when saving the accommodation: {str(e)}")
+                    print(f"[DEBUG-Backend] An error occurred when saving the accommodation: {str(e)}")
                     return Response(
                         {"success": False, "message": f"Error saving accommodation: {str(e)}"}, 
                         status=status.HTTP_500_INTERNAL_SERVER_ERROR
                     )
             else:
-                print("The address API did not return a valid address")
+                print("[DEBUG-Backend] The address API did not return a valid address")
                 return Response(
                     {"success": False, "message": "Could not geocode the provided address. Please provide a valid Hong Kong address."}, 
                     status=status.HTTP_400_BAD_REQUEST
                 )
         except requests.RequestException as e:
-            print(f"Address API request error: {str(e)}")
+            print(f"[DEBUG-Backend] Address API request error: {str(e)}")
             return Response(
                 {"success": False, "message": f"Error fetching geolocation: {str(e)}"}, 
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
     else:
-        print(f"Form validation failed: {serializer.errors}")
+        print(f"[DEBUG-Backend] Form validation failed: {serializer.errors}")
         return Response(
             {"success": False, "errors": serializer.errors}, 
             status=status.HTTP_400_BAD_REQUEST
@@ -371,6 +371,34 @@ def delete_accommodation(request):
         - JSON confirmation message on success
         - JSON error message on failure
     """
+    if not hasattr(request, 'auth') or not request.auth:
+        # check if the request has an API key in the header or query parameters
+        api_key = request.META.get('HTTP_X_API_KEY') or request.query_params.get('api_key')
+        
+        # record the API key for debugging
+        print(f"[DEBUG-Backend] Received API key: {api_key}")
+        
+        if not api_key:
+            return Response(
+                {"success": False, "message": "API key is required for delete accommodations"},
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+        
+        try:
+            api_key_obj = UniversityAPIKey.objects.get(key=api_key, is_active=True)
+            print(f"[DEBUG-Backend] Found API key object: {api_key_obj}, University: {api_key_obj.university.name}")
+            
+            request.user = api_key_obj.university
+            request.auth = api_key_obj
+            
+        except UniversityAPIKey.DoesNotExist:
+            print(f"[DEBUG-Backend] API key not found in database or inactive: {api_key}")
+            return Response(
+                {"success": False, "message": "Invalid API key"},
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+        
+    print(f"[DEBUG-Backend] Authentication successful: University {request.user.name} ({request.user.code})")
     serializer = DeleteAccommodationRequestSerializer(data=request.data)
     if serializer.is_valid():
         accommodation_id = serializer.validated_data['id']
@@ -405,7 +433,7 @@ def delete_accommodation(request):
         OpenApiParameter(name="min_beds", description="Minimum beds", type=int, required=False),
         OpenApiParameter(name="min_bedrooms", description="Minimum bedrooms", type=int, required=False),
         OpenApiParameter(name="max_price", description="Maximum price", type=float, required=False),
-        OpenApiParameter(name="distance", description="Maximum distance from HKU (km)", type=float, required=True),
+        OpenApiParameter(name="distance", description="Maximum distance from Campus (if Campus not provide, default to HKU_main)", type=float, required=False),
         OpenApiParameter(name="order_by_distance", description="Sort by distance", type=bool, required=False),
         OpenApiParameter(name="format", description="Response format", type=str, required=False),
         OpenApiParameter(
@@ -448,16 +476,43 @@ def list_accommodation(request):
     """
     accommodations = Accommodation.objects.all()
     
-    # Check if the request has an API key in the header or query parameters
+    print(f"[DEBUG-Backend] Total number of accommodations: {accommodations.count()}")
+    
+    # Get api from request header or query parameters to identify the specialist user
     api_key = request.META.get('HTTP_X_API_KEY') or request.query_params.get('api_key')
+    is_specialist = False
+    specialist_university = None
+
+    # Output the where api is sent from
+    if api_key:
+        if 'HTTP_X_API_KEY' in request.META:
+            print(f"[DEBUG-Backend] API Key from header: {api_key}")
+        else:
+            print(f"[DEBUG-Backend] API Key from query_params: {api_key}")
+    
     if api_key:
         try:
             api_key_obj = UniversityAPIKey.objects.get(key=api_key, is_active=True)
-            university = api_key_obj.university
-            accommodations = accommodations.filter(affiliated_universities=university)
-            print(f"Use API key filtering: Only display and {university.name} Related accommodation")
+            specialist_university = api_key_obj.university
+            is_specialist = True
+            
+            university_name = specialist_university.name
+            university_id = specialist_university.id
+            print(f"[DEBUG-Backend] Successfully verified the expert's identity: University = {university_name}, ID={university_id}")
+            
+            affiliated_count = Accommodation.objects.filter(affiliated_universities=specialist_university).count()
+            print(f"[DEBUG-Backend] The number of accommodations associated with this university: {affiliated_count}")
         except UniversityAPIKey.DoesNotExist:
-            print(f"Invalid API key: {api_key}")
+            print(f"[DEBUG-Backend] Invalid API Key: {api_key}")
+    else:
+        print("[DEBUG-Backend] No API Key is provided. Student user view.")
+    
+    if not is_specialist:
+        print("[DEBUG-Backend] Student User view - ignore the reserved accommodation")
+        accommodations = accommodations.exclude(reserved=True)
+    else:
+        print(f"[DEBUG-Backend] Specialist - only show {specialist_university.name}'s accommodations (including reserved)")
+        accommodations = accommodations.filter(affiliated_universities=specialist_university)
     
     building_name = request.query_params.get("building_name", "")
     accommodation_type = request.query_params.get("type", "")
@@ -485,11 +540,6 @@ def list_accommodation(request):
         if university:
             # only show accommodations affiliated with the user's university
             accommodations = accommodations.filter(affiliated_universities=university)
-    # else:
-    #     return Response(
-    #         {"success": False, "message": "User ID is required to filter accommodations by university affiliation."},
-    #         status=status.HTTP_400_BAD_REQUEST
-    #     )
     
     
     if campus not in CAMPUS_LOCATIONS:
@@ -498,7 +548,7 @@ def list_accommodation(request):
     campus_coords = CAMPUS_LOCATIONS[campus]
     campus_latitude = campus_coords["latitude"]
     campus_longitude = campus_coords["longitude"]
-    print(f"Campus Coordinates: {campus_latitude}, {campus_longitude}")
+    # print(f"[DEBUG-Backend] Campus Coordinates: {campus_latitude}, {campus_longitude}")
     
     if accommodation_type:
         accommodations = accommodations.filter(type=accommodation_type)
@@ -562,6 +612,8 @@ def list_accommodation(request):
     elif order_by_distance:
         accommodations = accommodations.order_by('distance')
 
+    print(f"[DEBUG-Backend] The number of filtered accommodations: {accommodations.count()}")
+    
     if request.headers.get('Accept') == 'application/json' or request.query_params.get('format') == 'json':
         serializer = AccommodationListSerializer(accommodations, many=True)
         return Response({'accommodations': serializer.data})
@@ -592,7 +644,7 @@ def list_accommodation(request):
         OpenApiParameter(name="min_beds", description="Minimum beds", type=int, required=False),
         OpenApiParameter(name="min_bedrooms", description="Minimum bedrooms", type=int, required=False),
         OpenApiParameter(name="max_price", description="Maximum price", type=float, required=False),
-        OpenApiParameter(name="distance", description="Maximum distance from HKU (km)", type=float, required=True),
+        OpenApiParameter(name="distance", description="Maximum distance from Campus (if Campus not provide, default to HKU_main)", type=float, required=True),
         OpenApiParameter(name="format", description="Response format", type=str, required=False),
         OpenApiParameter(
             name="campus",
@@ -774,7 +826,7 @@ class ReservationView(GenericAPIView):
             # Send notification email to the housing specialist
             if university:
                 specialist_email = university.specialist_email
-                university_name = university.name
+                university_name = university.code
             else:
                 specialist_email = "cedars@hku.hk"  # 默认的HKU联系人
                 university_name = "HKU"
@@ -846,6 +898,17 @@ class CancellationView(GenericAPIView):
                     'success': False,
                     'message': f'You are not authorized to cancel this reservation. The accommodation can only be canceled by [{accommodation.userID}].'
                 }, status=status.HTTP_403_FORBIDDEN)
+            
+            # Get the university from the user ID
+            university = get_university_from_user_id(user_id)
+            if university and accommodation.affiliated_universities.exists():
+                if not accommodation.affiliated_universities.filter(id=university.id).exists():
+                    university_codes = [u.code for u in accommodation.affiliated_universities.all()]
+                    return Response({
+                        'success': False,
+                        'message': f'You are not eligible to cancel this accommodation. It is only available to students from: {", ".join(university_codes)}.'
+                    }, status=status.HTTP_403_FORBIDDEN)
+
             accommodation.reserved = False
             accommodation.userID = ""
             accommodation.save()
@@ -858,10 +921,17 @@ class CancellationView(GenericAPIView):
                 from_email=settings.DEFAULT_FROM_EMAIL,
                 recipient_list=[student_email],
             )
-            specialist_email = "cedars@hku.hk"  
+
+            if university:
+                specialist_email = university.specialist_email
+                university_name = university.code
+            else:
+                specialist_email = "cedars@hku.hk"
+                university_name = "HKU"
+            # specialist_email = "cedars@hku.hk"  
             send_mail(
                 subject="[UniHaven] Reservation Cancelled",
-                message=f"Dear CEDARS,\n\nStudent {student_name} has cancelled their reservation for '{accommodation.title}'.\nNo further action is required.\n\nRegards,\nUniHaven System",
+                message=f"Dear {university_name},\n\nStudent {student_name} has cancelled their reservation for '{accommodation.title}'.\nNo further action is required.\n\nRegards,\nUniHaven System",
                 from_email=settings.DEFAULT_FROM_EMAIL,
                 recipient_list=[specialist_email],
             )
@@ -1124,9 +1194,11 @@ def check_duplicate_accommodation(request):
     summary="Link to Existing Accommodation",
     description="Link a university (identified by API key) to an existing accommodation",
     parameters=[
+
         OpenApiParameter(name="id", location=OpenApiParameter.PATH, description="Accommodation ID to link to", type=int, required=True),
     ] + API_KEY_PARAMETER,
     responses={
+
         200: SuccessResponseSerializer,
         401: OpenApiResponse(description="API key authentication failed"),
         404: ErrorResponseSerializer
@@ -1165,3 +1237,29 @@ def link_to_accommodation(request, id):
             "success": False,
             "message": "Accommodation doesn't exist"
         }, status=status.HTTP_404_NOT_FOUND)
+
+@api_view(['GET', 'POST'])
+@renderer_classes([TemplateHTMLRenderer])
+def view_reservations(request):
+    """
+    View to display all reservations for a specific user.
+    
+    GET: Shows a form to enter User ID
+    POST: Shows all reservations for the provided User ID
+    """
+    if request.method == 'POST':
+        user_id = request.data.get('user_id')
+        if not user_id:
+            return Response({'error': 'User ID is required'}, template_name='accommodation/view_reservations.html')
+        
+        # Validate user ID format
+        if not (user_id.count('_') == 1 and any(user_id.upper().startswith(code.upper() + "_") for code in ["HKU", "HKUST", "CUHK"])):
+            return Response({'error': 'Invalid User ID format. Please use format like HKU_12345678.'}, template_name='accommodation/view_reservations.html')
+        
+        # Get all reservations for this user
+        reservations = Accommodation.objects.filter(reserved=True, userID=user_id)
+        
+        return Response({'reservations': reservations, 'user_id': user_id}, template_name='accommodation/view_reservations.html')
+    else:
+        # Show a form to enter User ID
+        return Response({}, template_name='accommodation/view_reservations.html')

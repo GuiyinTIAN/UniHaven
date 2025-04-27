@@ -286,6 +286,25 @@
             userIdError.style.display = 'none';
             userIdInput.classList.remove('error-input');
         });
+
+        // 添加检测API Key的代码
+        const apiKey = localStorage.getItem('unihaven_api_key') || sessionStorage.getItem('specialist_api_key');
+        if (apiKey) {
+            // 清除会话存储中的临时API Key
+            sessionStorage.removeItem('specialist_api_key');
+            
+            // 为搜索表单添加提交事件监听器，在提交时添加API Key
+            const searchForm = document.getElementById('searchForm');
+            searchForm.addEventListener('submit', function(e) {
+                // 不阻止默认提交
+                // 添加隐藏的API Key字段
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'api_key';
+                input.value = apiKey;
+                searchForm.appendChild(input);
+            });
+        }
     });
 </script>
 {% endblock %}

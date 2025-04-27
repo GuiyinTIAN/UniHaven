@@ -17,4 +17,5 @@ urlpatterns = [
     path('test-auth/', views.test_api_key, name='test_api_key'),
     path('check-duplicate-accommodation/', views.check_duplicate_accommodation, name='check_duplicate_accommodation'),
     path('link-accommodation/<int:id>/', views.link_to_accommodation, name='link_to_accommodation'),
+    path("view_reservations/", views.view_reservations, name="view_reservations"),
 ]
