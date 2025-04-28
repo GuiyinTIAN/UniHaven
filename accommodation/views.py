@@ -428,8 +428,8 @@ def delete_accommodation(request):
     parameters=[
         OpenApiParameter(name="type", description="Accommodation type", type=str, required=False),
         OpenApiParameter(name="region", description="Region", type=str, required=False),
-        OpenApiParameter(name="available_from", description="Available from date", type=OpenApiTypes.DATE, required=False),
-        OpenApiParameter(name="available_to", description="Available to date", type=OpenApiTypes.DATE, required=False),
+        OpenApiParameter(name="available_from", description="Available from date (yyyy-MM-DD)", type=OpenApiTypes.DATE, required=False),
+        OpenApiParameter(name="available_to", description="Available to date (yyyy-MM-DD)", type=OpenApiTypes.DATE, required=False),
         OpenApiParameter(name="min_beds", description="Minimum beds", type=int, required=False),
         OpenApiParameter(name="min_bedrooms", description="Minimum bedrooms", type=int, required=False),
         OpenApiParameter(name="max_price", description="Maximum price", type=float, required=False),
@@ -645,8 +645,8 @@ def list_accommodation(request):
     parameters=[
         OpenApiParameter(name="type", description="Accommodation type", type=str, required=False),
         OpenApiParameter(name="region", description="Region", type=str, required=False),
-        OpenApiParameter(name="available_from", description="Available from date", type=OpenApiTypes.DATE, required=False),
-        OpenApiParameter(name="available_to", description="Available to date", type=OpenApiTypes.DATE, required=False),
+        OpenApiParameter(name="available_from", description="Available from date (yyyy-MM-DD)", type=OpenApiTypes.DATE, required=False),
+        OpenApiParameter(name="available_to", description="Available to date ((yyyy-MM-DD))", type=OpenApiTypes.DATE, required=False),
         OpenApiParameter(name="min_beds", description="Minimum beds", type=int, required=False),
         OpenApiParameter(name="min_bedrooms", description="Minimum bedrooms", type=int, required=False),
         OpenApiParameter(name="max_price", description="Maximum price", type=float, required=False),
