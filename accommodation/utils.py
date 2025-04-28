@@ -1,4 +1,4 @@
-from .models import University
+from .models import University, Accommodation
 
 def get_university_from_user_id(user_id):
     """
@@ -26,3 +26,23 @@ def get_university_from_user_id(user_id):
         return University.objects.get(code='HKU')
     except University.DoesNotExist:
         return None
+
+def debug_accommodation_dates():
+    """
+    Debug function to check accommodation dates and availability.
+    
+    return:
+        list: containing all accommodation ids, titles and date ranges
+    """
+    date_info = []
+    
+    for acc in Accommodation.objects.all():
+        date_info.append({
+            'id': acc.id,
+            'title': acc.title,
+            'available_from': acc.available_from,
+            'available_to': acc.available_to,
+            'is_reserved': acc.reserved
+        })
+    
+    return date_info

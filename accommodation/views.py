@@ -435,7 +435,6 @@ def delete_accommodation(request):
         OpenApiParameter(name="max_price", description="Maximum price", type=float, required=False),
         OpenApiParameter(name="distance", description="Maximum distance from Campus (if Campus not provide, default to HKU_main)", type=float, required=False),
         OpenApiParameter(name="order_by_distance", description="Sort by distance", type=bool, required=False),
-        OpenApiParameter(name="format", description="Response format", type=str, required=False),
         OpenApiParameter(
             name="campus",
             description=(
@@ -476,7 +475,7 @@ def list_accommodation(request):
     """
     accommodations = Accommodation.objects.all()
     
-    print(f"[DEBUG-Backend] Total number of accommodations: {accommodations.count()}")
+    print(f"[DEBUG-Backend] Total number of accommodations before filter: {accommodations.count()}")
     
     # Get api from request header or query parameters to identify the specialist user
     api_key = request.META.get('HTTP_X_API_KEY') or request.query_params.get('api_key')
@@ -527,7 +526,7 @@ def list_accommodation(request):
     order_by_distance = request.query_params.get("order_by_distance", "false").lower() == "true"
     campus = request.query_params.get("campus", "HKU_main")  # Default to "HKU_main" campus
     user_id = request.query_params.get("user_id", "")
-    
+        
     # if user_id is provided, check if it is valid
     if user_id:
         # check if the user_id is matching the format
@@ -557,15 +556,22 @@ def list_accommodation(request):
         accommodations = accommodations.filter(region=region)
 
     if available_from and available_to:
-        try:
-            available_from = parse_date(available_from)
-            available_to = parse_date(available_to)
-            if available_from and available_to:
-                accommodations = accommodations.filter(
-                    Q(available_from__lte=available_from) & Q(available_to__gte=available_to)
-                )
-        except ValueError:
-            pass
+        available_from = parse_date(available_from)
+        available_to = parse_date(available_to)
+        
+        print(f"[DEBUG-Backend] User filter with date: from {available_from} to {available_to}")
+                
+        if available_from and available_to:
+            original_count = accommodations.count()
+            
+            accommodations = accommodations.filter(
+                Q(available_from__lte=available_from) & Q(available_to__gte=available_to)
+            )
+            print(f"[DEBUG-Backend] Before Date Filter has {original_count} non-reserved Accommodation, after Date Filter has {accommodations.count()} non-reserved Accommodation")
+            # Debugging information to list all accommodation information
+            from .utils import debug_accommodation_dates
+            date_info = debug_accommodation_dates()
+            print(f"[DEBUG-Backend] Accommodation available date information: {date_info}")
     if min_beds:
         accommodations = accommodations.filter(beds__gte=min_beds)
 
@@ -612,7 +618,7 @@ def list_accommodation(request):
     elif order_by_distance:
         accommodations = accommodations.order_by('distance')
 
-    print(f"[DEBUG-Backend] The number of filtered accommodations: {accommodations.count()}")
+    print(f"[DEBUG-Backend] The number of after all filtered accommodations: {accommodations.count()}")
     
     if request.headers.get('Accept') == 'application/json' or request.query_params.get('format') == 'json':
         serializer = AccommodationListSerializer(accommodations, many=True)
@@ -631,7 +637,7 @@ def list_accommodation(request):
         'order_by': order_by,
         'order_by_distance': order_by_distance,
         'user_id': user_id, 
-    })
+            })
 
 @extend_schema(
     summary="Search Accommodations",
