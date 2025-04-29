@@ -219,8 +219,30 @@ def add_accommodation(request):
     - GET: Returns the accommodation form for adding new accommodation.
     - POST: Processes the form submission to add new accommodation information.
     """
+    is_api_request = request.accepted_renderer.format == 'json'
+    
     # GET method returns the accommodation form
     if request.method == 'GET':
+        if is_api_request:
+            return Response({
+                "success": True,
+                "message": "To add accommodation, make a POST request with the required data",
+                "required_fields": {
+                    "title": "Accommodation title",
+                    "type": "Accommodation type (HOUSE, APARTMENT, etc.)",
+                    "description": "Description of the accommodation",
+                    "beds": "Number of beds",
+                    "bedrooms": "Number of bedrooms",
+                    "available_from": "yyyy-mm-dd",
+                    "available_to": "yyyy-mm-dd",
+                    "building_name": "the name of the building",
+                    "room_number": "room number",
+                    "floor_number": "floor number",
+                    "flat_number": "flat number",
+                    "contact_phone": "contact phone number",
+                    "contact_email": "user@example.com"
+                }
+            })
         form = AccommodationForm()
         return Response({'form': form}, template_name='accommodation/add_accommodation.html')
     
@@ -235,7 +257,8 @@ def add_accommodation(request):
         if not api_key:
             return Response(
                 {"success": False, "message": "API key is required for adding accommodations"},
-                status=status.HTTP_401_UNAUTHORIZED
+                status=status.HTTP_401_UNAUTHORIZED,
+                content_type= 'application/json'
             )
         
         try:
@@ -249,7 +272,8 @@ def add_accommodation(request):
             print(f"[DEBUG-Backend] API key not found in database or inactive: {api_key}")
             return Response(
                 {"success": False, "message": "Invalid API key"},
-                status=status.HTTP_401_UNAUTHORIZED
+                status=status.HTTP_401_UNAUTHORIZED,
+                content_type= 'application/json'
             )
         
     print(f"[DEBUG-Backend] Authentication successful: University {request.user.name} ({request.user.code})")
@@ -370,7 +394,7 @@ def add_accommodation(request):
 
 @extend_schema(
     summary="Delete Accommodation",
-    description="Delete an accommodation by ID using POST method. Requires API key authentication.",
+    description="Delete an accommodation by ID using POST method or remove university association if multiple universities are linked.",
     request=DeleteAccommodationRequestSerializer,
     parameters=API_KEY_PARAMETER,
     responses={
@@ -388,11 +412,10 @@ def add_accommodation(request):
 @permission_classes([UniversityAccessPermission])
 def delete_accommodation(request):
     """
-    Delete an accommodation by ID.
+    Delete an accommodation by ID or remove university association.
 
-    Processes a POST request with JSON containing the accommodation ID.
-    If the ID is valid and exists, the corresponding accommodation will be deleted.
-    Requires API key authentication - only university systems that created the accommodation can delete it.
+    If the accommodation is only associated with the current university, it will be completely deleted.
+    If the accommodation is associated with multiple universities, only the association with the current university will be removed.
 
     Args:
         request: HTTP POST request with JSON containing "id"
@@ -402,10 +425,8 @@ def delete_accommodation(request):
         - JSON error message on failure
     """
     if not hasattr(request, 'auth') or not request.auth:
-        # check if the request has an API key in the header or query parameters
         api_key = request.META.get('HTTP_X_API_KEY') or request.query_params.get('api_key')
         
-        # record the API key for debugging
         print(f"[DEBUG-Backend] Received API key: {api_key}")
         
         if not api_key:
@@ -427,20 +448,44 @@ def delete_accommodation(request):
                 {"success": False, "message": "Invalid API key"},
                 status=status.HTTP_401_UNAUTHORIZED
             )
-        
-    print(f"[DEBUG-Backend] Authentication successful: University {request.user.name} ({request.user.code})")
+    
+    university = request.user
+    print(f"[DEBUG-Backend] Authentication successful: University {university.name} ({university.code})")
+    
     serializer = DeleteAccommodationRequestSerializer(data=request.data)
     if serializer.is_valid():
         accommodation_id = serializer.validated_data['id']
         try:
             accommodation = Accommodation.objects.get(id=accommodation_id)
             
+            # check if the accommodation is associated with the current university
+            if not accommodation.affiliated_universities.filter(id=university.id).exists():
+                return Response(
+                    {"success": False, "message": f"{university.name} is not associated with this accommodation."},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+            
+            # check the number of universities associated with the accommodation
+            affiliated_count = accommodation.affiliated_universities.count()
             title = accommodation.title
-            accommodation.delete()
-            return Response(
-                {"success": True, "message": f"Accommodation '{title}' has been deleted."},
-                status=status.HTTP_200_OK
-            )
+            
+            if affiliated_count > 1:
+                # if multiple universities are associated, just remove the current university
+                accommodation.affiliated_universities.remove(university)
+                print(f"[DEBUG-Backend] Removed {university.name}'s association with accommodation {title} (ID: {accommodation_id})")
+                return Response(
+                    {"success": True, "message": f"Removed {university.name}'s association with accommodation '{title}'. The accommodation is still available to other universities."},
+                    status=status.HTTP_200_OK
+                )
+            else:
+                # if only one university is associated, delete the accommodation
+                accommodation.delete()
+                print(f"[DEBUG-Backend] Completely deleted accommodation {title} (ID: {accommodation_id})")
+                return Response(
+                    {"success": True, "message": f"Accommodation '{title}' has been completely deleted."},
+                    status=status.HTTP_200_OK
+                )
+                
         except Accommodation.DoesNotExist:
             return Response(
                 {"success": False, "message": "Accommodation not found."},
@@ -487,7 +532,7 @@ def delete_accommodation(request):
             type=OpenApiTypes.STR,
             required=False,
         ),
-    ],
+    ] + API_KEY_PARAMETER,
     responses={
         200: AccommodationListResponseSerializer,
     },
