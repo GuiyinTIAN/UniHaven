@@ -207,6 +207,8 @@ def lookup_address(request):
     }
 )
 @api_view(['GET', 'POST']) 
+@authentication_classes([UniversityAPIKeyAuthentication])
+@permission_classes([UniversityAccessPermission])
 @parser_classes([JSONParser, FormParser, MultiPartParser])
 @renderer_classes([JSONRenderer, TemplateHTMLRenderer]) 
 def add_accommodation(request):
@@ -290,17 +292,45 @@ def add_accommodation(request):
                 floor_number = serializer.validated_data.get('floor_number')
                 flat_number = serializer.validated_data.get('flat_number')
                 geo_address = result.get("GeoAddress", "")
+
+                university = request.user
                 
-                if Accommodation.objects.filter(
+                duplicate_accommodations = Accommodation.objects.filter(
                     geo_address=geo_address,
                     room_number=room_number,
                     floor_number=floor_number,
                     flat_number=flat_number
-                ).exists():
-                    return Response(
-                        {"success": False, "message": "This accommodation information already exists. The same combination of room number, floor, unit number and address has already been recorded in the system. If is the same accommodation, you can associate it with your university."},
-                        status=status.HTTP_400_BAD_REQUEST
-                    )
+                )
+                if duplicate_accommodations.exists():
+                    try:
+                        duplicate_accommodation = duplicate_accommodations.first()
+                        
+                        # Check whether this university has been associated with the accommodation
+                        if duplicate_accommodation.affiliated_universities.filter(id=university.id).exists():
+                            return Response({
+                                "success": False,
+                                "message": f"{university.name} is already associated with this accommodation"
+                            }, status=status.HTTP_400_BAD_REQUEST)
+                        
+                        # Add the university to the list of associated universities for accommodation
+                        duplicate_accommodation.affiliated_universities.add(university)
+                        
+                        return Response({
+                            "success": True,
+                            "message": f"Successfully associated {university.name} with accommodation '{duplicate_accommodation.title}'",
+                            "id": duplicate_accommodation.id
+                        })
+                    
+                    except Accommodation.DoesNotExist:
+                        return Response({
+                            "success": False,
+                            "message": "Accommodation doesn't exist"
+                        }, status=status.HTTP_404_NOT_FOUND)
+            
+                    # return Response(
+                    #     {"success": False, "message": "This accommodation information already exists. The same combination of room number, floor, unit number and address has already been recorded in the system. If is the same accommodation, you can associate it with your university."},
+                    #     status=status.HTTP_400_BAD_REQUEST
+                    # )
                 
                 try:
                     accommodation.save()
