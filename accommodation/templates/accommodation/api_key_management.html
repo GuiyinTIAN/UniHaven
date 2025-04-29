@@ -6,7 +6,6 @@
 
 {% block extra_css %}
 <style>
-    /* 确保输入组内的元素正确显示在同一行 */
     .input-group {
         display: flex;
         align-items: stretch;
@@ -23,14 +22,13 @@
     }
     
     .input-group .btn {
-        margin-left: -1px; /* 确保边框重叠 */
+        margin-left: -1px;
         border-top-left-radius: 0;
         border-bottom-left-radius: 0;
         position: relative;
-        z-index: 2; /* 确保按钮边框在输入框边框上面 */
+        z-index: 2; 
     }
     
-    /* 改进按钮外观 */
     #toggleVisibility {
         width: 46px;
         height: 38px;
@@ -40,20 +38,18 @@
         background-color: #e9ecef;
         border: 1px solid #ced4da;
         color: #495057;
-        padding: 0; /* 移除内边距 */
+        padding: 0; 
     }
     
     #toggleVisibility:hover {
         background-color: #dee2e6;
     }
     
-    /* 添加焦点样式 */
     .input-group .form-control:focus {
-        z-index: 3; /* 确保聚焦时输入框在最上层 */
+        z-index: 3;
         position: relative;
     }
     
-    /* 添加新的样式改进 */
     .form-card {
         max-width: 800px;
         margin: 0 auto;
@@ -221,6 +217,9 @@
                 keyStatus.classList.add('not-set');
                 testResult.style.display = 'none';
                 alert('API key cleared successfully!');
+                
+                // Refresh the page to update menu status
+                window.location.reload();
             }
         });
         
@@ -254,10 +253,11 @@
                 
                 if (response.ok) {
                     testResult.innerHTML = `
-                        <div style="padding: 10px; background-color: #d4edda; color: #155724; border-radius: 4px;">
+                        <div style="padding: 10px; background-color: #d4edda; color: #155724; border-radius: 4px;text-align: center;">
                             <h4>✅ API Key Valid!</h4>
                             <p>University: ${data.university || 'Unknown'}</p>
                             <p>Code: ${data.code || 'Unknown'}</p>
+                            <button id="refreshPageBtn" class="btn btn-primary mt-2" style="display: block; margin: 0 auto;">Refresh Page to Update Menu</button>
                         </div>
                     `;
                     
@@ -265,6 +265,11 @@
                     keyStatus.textContent = 'Set';
                     keyStatus.classList.remove('not-set');
                     keyStatus.classList.add('set');
+                    
+                    // Add refresh button click event
+                    document.getElementById('refreshPageBtn').addEventListener('click', function() {
+                        window.location.reload();
+                    });
                 } else {
                     testResult.innerHTML = `
                         <div style="padding: 10px; background-color: #f8d7da; color: #721c24; border-radius: 4px;">

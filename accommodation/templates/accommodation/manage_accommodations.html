@@ -283,20 +283,19 @@
     </div>
     
     <div class="page-info">
-        <h2>Manage Your Listed Accommodations</h2>
-        <p>This page shows all accommodations that realted to your organization and allows to delete them if needed.</p>
+        <!-- <h2>Manage Your Listed Accommodations</h2> -->
+        <p style="text-align: center;">This page shows all accommodations that realted to your organization and allows to delete them if needed.</p>
     </div>
     
-    <!-- 加载中显示 -->
+    <!-- loading display -->
     <div id="loadingSpinner" class="loading-spinner">
         <div class="spinner"></div>
         <p>Loading your accommodations...</p>
     </div>
     
-    <!-- 住宿列表 -->
+    <!-- accommodation List -->
     <div id="accommodationList" class="accommodation-list" style="display: none;"></div>
     
-    <!-- 确认删除对话框 -->
     <div id="confirmationModal" class="confirmation-modal">
         <div class="modal-content">
             <h3>Confirm Deletion</h3>
@@ -318,7 +317,7 @@
     let universityData = null;
     
     document.addEventListener('DOMContentLoaded', async function() {
-        // 检查API密钥
+        // check if API key is set
         const apiKey = localStorage.getItem('unihaven_api_key');
         if (!apiKey) {
             document.getElementById('apiKeyWarning').style.display = 'block';
@@ -332,7 +331,7 @@
             return;
         }
         
-        // 验证API密钥并获取大学信息
+        // check if API key is valid
         try {
             const response = await fetch('/api/test-auth/', {
                 headers: {
@@ -344,23 +343,23 @@
                 const data = await response.json();
                 universityData = data;
                 
-                // 显示大学信息
+                // display university information
                 document.getElementById('universityName').textContent = data.university || 'Unknown University';
                 document.getElementById('universityCode').textContent = data.code || '';
                 document.getElementById('universityInfo').style.display = 'flex';
             } else {
-                // API密钥无效，显示警告
+                // API jey is invalid
                 document.getElementById('apiKeyWarning').style.display = 'block';
             }
         } catch (error) {
             console.error('Error verifying API key:', error);
         }
         
-        // 获取可以删除的住宿列表（当前大学关联的）
+        // load accommodations with retrieved University
         await loadAccommodations(apiKey);
     });
     
-    // 清除API密钥
+    // clear API key
     function clearApiKey() {
         if (confirm('Are you sure you want to remove this API key?')) {
             localStorage.removeItem('unihaven_api_key');
@@ -368,7 +367,7 @@
         }
     }
     
-    // 加载住宿列表
+    // load accommodations list
     async function loadAccommodations(apiKey) {
         try {
             const response = await fetch('/api/list-accommodation/?format=json', {
@@ -446,7 +445,7 @@
                                     <i class="fas fa-location-arrow"></i> ${distanceDisplay}
                                 </div>
                                 <div class="meta-item">
-                                    <i class="fas fa-star"></i> ${ratingDisplay}
+                                    <i class="fas fa-star"></i> rating: ${ratingDisplay}
                                 </div>
                             </div>
                         </div>
@@ -531,12 +530,10 @@
         }
     }
     
-    // 获取CSRF令牌
     function getCSRFToken() {
         return getCookie('csrftoken');
     }
     
-    // 获取Cookie
     function getCookie(name) {
         const cookies = document.cookie.split(';');
         for (let i = 0; i < cookies.length; i++) {
@@ -548,7 +545,6 @@
         return '';
     }
     
-    // 添加这些辅助函数到现有JavaScript中
     function getAccommodationTypeIcon(type) {
         switch(type) {
             case 'APARTMENT': return 'fas fa-building';

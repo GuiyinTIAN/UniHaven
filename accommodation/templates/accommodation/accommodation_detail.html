@@ -6,7 +6,6 @@
 
 {% block extra_css %}
 <style>
-    /* 添加删除确认模态框样式 */
     .modal {
         display: none;
         position: fixed;
@@ -44,12 +43,10 @@
         background-color: #bd2130;
     }
 
-    /* 评分样式 */
     .rating-summary {
         display: flex;
         align-items: center;
         margin-bottom: 20px;
-        /* 添加居中对齐 */
         justify-content: center;
     }
     
@@ -98,7 +95,6 @@
         font-size: 0.9em;
     }
 
-    /* 预订状态样式 - 使用统一的标签样式 */
     .status-badge {
         display: inline-block;
         padding: 3px 10px;
@@ -171,9 +167,9 @@
             <div class="detail-item">
                 <div class="detail-label">Unit Details:</div>
                 <div class="detail-value">
-                    {% if accommodation.floor_number %}Floor: {{ accommodation.floor_number }}{% endif %}
-                    {% if accommodation.flat_number %}{% if accommodation.floor_number %}, {% endif %}Flat: {{ accommodation.flat_number }}{% endif %}
-                    {% if accommodation.room_number %}{% if accommodation.floor_number or accommodation.flat_number %}, {% endif %}Room: {{ accommodation.room_number }}{% endif %}
+                    {% if accommodation.flat_number %}Flat: {{ accommodation.flat_number }}{% endif %}
+                    {% if accommodation.floor_number %}{% if accommodation.flat_number %}, {% endif %}Floor: {{ accommodation.floor_number }}{% endif %}
+                    {% if accommodation.room_number %}{% if accommodation.flat_number or accommodation.floor_number %}, {% endif %}Room: {{ accommodation.room_number }}{% endif %}
                 </div>
             </div>
             {% endif %}
@@ -205,7 +201,6 @@
             {% endif %}
         </div>
 
-        <!-- 修改评分详情部分，将评分和预订状态水平显示 -->
         <div class="detail-section">
             <h2>Ratings and Availability</h2>
             <div style="display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 25px; margin-bottom: 20px;">
@@ -227,7 +222,6 @@
                     </div>
                 </div>
                 
-                <!-- 预订状态标签 - 使用统一样式 -->
                 <span class="status-badge {% if accommodation.reserved %}status-reserved{% else %}status-available{% endif %}">
                     <i class="fas {% if accommodation.reserved %}fa-calendar-times{% else %}fa-calendar-check{% endif %}"></i>
                     {% if accommodation.reserved %}Reserved{% else %}Available{% endif %}
@@ -235,39 +229,43 @@
             </div>
         </div>
         
-        <div style="display: flex; justify-content: center; margin-top: 15px;">
+        <!-- Student-specific actions section - Will be hidden for specialists -->
+        <div id="studentActionsSection" style="display: flex; justify-content: center; margin-top: 15px;">
             <!-- Reserve button -->
             <a href="javascript:void(0);" onclick="showUserIdPrompt('reserve', '{{ accommodation.id }}')" class="btn btn-primary back-button">Reserve</a>
             <!-- Cancel button -->
             <a href="javascript:void(0);" onclick="showUserIdPrompt('cancel', '{{ accommodation.id }}')" class="btn btn-secondary back-button" style="background-color: red;">Cancel</a>
         </div>
         
-        <div class="button-group" style="display: flex; gap: 10px; justify-content: center; margin-top: 15px;">
+        <!-- Student navigation buttons -->
+        <div id="studentButtonGroup" class="button-group" style="display: flex; gap: 10px; justify-content: center; margin-top: 15px;">
             <!-- Back to Listings button with all original query parameters -->
             <a href="{% url 'list_accommodation' %}?{{ query_string }}" class="btn btn-primary back-button">Back to Listings</a>
             <!-- Back to Search button -->
             <a href="{% url 'search_accommodation' %}" class="btn btn-secondary back-button">Back to Search</a>
         </div>
         
-        <!-- 管理员功能区（需要API密钥） -->
+        <!-- Administrator Function Area (API key required) -->
         <div id="adminSection" class="admin-section">
             <h3>Specialist</h3>
-            <div style="display: flex; justify-content: center; margin-top: 10px;">
-                <button onclick="showDeleteModal()" class="btn delete-btn">Delete Accommodation</button>
+            <div style="display: flex; justify-content: center; gap: 10px; margin-top: 10px;">
+                <a href="{% url 'add_accommodation' %}" class="btn btn-primary">Add Accommodation</a>
+                <button onclick="showDeleteModal()" class="btn btn-primary" style="background-color: #dc3545; border-color: #dc3545;">Delete Accommodation</button>
+                <a href="{% url 'manage_accommodations' %}" class="btn btn-secondary">Manage Accommodations</a>
             </div>
         </div>
     </div>
 </div>
 
-<!-- 删除确认模态框 -->
+<!-- Delete the confirmation modal box-->
 <div id="deleteModal" class="modal">
     <div class="modal-content">
-        <h3>Confirm deletion</h3>
-        <p>Are you sure you want to delete "{{ accommodation.title }}"？</p>
+        <h3 style="text-align: center;">Confirm deletion</h3>
+        <p style="text-align: center;">Are you sure you want to delete "{{ accommodation.title }}"？</p>
         <p>This operation is <strong>irreversible</strong>, Data cannot be recovered after deletion.</p>
         <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 15px;">
             <button onclick="hideDeleteModal()" class="btn btn-secondary">Cancel</button>
-            <button onclick="deleteAccommodation('{{ accommodation.id }}')" class="btn delete-btn">Confirm Delete</button>
+            <button onclick="deleteAccommodation('{{ accommodation.id }}')" class="btn btn-danger">Confirm Delete</button>
         </div>
     </div>
 </div>
@@ -275,27 +273,32 @@
 
 {% block extra_js %}
 <script>
-    // 检查是否有API密钥，显示管理员功能
+    // Check if there is an API key and display the administrator function
     document.addEventListener('DOMContentLoaded', function() {
         const apiKey = localStorage.getItem('unihaven_api_key');
         if (apiKey) {
+            // Show admin section and hide student actions for specialists
             document.getElementById('adminSection').style.display = 'block';
+            document.getElementById('studentActionsSection').style.display = 'none';
+            
+            // Show specialist navigation and hide student navigation
+            document.getElementById('studentButtonGroup').style.display = 'none';
         }
     });
     
-    // 显示用户ID输入提示
     function showUserIdPrompt(action, accommodationId) {
-        let userId = prompt("请输入您的用户ID (例如: HKU_12345678):");
-        if (!userId) return; // 用户取消了输入
-        
         if (action === 'reserve') {
+            const urlParams = new URLSearchParams(window.location.search);
+            let userId = urlParams.get('user_id');
             reserveAccommodation(accommodationId, userId);
         } else if (action === 'cancel') {
+            let userId = prompt("Please enter your User ID to cancel the reservation");
+            if (!userId) return;
             cancelReservation(accommodationId, userId);
         }
     }
     
-    // 预订住宿
+    // Reserve accommodation
     async function reserveAccommodation(accommodationId, userId) {
         const csrfToken = getCSRFToken();
         try {
@@ -311,17 +314,34 @@
             
             if (response.ok) {
                 alert(data.message);
-                location.reload(); // 刷新页面以显示预订状态
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = "{% url 'view_reservations' %}";
+                
+                const csrfInput = document.createElement('input');
+                csrfInput.type = 'hidden';
+                csrfInput.name = 'csrfmiddlewaretoken';
+                csrfInput.value = csrfToken;
+                form.appendChild(csrfInput);
+                
+                const userIdInput = document.createElement('input');
+                userIdInput.type = 'hidden';
+                userIdInput.name = 'user_id';
+                userIdInput.value = userId;
+                form.appendChild(userIdInput);
+                
+                document.body.appendChild(form);
+                form.submit();
             } else {
-                alert(`预订失败: ${data.message}`);
+                alert(`Fail to Reserve: ${data.message}`);
             }
         } catch (error) {
             console.error('Error reserving accommodation:', error);
-            alert('预订住宿时发生错误。');
+            alert('An error occurred when booking accommodation.');
         }
     }
 
-    // 取消预订
+    // cancel reservation
     async function cancelReservation(accommodationId, userId) {
         const csrfToken = getCSRFToken();
         try {
@@ -337,37 +357,57 @@
             
             if (response.ok) {
                 alert(data.message);
-                location.reload(); // 刷新页面以显示预订状态
+                // location.reload();
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = "{% url 'view_reservations' %}";
+                
+                // 添加CSRF token
+                const csrfInput = document.createElement('input');
+                csrfInput.type = 'hidden';
+                csrfInput.name = 'csrfmiddlewaretoken';
+                csrfInput.value = csrfToken;
+                form.appendChild(csrfInput);
+                
+                // Pass the user ID to the form
+                const userIdInput = document.createElement('input');
+                userIdInput.type = 'hidden';
+                userIdInput.name = 'user_id';
+                userIdInput.value = userId;
+                form.appendChild(userIdInput);
+                
+                // Add to the page and submit
+                document.body.appendChild(form);
+                form.submit();
             } else {
-                alert(`取消预订失败: ${data.message}`);
+                alert(`Failed to cancel the reservation: ${data.message}`);
             }
         } catch (error) {
             console.error('Error canceling reservation:', error);
-            alert('取消预订时发生错误。');
+            alert('An error occurred when canceling the reservation.');
         }
     }
     
-    // 显示删除确认模态框
+    // Display the deletion confirmation modal box
     function showDeleteModal() {
         document.getElementById('deleteModal').style.display = 'block';
     }
     
-    // 隐藏删除确认模态框
+    // Hide the deletion confirmation modal box
     function hideDeleteModal() {
         document.getElementById('deleteModal').style.display = 'none';
     }
     
-    // 删除住宿
+    // delete accommodation
     async function deleteAccommodation(accommodationId) {
         const apiKey = localStorage.getItem('unihaven_api_key');
         if (!apiKey) {
-            alert('需要有效的API密钥才能删除住宿！');
+            alert('A valid API key is required to delete the accommodation！');
             hideDeleteModal();
             return;
         }
         
         try {
-            // 修复: 添加URL尾部斜杠，以符合Django的APPEND_SLASH设置
             const response = await fetch('/api/delete-accommodation/', {
                 method: 'POST',
                 headers: {
@@ -383,25 +423,25 @@
             const data = await response.json();
             
             if (response.ok) {
-                alert('住宿已成功删除！');
-                window.location.href = "{% url 'list_accommodation' %}";
+                alert('The accommodation has been successfully deleted！');
+                window.location.href = "{% url 'manage_accommodations' %}";
             } else {
-                alert(`删除失败: ${data.message}`);
+                alert(`Fail to delete: ${data.message}`);
                 hideDeleteModal();
             }
         } catch (error) {
             console.error('Error deleting accommodation:', error);
-            alert('删除住宿时发生错误。');
+            alert('An error occurred when deleting the accommodation.');
             hideDeleteModal();
         }
     }
 
-    // 获取CSRF令牌
+    // get CSRF token from cookies
     function getCSRFToken() {
         return getCookie('csrftoken');
     }
 
-    // 获取Cookie
+    // get cookie
     function getCookie(name) {
         const cookies = document.cookie.split(';');
         for (let i = 0; i < cookies.length; i++) {

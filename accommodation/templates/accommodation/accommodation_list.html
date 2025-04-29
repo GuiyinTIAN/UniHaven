@@ -224,7 +224,6 @@
         margin-right: 4px;
     }
 
-    /* 添加状态徽章样式 */
     .status-badge {
         display: inline-block;
         padding: 3px 8px;
@@ -241,19 +240,93 @@
         background-color: #d4edda;
         color: #155724;
     }
-
-    /* 卡片标题和状态布局 */
+    
     .card-header {
         display: flex;
         justify-content: space-between;
         align-items: center;
         margin-bottom: 10px;
     }
+
+    .api-key-warning {
+        background-color: #fff3cd;
+        color: #856404;
+        padding: 10px 15px;
+        border-radius: 4px;
+        margin-bottom: 20px;
+        display: none;
+    }
+    
+    .api-key-warning a {
+        color: #533f03;
+        text-decoration: underline;
+        font-weight: bold;
+    }
+    
+    .university-info {
+        background-color: #e7f5ff;
+        border-left: 4px solid var(--primary-color);
+        padding: 15px;
+        margin: 20px 0;
+        border-radius: 4px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+    
+    .university-name {
+        font-weight: bold;
+        color: var(--primary-color);
+        font-size: 1.1em;
+    }
+    
+    .university-code {
+        font-family: monospace;
+        background-color: rgba(0, 123, 255, 0.1);
+        padding: 3px 8px;
+        border-radius: 3px;
+        margin-left: 10px;
+    }
+    
+    .api-status {
+        display: flex;
+        align-items: center;
+    }
+    
+    .status-badge.valid {
+        background-color: #d4edda;
+        color: #155724;
+        display: inline-block;
+        padding: 3px 10px;
+        border-radius: 20px;
+        font-size: 0.8em;
+        font-weight: 500;
+        margin-right: 10px;
+    }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="container">
+<!-- API key warning -->
+    <div id="apiKeyWarning" class="api-key-warning">
+        <strong>Attention!</strong> The API key was not detected. Specialist features require a valid API key for authentication.
+        <a href="{% url 'api_key_management' %}">Click here to set your API key</a>
+    </div>
+    
+    <!-- university information panel -->
+    <div id="universityInfo" class="university-info" style="display: none;">
+        <div>
+            <span>Organization:</span>
+            <span class="university-name" id="universityName">Loading...</span>
+            <span class="university-code" id="universityCode"></span>
+        </div>
+        <div class="api-status">
+            <span class="status-badge valid">API Key Valid</span>
+            <button onclick="clearApiKey()" class="btn btn-sm btn-outline-secondary">Change Key</button>
+        </div>
+    </div>
+    
     <div class="filter-tags" id="activeFilters">
     </div>
 
@@ -336,6 +409,13 @@
                     {% if accommodation.distance %}
                     <div class="meta-item"><span class="meta-icon">📍</span> {{ accommodation.distance|floatformat:2 }} km</div>
                     {% endif %}
+                    {% if accommodation.affiliated_universities.exists %}
+                    <div class="meta-item"><span class="meta-icon">🎓</span> 
+                        {% for uni in accommodation.affiliated_universities.all %}
+                            {{ uni.code }}{% if not forloop.last %}, {% endif %}
+                        {% endfor %}
+                    </div>
+                    {% endif %}
                 </div>
                 
                 <div style="text-align: center;">
@@ -345,10 +425,26 @@
         </div>
         {% endfor %}
     </div>
+
+    <div style="display: flex; justify-content: center; margin: 20px 0;">
+        {% if user_id %}
+        <form method="post" action="{% url 'view_reservations' %}">
+            {% csrf_token %}
+            <input type="hidden" name="user_id" value="{{ user_id }}">
+            <button type="submit" class="btn btn-secondary">View Your Reservations</button>
+        </form>
+        {% else %}
+        <a href="{% url 'view_reservations' %}" class="btn btn-secondary">View Your Reservations</a>
+        {% endif %}
+    </div>
+
     {% else %}
     <div class="no-results">
         <p>No accommodations found matching your criteria.</p>
-        <a href="{% url 'search_accommodation' %}" class="btn btn-primary">Try a New Search</a>
+        <div style="display: flex; gap: 10px; justify-content: center; margin-top: 15px;">
+            <a href="{% url 'search_accommodation' %}" class="btn btn-primary">Try a New Search</a>
+            <a href="{% url 'view_reservations' %}" class="btn btn-secondary">View Your Reservations</a>
+        </div>
     </div>
     {% endif %}
 </div>
@@ -357,6 +453,36 @@
 {% block extra_js %}
 <script>
     document.addEventListener('DOMContentLoaded', function() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const apiKey = localStorage.getItem('unihaven_api_key');
+
+        if (apiKey) {
+            // Specialist Mode
+            console.log("Specialist View");
+            
+            // verify API Key and display university information
+            verifyApiKeyAndDisplayUniversity(apiKey);
+            
+            if (!urlParams.has('api_key') && !urlParams.has('user_id')) {
+                console.log("Add the API Key and reload the page");
+                urlParams.set('api_key', apiKey);
+                localStorage.setItem('unihaven_api_key', apiKey);
+                window.location.href = `${window.location.pathname}?${urlParams.toString()}`;
+                return;
+            }
+        } else {
+            // student user view - from the search page
+            console.log("Student View");
+            // document.getElementById('apiKeyWarning').style.display = 'block';
+            
+            if (urlParams.has('api_key')) {
+                console.log("Remove the incorrect API Key parameter");
+                urlParams.delete('api_key');
+                window.location.href = `${window.location.pathname}?${urlParams.toString()}`;
+                return;
+            }
+        }
+        
         displayActiveFilters();
         
         const sortSelect = document.getElementById('sortSelect');
@@ -380,6 +506,40 @@
         });
     });
     
+    async function verifyApiKeyAndDisplayUniversity(apiKey) {
+        try {
+            const response = await fetch('/api/test-auth/', {
+                headers: {
+                    'X-API-Key': apiKey
+                }
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                document.getElementById('universityName').textContent = data.university || 'Unknown University';
+                document.getElementById('universityCode').textContent = data.code || '';
+                document.getElementById('universityInfo').style.display = 'flex';
+                document.getElementById('apiKeyWarning').style.display = 'none';
+            } else {
+                // If the API key is invalid, show the warning message
+                document.getElementById('apiKeyWarning').style.display = 'block';
+                document.getElementById('universityInfo').style.display = 'none';
+            }
+        } catch (error) {
+            console.error('Error verifying API key:', error);
+            document.getElementById('apiKeyWarning').style.display = 'block';
+            document.getElementById('universityInfo').style.display = 'none';
+        }
+    }
+    
+    // clear the API key and redirect to the API key management page
+    window.clearApiKey = function() {
+        if (confirm('Are you sure you want to remove this API key?')) {
+            localStorage.removeItem('unihaven_api_key');
+            window.location.href = "{% url 'api_key_management' %}";
+        }
+    };
+    
     function getBaseUrlParams() {
         const urlParams = new URLSearchParams(window.location.search);
         urlParams.delete('order_by_distance');
@@ -398,7 +558,8 @@
     function displayActiveFilters() {
         const urlParams = new URLSearchParams(window.location.search);
         const filterContainer = document.getElementById('activeFilters');
-        const ignoredParams = ['order_by', 'order_by_distance', 'page', 'campus'];
+        const ignoredParams = ['order_by', 'order_by_distance', 'page', 'campus', 'api_key', 'user_id'];
+        
         let hasFilters = false;
         
         for (const [key, value] of urlParams.entries()) {
@@ -521,7 +682,7 @@
     }
     
     function isFilterEmpty(params) {
-        const ignoredParams = ['order_by', 'order_by_distance', 'page', 'campus'];
+        const ignoredParams = ['order_by', 'order_by_distance', 'page', 'campus',];
         for (const [key, value] of params.entries()) {
             if (!ignoredParams.includes(key) && value) {
                 return false;

@@ -14,10 +14,9 @@
             flex-direction: column;
         }
         
-        /* 重新设计导航栏，保持原高度 */
+        
         .navbar {
             position: relative;
-            /* 去掉固定高度，让内容自然决定高度 */
             padding: 0 20px;
             background-color: var(--primary-color);
             color: white;
@@ -25,7 +24,6 @@
             align-items: center;
         }
         
-        /* 标题居中定位 */
         .navbar h1 {
             position: absolute;
             left: 0;
@@ -34,21 +32,20 @@
             transform: translateY(-50%);
             text-align: center;
             margin: 0;
-            padding: 15px 0; /* 恢复原来的内边距 */
+            padding: 15px 0;
             white-space: nowrap;
             z-index: 10;
         }
         
         /* 左侧元素 */
         .nav-left {
-            position: relative; /* 改为相对定位 */
+            position: relative;
             z-index: 20;
-            height: 60px; /* 为navbar设置一个明确的高度 */
+            height: 60px;
             display: flex;
             align-items: center;
         }
         
-        /* 右侧元素 */
         .nav-right {
             position: absolute;
             right: 20px;
@@ -60,7 +57,6 @@
             gap: 10px;
         }
         
-        /* 主页按钮样式 */
         .home-btn {
             background-color: transparent;
             border: none;
@@ -76,7 +72,6 @@
             transform: translateY(-2px);
         }
         
-        /* 统一下拉菜单样式 */
         .dropdown-container {
             position: relative;
             margin-right: 5px;
@@ -150,7 +145,6 @@
             background-color: #f5f5f5;
         }
         
-        /* 语言下拉菜单样式 */
         .language-dropdown {
             position: relative;
         }
@@ -193,7 +187,7 @@
             text-align: center;
             padding: 10px 0;
             font-size: 0.9em;
-            margin-top: auto; /* 确保footer始终在底部 */
+            margin-top: auto;
         }
     </style>
     {% block extra_css %}{% endblock %}
@@ -209,19 +203,18 @@
         <h1>{% block nav_title %}UniHaven{% endblock %}</h1>
         
         <div class="nav-right">
-            <!-- 通用语言切换器占位 -->
             {% block language_selector %}{% endblock %}
             
-            <!-- 导航菜单 -->
             <div class="dropdown-container">
                 <button id="menuToggle" class="dropdown-toggle">
                     Menu <span class="dropdown-icon">▼</span>
                 </button>
                 <ul id="navMenu" class="dropdown-menu">
                     <li><a href="{% url 'search_accommodation' %}">Search</a></li>
-                    <li><a href="{% url 'list_accommodation' %}">List</a></li>
-                    <li><a href="{% url 'add_accommodation' %}">Add Accommodation</a></li>
-                    <li><a href="{% url 'manage_accommodations' %}">Manage Accommodation</a></li>
+                    <li id="listMenuItem" style="display: none;"><a href="{% url 'list_accommodation' %}">List</a></li>
+                    <li id="addMenuItem" style="display: none;"><a href="{% url 'add_accommodation' %}">Add Accommodation</a></li>
+                    <li id="manageMenuItem" style="display: none;"><a href="{% url 'manage_accommodations' %}">Manage Accommodation</a></li>
+                    <li><a href="{% url 'view_reservations' %}">View Reservation</a></li>
                     <li><a href="{% url 'api_key_management' %}">API Key</a></li>
                     <li><a href="{% url 'swagger-ui' %}">API DOC</a></li>
                 </ul>
@@ -238,24 +231,35 @@
     </div>
     
     <script>
-        // 下拉菜单功能
         document.addEventListener('DOMContentLoaded', function() {
             const menuToggle = document.getElementById('menuToggle');
             const navMenu = document.getElementById('navMenu');
+            
+            // check if the user is specialist or not
+            // If the user is a specialist, show the specialist menu item
+            const apiKey = localStorage.getItem('unihaven_api_key');
+            const listMenuItem = document.getElementById('listMenuItem');
+            const addMenuItem = document.getElementById('addMenuItem');
+            const manageMenuItem = document.getElementById('manageMenuItem');
+            
+            if (apiKey) {
+                // specialist user
+                listMenuItem.style.display = 'block';
+                addMenuItem.style.display = 'block';
+                manageMenuItem.style.display = 'block';
+            } else {
+                // non-specialist user
+                listMenuItem.style.display = 'none';
+                addMenuItem.style.display = 'none';
+                manageMenuItem.style.display = 'none';
+            }
             
             if (menuToggle && navMenu) {
                 menuToggle.addEventListener('click', function(event) {
                     event.stopPropagation();
                     navMenu.classList.toggle('show');
-                    
-                    // 切换箭头方向
-                    // const menuIcon = menuToggle.querySelector('.dropdown-icon');
-                    // if (menuIcon) {
-                    //     menuIcon.textContent = navMenu.classList.contains('show') ? '▲' : '▼';
-                    // }
                 });
                 
-                // 点击菜单外部关闭菜单
                 document.addEventListener('click', function(event) {
                     if (!menuToggle.contains(event.target) && !navMenu.contains(event.target)) {
                         navMenu.classList.remove('show');

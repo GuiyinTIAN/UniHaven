@@ -27,9 +27,9 @@
         padding: 10px 15px;
         margin: 10px 0 20px 0;
         font-size: 0.9em;
+        border-radius: 6px;
     }
 
-    /* 添加样式以支持同一行的多个字段 */
     .form-row {
         display: flex;
         gap: 20px;
@@ -46,7 +46,6 @@
         margin-top: 5px;
     }
 
-    /* 添加大学信息面板样式 */
     .university-info {
         background-color: #e7f5ff;
         border-left: 4px solid var(--primary-color);
@@ -95,18 +94,51 @@
         background-color: #f8d7da;
         color: #721c24;
     }
+
+    /* Add duplicate accommodation info box styles */
+    .duplicate-info {
+        background-color: #e7f1ff;
+        border-left: 4px solid #3498db;
+        padding: 10px 15px;
+        margin: 10px 0 20px 0;
+        font-size: 0.9em;
+        border-radius: 6px;
+    }
+
+    .duplicate-property {
+        background-color: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+        padding: 10px;
+        margin-top: 10px;
+    }
+
+    .duplicate-property h4 {
+        color: #3498db;
+        margin-bottom: 8px;
+    }
+
+    .link-existing-btn {
+        background-color: #28a745;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        padding: 5px 10px;
+        margin-top: 8px;
+        cursor: pointer;
+    }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="container">
-    <!-- API密钥警告 -->
+    <!-- API key warning -->
     <div id="apiKeyWarning" class="api-key-warning">
         <strong>Attention!</strong> The API key was not detected. Adding accommodation requires a valid API key for authentication.
         <a href="{% url 'api_key_management' %}">Click here to set your API key</a>
     </div>
     
-    <!-- 添加大学信息面板 -->
+    <!--  university information panel -->
     <div id="universityInfo" class="university-info" style="display: none;">
         <div>
             <span>Organization:</span>
@@ -117,6 +149,13 @@
             <span class="status-badge valid">API Key Valid</span>
             <button onclick="clearApiKey()" class="btn btn-sm btn-outline-secondary">Change Key</button>
         </div>
+    </div>
+    
+    <!-- Add duplicate accommodation detection info area -->
+    <div id="duplicateAccommodationInfo" class="duplicate-info" style="display: none;">
+        <h4><i class="fas fa-info-circle"></i> Similar Accommodation Detected</h4>
+        <p>The system has found the following accommodations similar to the one you are adding. If it's the same accommodation, you can choose to associate with it instead of creating a new one.</p>
+        <div id="duplicatePropertiesList"></div>
     </div>
     
     <div class="form-card">
@@ -157,7 +196,6 @@
                     <input type="number" name="bedrooms" id="id_bedrooms" class="form-control" min="1" required>
                 </div>
                 
-                <!-- 将Price和Address放在同一行 -->
                 <div class="form-row full-width">
                     <div class="form-group">
                         <label for="id_price">Price (HKD): <span class="required">*</span></label>
@@ -165,10 +203,9 @@
                     </div>
                     
                     <div class="form-group">
-                        <label for="id_address">Address: <span class="required">*</span></label>
-                        <input type="text" name="address" id="id_address" class="form-control" required
+                        <label for="id_address">Building Name: <span class="required">*</span></label>
+                        <input type="text" name="building_name" id="id_building_name" class="form-control" required
                                placeholder="Enter the building name">
-                        <small class="form-text text-muted">The address will be geocoded using the Hong Kong government API.</small>
                     </div>
                 </div>
                 
@@ -227,14 +264,10 @@
 {% block extra_js %}
 <script>
     document.addEventListener('DOMContentLoaded', async function() {
-        // 检查API密钥和验证
         const apiKey = localStorage.getItem('unihaven_api_key');
-        
         if (!apiKey) {
-            // 显示API密钥缺失警告
             document.getElementById('apiKeyWarning').style.display = 'block';
         } else {
-            // 验证API密钥并获取大学信息
             try {
                 const response = await fetch('/api/test-auth/', {
                     headers: {
@@ -244,13 +277,12 @@
                 
                 if (response.ok) {
                     const data = await response.json();
-                    
-                    // 显示大学信息
+                    // display the university name and code
                     document.getElementById('universityName').textContent = data.university || 'Unknown University';
                     document.getElementById('universityCode').textContent = data.code || '';
                     document.getElementById('universityInfo').style.display = 'flex';
                 } else {
-                    // API密钥无效，显示警告
+                    // The API key is invalid and a warning is displayed
                     document.getElementById('apiKeyWarning').style.display = 'block';
                 }
             } catch (error) {
@@ -259,7 +291,7 @@
             }
         }
         
-        // 添加清除API密钥的功能
+        //  function of clearing API keys
         window.clearApiKey = function() {
             if (confirm('Are you sure you want to remove this API key?')) {
                 localStorage.removeItem('unihaven_api_key');
@@ -267,7 +299,7 @@
             }
         };
         
-        // 日期范围验证
+        // Date range verification
         const today = new Date();
         const yyyy = today.getFullYear();
         const mm = String(today.getMonth() + 1).padStart(2, '0');
@@ -297,62 +329,212 @@
             }
         });
         
-        // API密钥检查和表单提交修改
+        // API key inspection and form submission modification
         const apiKeyWarning = document.getElementById('apiKeyWarning');
         const form = document.getElementById('accommodationForm');
         
-        // 检查是否有API密钥
+        // check if API key is set
         if (!apiKey) {
             apiKeyWarning.style.display = 'block';
         }
         
-        // 拦截表单提交
-        form.addEventListener('submit', function(event) {
-            event.preventDefault();
+        // Function to check for duplicate accommodation
+        function checkForDuplicateAccommodation() {
+            const apiKey = localStorage.getItem('unihaven_api_key');
+            if (!apiKey) return;
             
-            // 如果没有API密钥，显示警告
+            const buildingName = document.getElementById('id_building_name').value;
+            const floorNumber = document.getElementById('id_floor_number').value;
+            const flatNumber = document.getElementById('id_flat_number').value;
+            const roomNumber = document.getElementById('id_room_number').value;
+            
+            // If the address is empty, do not perform the check
+            if (!buildingName) return;
+            
+            // Build query parameters
+            const params = new URLSearchParams({
+                building_name: buildingName
+            });
+            
+            if (floorNumber) params.append('floor_number', floorNumber);
+            if (flatNumber) params.append('flat_number', flatNumber);
+            if (roomNumber) params.append('room_number', roomNumber);
+            
+            return fetch(`/api/check-duplicate-accommodation/?${params.toString()}`, {
+                headers: {
+                    'X-API-Key': apiKey
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                // If already associated with an identical accommodation, show alert and redirect
+                if (data.already_associated) {
+                    alert(`Your university is already associated with an identical accommodation: "${data.accommodation_title}". Redirecting to view it.`);
+                    window.location.href = `/api/accommodation_detail/${data.accommodation_id}/`;
+                    return null; // Stop further processing
+                }
+                return data;
+            })
+            .catch(error => {
+                console.error('Error checking for duplicates:', error);
+                return { success: false, duplicates: [] };
+            });
+        }
+        
+        // Function to associate with existing accommodation
+        window.linkToExistingAccommodation = function(accommodationId) {
+            const apiKey = localStorage.getItem('unihaven_api_key');
             if (!apiKey) {
-                alert('A valid API key is required to add accommodations! Please set your key on the API Key Management page.');
+                alert('A valid API key is required to associate with an accommodation!');
                 return;
             }
             
-            // 创建FormData对象
-            const formData = new FormData(form);
+            if (confirm('Are you sure you want to associate with this accommodation?')) {
+                fetch(`/api/link-accommodation/${accommodationId}/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-API-Key': apiKey,
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('Successfully associated with existing accommodation!');
+                        window.location.href = `/api/accommodation_detail/${accommodationId}/`;
+                    } else {
+                        alert(`Association failed: ${data.message || 'Unknown error'}`);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error linking accommodation:', error);
+                    alert('An error occurred during the association process');
+                });
+            }
+        };
+        
+        // Modify form submission event
+        form.addEventListener('submit', async function(event) {
+            event.preventDefault();
             
-            // 修正API请求URL，URL应该是/api/add-accommodation/而不是/accommodation/add-accommodation/
+            // If API key does not exist, show warning and return
+            if (!apiKey) {
+                alert('A valid API key is required to add accommodation! Please set your key on the API Key Management page.');
+                return;
+            }
+            
+            // Check for duplicate accommodation before submission
+            const duplicateResult = await checkForDuplicateAccommodation();
+            if (!duplicateResult) {
+                // Already handled by checkForDuplicateAccommodation (redirect case)
+                return;
+            }
+            
+            if (duplicateResult.success && duplicateResult.duplicates && duplicateResult.duplicates.length > 0) {
+                // Duplicate accommodation detected, show confirmation window
+                if (confirm(`Similar accommodations detected. Do you want to view existing accommodations or still create a new one?\nClick "OK" to view existing accommodations, click "Cancel" to create a new one.`)) {
+                    // User chooses to view existing accommodations
+                    const duplicateInfo = document.getElementById('duplicateAccommodationInfo');
+                    const propertiesList = document.getElementById('duplicatePropertiesList');
+                    
+                    // Clear existing list
+                    propertiesList.innerHTML = '';
+                    
+                    // Add matching accommodations with conditional button
+                    duplicateResult.duplicates.forEach(property => {
+                        const propertyDiv = document.createElement('div');
+                        propertyDiv.className = 'duplicate-property';
+                        
+                        let actionButton = '';
+                        if (property.already_associated) {
+                            actionButton = `
+                                <button class="btn btn-secondary" disabled>
+                                    Already Associated
+                                </button>
+                                <a href="/api/accommodation_detail/${property.id}/" class="btn btn-primary">
+                                    View Details
+                                </a>
+                            `;
+                        } else {
+                            actionButton = `
+                                <button 
+                                    class="link-existing-btn" 
+                                    data-id="${property.id}"
+                                    onclick="linkToExistingAccommodation(${property.id})">
+                                    Associate with this Accommodation
+                                </button>
+                            `;
+                        }
+                        
+                        propertyDiv.innerHTML = `
+                            <h4>${property.title}</h4>
+                            <p><strong>Geo Address:</strong> ${property.geo_address}</p>
+                            <p><strong>Address:</strong> ${property.formatted_address}</p>
+                            <p><strong>Unit Details:</strong> Floor ${property.floor_number || 'Not specified'}, 
+                               Unit ${property.flat_number || 'Not specified'}, 
+                               Room ${property.room_number || 'Not specified'}</p>
+                            <p><strong>Associated Universities:</strong> ${property.universities.join(', ')}</p>
+                            <div class="button-group">
+                                ${actionButton}
+                            </div>
+                        `;
+                        propertiesList.appendChild(propertyDiv);
+                    });
+                    
+                    // Show duplicate accommodation info
+                    duplicateInfo.style.display = 'block';
+                    duplicateInfo.scrollIntoView({
+                        behavior: 'smooth'
+                    });
+                    return; // Stop form submission
+                } else {
+                    // User insists on creating new accommodation, continue normal submission
+                    // Create FormData object
+                    const formData = new FormData(form);
+                    
+                    // Add a flag indicating this is creating new accommodation instead of associating
+                    formData.append('create_new', 'true');
+                    formData.append('force_create', 'true'); // Force creation even if duplicates exist
+                    
+                    submitForm(formData);
+                }
+            } else {
+                // No duplicates found, normal submission
+                const formData = new FormData(form);
+                formData.append('create_new', 'true');
+                submitForm(formData);
+            }
+        });
+        
+        // Extract form submission logic into a separate function
+        function submitForm(formData) {
             fetch('/api/add-accommodation/', {
                 method: 'POST',
                 headers: {
                     'X-API-Key': apiKey
-                    // 注意：使用FormData时不要手动设置Content-Type，让浏览器自动处理
                 },
                 body: formData
             })
-            .then(response => {
-                // 增加错误日志以便调试
-                console.log('Response status:', response.status);
-                return response.json();
-            })
+            .then(response => response.json())
             .then(data => {
                 if (data.success) {
                     alert('Accommodation added successfully!');
                     window.location.href = `/api/accommodation_detail/${data.id}/`;
                 } else {
-                    // 处理错误
                     let errorMessage = data.message || '';
                     if (data.errors) {
                         errorMessage += '\n' + Object.entries(data.errors)
                             .map(([key, value]) => `${key}: ${value.join(', ')}`)
                             .join('\n');
                     }
-                    alert(`Failed to add accommodation:\n${errorMessage}`);
+                    alert(`Failed to add:\n${errorMessage}`);
                 }
             })
             .catch(error => {
                 console.error('Error:', error);
                 alert('An error occurred while submitting the form');
             });
-        });
+        }
     });
 </script>
 {% endblock %}

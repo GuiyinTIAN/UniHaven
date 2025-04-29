@@ -67,12 +67,13 @@
             <div class="form-grid">
                 <div class="section-title">Basic Filters</div>
                 
-                <!-- 更新用户ID输入区域的提示 -->
+                <!-- Update the prompt for the user ID input area -->
                 <div class="user-id-input full-width">
                     <div class="form-group">
                         <label for="user_id">Your Student ID:</label>
                         <input type="text" name="user_id" id="user_id" 
                                placeholder="Enter your student ID to filter accommodations for your university (e.g. HKU_12345678, HKUST_87654321, CUHK_12345678)">
+                        <small id="userIdError" class="error-message" style="color: red; display: none;">Please enter a valid user ID in the format: [UNIVERSITY_CODE]_[Student Number or Name] (e.g. HKU_12345678)</small>
                     </div>
                 </div>
                 
@@ -228,13 +229,77 @@
         // Set form values from URL parameters
         const urlParams = new URLSearchParams(window.location.search);
         for (const [key, value] of urlParams) {
-            // 忽略order_by参数，因为它已经移到结果页面
             if (key === 'order_by' || key === 'order_by_distance') continue;
             
             const element = document.getElementById(key);
             if (element) {
                 element.value = value;
             }
+        }
+
+        // Add user ID validation
+        const userIdInput = document.getElementById('user_id');
+        const userIdError = document.getElementById('userIdError');
+        const searchForm = document.getElementById('searchForm');
+        
+        // Function to validate user ID format
+        function validateUserId(userId) {
+
+            if (!userId) return false;
+            
+            // check if User ID matches the format
+            const regex = /^(HKU|HKUST|CUHK)_[A-Za-z0-9]+$/i;
+            return regex.test(userId);
+        }
+        
+        // Validate on form submission
+        searchForm.addEventListener('submit', function(event) {
+            const userId = userIdInput.value.trim();
+            
+            if (!validateUserId(userId)) {
+                event.preventDefault();
+                userIdError.style.display = 'block';
+                userIdInput.focus();
+                userIdInput.classList.add('error-input');
+                userIdError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            } else {
+                userIdError.style.display = 'none';
+                userIdInput.classList.remove('error-input');
+            }
+        });
+        
+        // Validate when user leaves the input field
+        userIdInput.addEventListener('blur', function() {
+            const userId = userIdInput.value.trim();
+            
+            if (!validateUserId(userId)) {
+                userIdError.style.display = 'block';
+                userIdInput.classList.add('error-input');
+            } else {
+                userIdError.style.display = 'none';
+                userIdInput.classList.remove('error-input');
+            }
+        });
+        
+        // Clear error on input
+        userIdInput.addEventListener('input', function() {
+            userIdError.style.display = 'none';
+            userIdInput.classList.remove('error-input');
+        });
+
+        const apiKey = localStorage.getItem('unihaven_api_key') || sessionStorage.getItem('specialist_api_key');
+        if (apiKey) {
+            sessionStorage.removeItem('specialist_api_key');
+            
+            const searchForm = document.getElementById('searchForm');
+            searchForm.addEventListener('submit', function(e) {
+
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'api_key';
+                input.value = apiKey;
+                searchForm.appendChild(input);
+            });
         }
     });
 </script>

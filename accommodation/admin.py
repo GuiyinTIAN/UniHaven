@@ -24,9 +24,9 @@ class AccommodationAdmin(admin.ModelAdmin):
     inlines = [AccommodationUniversityInline]
     
     def reset_ids(self, request, queryset):
-        """重置 ID 自增序列的管理操作"""
+        """Delete all records and reset the ID sequence to 1"""
         if not request.user.is_superuser:
-            messages.error(request, "只有超级用户可以执行此操作")
+            messages.error(request, "Only superusers can perform this operation")
             return
             
         # 删除所有记录
@@ -38,9 +38,9 @@ class AccommodationAdmin(admin.ModelAdmin):
             cursor.execute("DELETE FROM accommodation_accommodation;")
             cursor.execute("DELETE FROM sqlite_sequence WHERE name='accommodation_accommodation';")
                 
-        messages.success(request, f"ID 序列已重置 (数据库类型: {db_engine})")
+        messages.success(request, f"The ID sequence has been reset (database type: {db_engine})")
     
-    reset_ids.short_description = "重置所有记录并将 ID 序列重置为 1"
+    reset_ids.short_description = "Reset all records and reset the ID sequence to 1"
 
     def get_universities(self, obj):
         return ", ".join([u.code for u in obj.affiliated_universities.all()])
