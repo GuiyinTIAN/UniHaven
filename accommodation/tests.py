@@ -141,9 +141,10 @@ class AccommodationAPITestCase(APITestCase):
             'formatted_address': self.accommodation_1.formatted_address(),  # 添加 formatted_address 字段
             'building_name': self.accommodation_1.building_name,
             'userID': self.accommodation_1.userID,  # 添加 userID 字段
-            'flat_number': self.accommodation_1.flat_number,
-            'floor_number': self.accommodation_1.floor_number,
             'room_number': self.accommodation_1.room_number,
+            'floor_number': self.accommodation_1.floor_number,
+            'flat_number': self.accommodation_1.flat_number,
+            'contact_name': self.accommodation_1.contact_name,  # 添加 contact_name 字段
             'contact_phone': self.accommodation_1.contact_phone,  # 添加 contact_phone 字段
             'contact_email': self.accommodation_1.contact_email,  # 添加 contact_email 字段
             'rating': self.accommodation_1.rating,  # 添加 rating 字段
@@ -171,7 +172,7 @@ class AccommodationAPITestCase(APITestCase):
             "bedrooms": 2,  
             "available_from": "2025-04-28",
             "available_to": "2025-05-30",
-            "address": "top",
+            "building_name": "top",
             "room_number": "1001",
             "floor_number": "10",
             "flat_number": "A",
@@ -543,18 +544,54 @@ class AccommodationAPITestCase(APITestCase):
         self.assertEqual(english_address['District'], "CENTRAL & WESTERN DISTRICT")
         self.assertEqual(english_address['Region'], "HK")
 
-    # def test_delete_accommodation_success(self):
-    #     """测试成功删除住宿"""
-    #     url = reverse('delete_accommodation')  
-    #     query_params = f"?api_key={self.hku_api_key}"
-    #     full_url = f"{url}{query_params}"
+    def test_remove_university_association(self):
+        """测试移除大学与宿舍的关联（多个大学关联时）"""
+        api_key = self.hku_api_key.key
+        url = f"/api/delete-accommodation/?api_key={api_key}"
+        
+        response = self.client.post(url, {"id": self.accommodation_1.id}, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.json()["success"], True)
+        self.assertEqual(
+            response.json()["message"],
+            f"Removed {self.hku.name}'s association with accommodation '{self.accommodation_1.title}'. The accommodation is still available to other universities."
+        )
+        # 验证大学 1 的关联已移除
+        self.assertFalse(self.accommodation_1.affiliated_universities.filter(id=self.hku.id).exists())
 
-    #     response = self.client.post(full_url, {'id': self.accommodation1.id}, format='json')
+        # 验证大学 2 的关联仍然存在
+        self.assertTrue(self.accommodation_1.affiliated_universities.filter(id=self.hkust.id).exists())
+        self.assertTrue(self.accommodation_1.affiliated_universities.filter(id=self.cuhk.id).exists())
 
-    #     # 检查响应状态码
-    #     self.assertEqual(response.status_code, status.HTTP_200_OK)
+    def test_delete_accommodation_when_all_associations_removed(self):
+        """
+        测试当删除最后一个大学的关联时，宿舍是否会被完全删除。
+        """
 
-    #     # 检查响应内容
-    #     data = response.json()
-    #     self.assertTrue(data['success'])
-    #     self.assertIn(f"Accommodation with ID {self.accommodation1.id} has been deleted.", data['message'])
+        # API 请求 URL
+        url = f"/api/delete-accommodation/?api_key={self.cuhk_api_key.key}"
+
+        # 发送删除请求
+        response = self.client.post(url, {"id": self.accommodation_3.id}, format="json")
+
+        # 验证响应状态码
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        # 验证响应内容
+        self.assertEqual(response.json()["success"], True)
+        self.assertEqual(
+            response.json()["message"],
+            f"Accommodation '{self.accommodation_3.title}' has been completely deleted."
+        )
+
+        # 验证宿舍已从数据库中被删除
+        self.assertFalse(Accommodation.objects.filter(id=self.accommodation_3.id).exists())
+
+    def test_accommodation_not_found(self):
+        """测试删除不存在的宿舍"""
+        url = f"/api/delete-accommodation/?api_key=586385e5a18c46e3a3a5c9162599320f"
+        response = self.client.post(url, {"id": 999}, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(response.json()["success"], False)
+        self.assertEqual(response.json()["message"], "Accommodation not found.")
