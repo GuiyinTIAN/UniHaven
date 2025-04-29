@@ -15,12 +15,16 @@ class Accommodation(models.Model):
     price = models.DecimalField(max_digits=10, decimal_places=2)
     available_from = models.DateField(null=True, blank=True)
     available_to = models.DateField(null=True, blank=True)
+
+    # Accommodation Owner Information
+    contact_name = models.CharField(max_length=100, blank=True, null=True)
     contact_phone = models.CharField(max_length=20, blank=True, null=True)
     contact_email = models.EmailField(blank=True, null=True)
 
     # userID is the ID for resevation and cancellation
     userID = models.CharField(max_length=255, blank=True, default="")
     reserved = models.BooleanField(default=False)
+    contract_status = models.BooleanField(default=False, help_text="Whether the accommodation is singed contract")
 
     building_name = models.CharField(max_length=200, default="", blank=True)
     estate_name = models.CharField(max_length=200, default="", blank=True)

@@ -239,6 +239,7 @@ def add_accommodation(request):
                     "room_number": "room number",
                     "floor_number": "floor number",
                     "flat_number": "flat number",
+                    "contact_name": "contact name",
                     "contact_phone": "contact phone number",
                     "contact_email": "user@example.com"
                 }
@@ -285,7 +286,7 @@ def add_accommodation(request):
         accommodation = Accommodation()
         fields = ['title', 'description', 'type', 'price', 'beds', 
                  'bedrooms', 'available_from', 'available_to',
-                 'contact_phone', 'contact_email',
+                 'contact_name','contact_phone', 'contact_email',
                  'room_number', 'floor_number', 'flat_number']
         for field in fields:
             if field in serializer.validated_data:

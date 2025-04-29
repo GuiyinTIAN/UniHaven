@@ -31,7 +31,7 @@ class AddAccommodationSerializer(serializers.ModelSerializer):
         fields = [
             'title', 'description', 'type', 'price', 'beds', 'bedrooms',
             'available_from', 'available_to', 'building_name',
-            'room_number', 'floor_number', 'flat_number',
+            'room_number', 'floor_number', 'flat_number', 'contact_name',
             'contact_phone', 'contact_email'
         ]
 
@@ -68,7 +68,7 @@ class AccommodationSerializer(serializers.ModelSerializer):
         fields = ['id', 'title', 'description', 'type', 'price', 'beds', 'bedrooms', 
                  'available_from', 'available_to', 'address', 'formatted_address',
                  'reserved', 'userID', 'building_name', 'region', 
-                 'room_number', 'floor_number', 'flat_number',
+                 'room_number', 'floor_number', 'flat_number', 'contact_name',
                  'contact_phone', 'contact_email','rating', 'rating_count']
         read_only_fields = ['id', 'latitude', 'longitude', 'building_name', 
                            'estate_name', 'street_name', 'building_no', 'district', 
@@ -99,7 +99,7 @@ class AccommodationDetailSerializer(serializers.ModelSerializer):
         fields = ['id', 'title', 'description', 'type', 'price', 'beds', 'bedrooms', 
                  'available_from', 'available_to', 'region', 'reserved', 'formatted_address',
                  'building_name', 'userID', 'room_number', 'floor_number', 'flat_number',
-                 'contact_phone', 'contact_email', 'rating', 'rating_count', 'rating_sum',
+                 'contact_name','contact_phone', 'contact_email', 'rating', 'rating_count', 'rating_sum',
                  'affiliated_university_codes']
     
     @extend_schema_field(serializers.CharField())
@@ -119,7 +119,7 @@ class AccommodationListSerializer(serializers.ModelSerializer):
         model = Accommodation
         fields = ['id', 'title', 'building_name', 'description', 'type', 'price', 'beds', 'bedrooms',
                  'available_from', 'available_to', 'region', 'distance', 'reserved', 
-                 'room_number', 'floor_number', 'flat_number',
+                 'room_number', 'floor_number', 'flat_number', 'contact_name',
                  'contact_phone', 'contact_email','rating', 'rating_count', 'rating_sum']
         
 class RatingSerializer(serializers.Serializer):
