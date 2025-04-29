@@ -15,4 +15,5 @@ urlpatterns = [
     path('rate/<int:accommodation_id>/', views.rate_accommodation, name='rate_accommodation'),  
     path('api_key_management/', views.api_key_management, name='api_key_management'),
     path('test-auth/', views.test_api_key, name='test_api_key'),
+    path('add-university-to-accommodation/<int:accommodation_id>/', views.add_university_to_accommodationView, name='add_university_to_accommodation'),
 ]

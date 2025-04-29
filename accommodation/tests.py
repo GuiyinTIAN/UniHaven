@@ -1,3 +1,560 @@
 from django.test import TestCase
 
 # Create your tests here.
+from rest_framework.test import APITestCase, APIClient
+from rest_framework import status
+from django.urls import reverse
+from django.utils.timezone import now
+from accommodation.models import Accommodation, University, UniversityAPIKey
+import datetime
+
+class AccommodationAPITestCase(APITestCase):
+    @classmethod
+    def setUpTestData(cls):
+        # 创建测试大学
+        cls.hku, _ = University.objects.get_or_create(
+            code="HKU",
+            defaults={
+                "name": "The University of Hong Kong",
+                "specialist_email": "cedarsg@hku.hk"
+            }
+        )
+        cls.hkust, _ = University.objects.get_or_create(
+            code="HKUST",
+            defaults={
+                "name": "The Hong Kong University of Science and Technology",
+                "specialist_email": "housing@ust.hk"
+            }
+        )
+        cls.cuhk, _ = University.objects.get_or_create(
+            code="CUHK",
+            defaults={
+                "name": "The Chinese University of Hong Kong",
+                "specialist_email": "housing@cuhk.edu.hk"
+            }
+        )
+        cls.hku_api_key = UniversityAPIKey.objects.create(
+            university=cls.hku,
+            key="e6861bfe8eaa4994a8633222a136c78c",  # HKU 的固定密钥
+            is_active=True,
+            last_used=now()
+        )
+        cls.cuhk_api_key = UniversityAPIKey.objects.create(
+            university=cls.cuhk,
+            key="586385e5a18c46e3a3a5c9162599320f",  # CUHK 的固定密钥
+            is_active=True,
+            last_used=now()
+        )
+        cls.hkust_api_key = UniversityAPIKey.objects.create(
+            university=cls.hkust,
+            key="96a847fd519845099624b757d22c7424",  # HKUST 的固定密钥
+            is_active=True,
+            last_used=now()
+        )
+
+        # 创建测试住宿
+        cls.accommodation_1 = Accommodation.objects.create(
+            title="Luxury Apartment",
+            type="APARTMENT",
+            price=5000.00,
+            beds=2,
+            bedrooms=1,
+            available_from="2025-05-01",
+            available_to="2025-10-01",
+            reserved=False,
+            building_name="Princeton Tower",
+            room_number="A1001",
+            flat_number="A",
+            floor_number="10",
+            latitude=22.3964,
+            longitude=114.1099,
+        )
+        
+        cls.accommodation_2 = Accommodation.objects.create(
+            title="Budget Apartment",
+            type="APARTMENT",
+            price=2000.00,
+            beds=1,
+            bedrooms=1,
+            available_from="2025-06-01",
+            available_to="2025-12-01",
+            reserved=False,
+            building_name="Novum West",
+            room_number="B2002",
+            flat_number="B",
+            floor_number="20",
+            latitude=22.28554,
+            longitude=114.13653,
+        )
+        
+        cls.accommodation_3 = Accommodation.objects.create(
+            title="Luxury Villa",
+            type="House",
+            price=8000.00,
+            beds=4,
+            bedrooms=3,
+            available_from="2025-07-01",
+            available_to="2025-09-01",
+            reserved=False,
+            building_name="kennedy Town",
+            room_number="C3003",
+            flat_number="C",
+            floor_number="30",
+            latitude=22.28367,
+            longitude=114.12809,
+        )
+        # 将住宿与大学关联
+        cls.accommodation_1.affiliated_universities.add(cls.hku, cls.hkust, cls.cuhk)
+        cls.accommodation_2.affiliated_universities.add(cls.hku, cls.hkust)
+        cls.accommodation_3.affiliated_universities.add(cls.cuhk)
+
+    def test_home_page_json(self):
+        url = reverse('index')
+        response = self.client.get(url, HTTP_ACCEPT='application/json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['message'], "Welcome to UniHaven!")
+
+    def test_accommodation_detail_api(self):
+        """测试 Accommodation Detail API"""
+        # 获取测试住宿的详细信息的 URL
+        url = f'/api/accommodation_detail/{self.accommodation_1.id}/'
+
+        # 发送 GET 请求
+        response = self.client.get(url, {"format":'json'})
+
+        # 检查状态码是否为 200 OK
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        # 检查返回的数据是否正确
+        expected_data = {
+            'id': self.accommodation_1.id,
+            'title': self.accommodation_1.title,
+            'description': self.accommodation_1.description,  # 添加 description 字段
+            'type': self.accommodation_1.type,
+            'price': f"{self.accommodation_1.price:.2f}",  # 确保价格格式为字符串，带两位小数
+            'beds': self.accommodation_1.beds,
+            'bedrooms': self.accommodation_1.bedrooms,
+            'available_from': str(self.accommodation_1.available_from),
+            'available_to': str(self.accommodation_1.available_to),
+            'region': self.accommodation_1.region,  # 添加 region 字段
+            'reserved': self.accommodation_1.reserved,
+            'formatted_address': self.accommodation_1.formatted_address(),  # 添加 formatted_address 字段
+            'building_name': self.accommodation_1.building_name,
+            'userID': self.accommodation_1.userID,  # 添加 userID 字段
+            'flat_number': self.accommodation_1.flat_number,
+            'floor_number': self.accommodation_1.floor_number,
+            'room_number': self.accommodation_1.room_number,
+            'contact_phone': self.accommodation_1.contact_phone,  # 添加 contact_phone 字段
+            'contact_email': self.accommodation_1.contact_email,  # 添加 contact_email 字段
+            'rating': self.accommodation_1.rating,  # 添加 rating 字段
+            'rating_count': self.accommodation_1.rating_count,  # 添加 rating_count 字段
+            'rating_sum': self.accommodation_1.rating_sum,  # 添加 rating_sum 字段
+            'affiliated_university_codes': [  # 修改为仅包含大学代码
+                self.hku.code,
+                self.hkust.code,
+                self.cuhk.code
+            ],
+        }
+        self.assertEqual(response.json(), expected_data)
+    def test_add_accommodation_1(self):
+        """测试 Add Accommodation API"""
+        # URL
+        url = '/api/add-accommodation/?api_key=586385e5a18c46e3a3a5c9162599320f'
+
+        # 请求数据
+        data = {
+            "title": "test case ",
+            "description": "1",
+            "type": "APARTMENT",
+            "price": "3100.00",
+            "beds": 1,  
+            "bedrooms": 2,  
+            "available_from": "2025-04-28",
+            "available_to": "2025-05-30",
+            "address": "top",
+            "room_number": "1001",
+            "floor_number": "10",
+            "flat_number": "A",
+            "contact_phone": "90909090",
+            "contact_email": "user@example.com"
+        }
+
+        # 发送 POST 请求
+        response = self.client.post(url, data, format='json')
+
+        # 检查状态码是否为 201 Created
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        new_id = response.data['id']
+        # 检查数据库是否已创建对应的 Accommodation
+        accommodation = Accommodation.objects.get(id=new_id)
+        self.assertEqual(accommodation.description, data['description'])
+        self.assertEqual(accommodation.type, data['type'])
+        self.assertEqual(accommodation.price, float(data['price']))
+        # 测试不同的大学能否添加同样的宿舍
+        url = f'/api/add-accommodation/?api_key={self.hku_api_key.key}'
+        data = {
+            "title": "test case ",
+            "description": "1",
+            "type": "APARTMENT",
+            "price": "3100.00",
+            "beds": 1,  
+            "bedrooms": 2,  
+            "available_from": "2025-04-28",
+            "available_to": "2025-05-30",
+            "address": "top",
+            "room_number": "1001",
+            "floor_number": "10",
+            "flat_number": "A",
+            "contact_phone": "90909090",
+            "contact_email": "user@example.com"
+        }
+
+        # 发送 POST 请求
+        response = self.client.post(url, data, format='json')
+
+        # 检查状态码是否为 400_BAD_REQUEST
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+    
+    # test list_accommodation API
+    
+    def test_list_accommodation_with_filters(self):
+        """测试带过滤条件的住宿查询"""
+        url = '/api/list-accommodation/'
+        params = {
+            "type": "APARTMENT",  # 只查询 HOUSE 类型
+            "format": "json"
+        }
+        response = self.client.get(url, params)
+        # 检查响应状态码
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.json()["accommodations"]), 2) # 检查返回的住宿数量
+        # 检查返回的住宿数量
+
+    def test_list_accommodation_no_filters(self):
+        """测试无过滤条件时返回所有住宿"""
+        url = '/api/list-accommodation/'
+        params = {
+            "format": "json"
+        }
+        response = self.client.get(url, params)
+
+        # 检查响应状态码
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        # 检查返回的住宿数量是否为数据库中所有住宿的数量
+        self.assertEqual(len(response.json()["accommodations"]), Accommodation.objects.count())
+    
+    def test_list_accommodation_user_id_filter(self):
+        """测试根据用户 ID 过滤住宿"""
+        url = '/api/list-accommodation/'
+        params = {
+            "user_id": "HKUST_123", 
+            "format": "json"
+        }
+        response = self.client.get(url, params)
+
+        # 检查响应状态码
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        # 检查返回的住宿数量是否正确
+        accommodations = response.json()["accommodations"]
+        # 验证返回的住宿是否与用户的大学相关联
+        for accommodation in accommodations:
+            self.assertIn(accommodation["id"], [self.accommodation_1.id, self.accommodation_2.id])
+
+    def test_list_accommodation_order_by_price(self):
+        """测试根据价格升序排序"""
+        url = '/api/list-accommodation/'
+        params = {
+            "order_by": "price_asc",  # 按价格升序排序
+            "format": "json"
+        }
+        response = self.client.get(url, params)
+
+        # 检查响应状态码
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        # 检查返回的住宿是否按价格升序排序
+        accommodations = response.json()["accommodations"]
+        prices = [float(accommodation["price"]) for accommodation in accommodations]
+        self.assertEqual(prices, sorted(prices))
+
+    def test_list_accommodation_date_filter(self):
+        """测试根据可用日期范围过滤住宿"""
+        url = '/api/list-accommodation/'
+        params = {
+            "available_from": "2025-05-01",
+            "available_to": "2025-06-01",
+            "format": "json"
+        }
+        response = self.client.get(url, params)
+        # 检查响应状态码
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+
+        # 检查返回的住宿是否都在指定日期范围内
+        accommodations = response.json()["accommodations"]
+        self.assertTrue(all(
+            accommodation["available_from"] <= "2025-05-01" and accommodation["available_to"] >= "2025-06-01"
+            for accommodation in accommodations
+        ))
+    def test_reserve_accommodation_success_post(self):
+        """测试通过 POST 请求成功预订宿舍"""
+        # 确保宿舍未被预订
+        url = reverse('reserve_accommodation')  # 动态生成 URL
+        query_params = f"id={self.accommodation_1.id}&User%20ID=HKU_123"
+        
+        # 构造带查询参数的完整 URL
+        full_url = f"{url}?{query_params}"
+        
+        response = self.client.post(full_url)  # 发送 POST 请求
+        
+        # 检查响应状态码
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+
+        # # 检查数据库中住宿的状态
+        self.accommodation_1.refresh_from_db()
+        self.assertTrue(self.accommodation_1.reserved)
+        self.assertEqual(self.accommodation_1.userID, "HKU_123")
+        """测试不能预定已经预定的宿舍"""
+        query_params = f"id={self.accommodation_1.id}&User%20ID=CUHK_123"
+        
+        # 构造带查询参数的完整 URL
+        full_url = f"{url}?{query_params}"
+        
+        response = self.client.post(full_url)  # 发送 POST 请求
+        
+        # 检查响应状态码
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+    
+    def test_reserve_accommodation_only_for_specified_university_post(self):
+        """测试只能为指定大学预订宿舍"""
+        url = reverse('reserve_accommodation')  # 动态生成 URL
+        query_params = f"id={self.accommodation_3.id}&User%20ID=HKU_123"
+        
+        # 构造带查询参数的完整 URL
+        full_url = f"{url}?{query_params}"
+        
+        response = self.client.post(full_url)  # 发送 POST 请求
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+    def test_cancel_reservation_success(self):
+        """测试成功取消预订"""
+        url = reverse('reserve_accommodation')  # 动态生成 URL
+        query_params = f"id={self.accommodation_1.id}&User%20ID=HKU_123"
+        
+        # 构造带查询参数的完整 URL
+        full_url = f"{url}?{query_params}"
+        
+        response = self.client.post(full_url)  # 发送 POST 请求
+        
+        # 检查响应状态码
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        url = reverse('cancel_reservation') 
+        query_params = f"id={self.accommodation_1.id}&User%20ID=HKU_123"
+        full_url = f"{url}?{query_params}"
+
+        response = self.client.post(full_url)
+
+        # 检查响应状态码
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        # 检查数据库中的预订状态是否更新
+        self.accommodation_1.refresh_from_db()
+        self.assertFalse(self.accommodation_1.reserved)
+        self.assertEqual(self.accommodation_1.userID, "")
+    
+    def test_cancel_reservation_wrong_user(self):
+        """测试用户尝试取消不属于自己的预订"""
+
+        url = reverse('reserve_accommodation')  # 动态生成 URL
+        query_params = f"id={self.accommodation_1.id}&User%20ID=HKU_123"
+        
+        # 构造带查询参数的完整 URL
+        full_url = f"{url}?{query_params}"
+        
+        response = self.client.post(full_url)  # 发送 POST 请求
+        
+        # 检查响应状态码
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        url = reverse('cancel_reservation')
+        query_params = f"id={self.accommodation_1.id}&User%20ID=HKU_456"  # 错误的用户 ID
+        full_url = f"{url}?{query_params}"
+
+        response = self.client.post(full_url)
+
+        # 检查响应状态码
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_cancel_reservation_not_found(self):
+        """测试取消不存在的住宿"""
+        url = reverse('cancel_reservation')
+        query_params = f"id=9999&User%20ID=HKU_123"  # 不存在的住宿 ID
+        full_url = f"{url}?{query_params}"
+
+        response = self.client.post(full_url)
+        # 检查响应状态码
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_cancel_reservation_not_reserved(self):
+        """测试取消未预订的住宿"""
+        url = reverse('cancel_reservation')
+        query_params = f"id={self.accommodation_1.id}&User%20ID=HKU_123"
+        full_url = f"{url}?{query_params}"
+
+        response = self.client.post(full_url)
+
+        # 检查响应状态码
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+    
+    def test_submit_rating_success(self):
+        """测试成功提交评分"""
+        url = reverse('reserve_accommodation')  # 动态生成 URL
+        query_params = f"id={self.accommodation_1.id}&User%20ID=HKU_123"
+        
+        # 构造带查询参数的完整 URL
+        full_url = f"{url}?{query_params}"
+        
+        response = self.client.post(full_url)  # 发送 POST 请求
+        
+        # 检查响应状态码
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        url = reverse('rate_accommodation', args=[self.accommodation_1.id])  # 动态生成 URL
+        query_params = "?rating=5&userid=HKU_123"
+        full_url = f"{url}{query_params}"
+
+        response = self.client.post(full_url)
+
+        # 检查响应状态码
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+
+        # 检查数据库更新
+        self.accommodation_1.refresh_from_db()
+        self.assertEqual(self.accommodation_1.rating, 5.0)
+        self.assertEqual(self.accommodation_1.rating_count, 1)
+        self.assertEqual(self.accommodation_1.rating_sum, 5)
+
+    def test_submit_invalid_rating_value(self):
+        """测试评分值无效（超出范围）"""
+        url = reverse('reserve_accommodation')  # 动态生成 URL
+        query_params = f"id={self.accommodation_1.id}&User%20ID=HKU_123"
+        
+        # 构造带查询参数的完整 URL
+        full_url = f"{url}?{query_params}"
+        
+        response = self.client.post(full_url)  # 发送 POST 请求
+        
+        # 检查响应状态码
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        url = reverse('rate_accommodation', args=[self.accommodation_1.id])  
+        query_params = "?rating=6&userid=HKU_123"  # 无效评分值
+        full_url = f"{url}{query_params}"
+
+        response = self.client.post(full_url)
+
+        # 检查响应状态码
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+
+    def test_submit_rating_not_found(self):
+        """测试为不存在的住宿提交评分"""
+        url = reverse('rate_accommodation', args=[9999])  # 不存在的住宿 ID
+        query_params = "?rating=5&userid=HKU_123"
+        full_url = f"{url}{query_params}"
+
+        response = self.client.post(full_url)
+
+        # 检查响应状态码
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+    
+    def test_submit_rating_already_rated(self):
+        """测试用户已经评分的住宿"""
+ 
+        url = reverse('reserve_accommodation')  # 动态生成 URL
+        query_params = f"id={self.accommodation_1.id}&User%20ID=HKU_123"
+        
+        # 构造带查询参数的完整 URL
+        full_url = f"{url}?{query_params}"
+        
+        response = self.client.post(full_url)  # 发送 POST 请求
+        
+        # 检查响应状态码
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        url = reverse('rate_accommodation', args=[self.accommodation_1.id])  # 动态生成 URL
+        query_params = "?rating=5&userid=HKU_123"
+        full_url = f"{url}{query_params}"
+
+        response = self.client.post(full_url)
+
+        # 检查响应状态码
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        url = reverse('rate_accommodation', args=[self.accommodation_1.id])  # 动态生成 URL
+        query_params = "?rating=5&userid=HKU_123"
+        full_url = f"{url}{query_params}"
+        response = self.client.post(full_url)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_submit_rating_not_reserved_by_user(self):
+        url = reverse('reserve_accommodation')  # 动态生成 URL
+        query_params = f"id={self.accommodation_1.id}&User%20ID=HKU_123"
+        
+        # 构造带查询参数的完整 URL
+        full_url = f"{url}?{query_params}"
+        
+        response = self.client.post(full_url)  # 发送 POST 请求
+        
+        # 检查响应状态码
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        url = reverse('rate_accommodation', args=[self.accommodation_1.id])  # 动态生成 URL
+        query_params = "?rating=5&userid=HKU_456"
+        full_url = f"{url}{query_params}"
+
+        response = self.client.post(full_url)
+
+        # 检查响应状态码
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+    
+    def test_submit_rating_missing_parameters(self):
+        """测试缺少参数"""
+        url = reverse('rate_accommodation', args=[self.accommodation_1.id])  # 动态生成 URL
+
+        # 缺少 rating 参数
+        response = self.client.post(f"{url}?userid=HKU_123")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+    
+    def test_lookup_address_success(self):
+        """测试成功查询地址"""
+        url = reverse('lookup_address')  
+        query_params = "?address=princeton%20tower"
+        full_url = f"{url}{query_params}"
+
+        response = self.client.get(full_url)
+
+        # 检查响应状态码
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = response.json()
+        self.assertTrue(data.get('EnglishAddress'))
+
+        # 验证 EnglishAddress 内容
+        english_address = data['EnglishAddress']
+        self.assertEqual(english_address['BuildingName'], "PRINCETON TOWER")
+        self.assertEqual(english_address['StreetName'], "DES VOEUX ROAD WEST")
+        self.assertEqual(english_address['BuildingNo'], "88")
+        self.assertEqual(english_address['District'], "CENTRAL & WESTERN DISTRICT")
+        self.assertEqual(english_address['Region'], "HK")
+
+    # def test_delete_accommodation_success(self):
+    #     """测试成功删除住宿"""
+    #     url = reverse('delete_accommodation')  
+    #     query_params = f"?api_key={self.hku_api_key}"
+    #     full_url = f"{url}{query_params}"
+
+    #     response = self.client.post(full_url, {'id': self.accommodation1.id}, format='json')
+
+    #     # 检查响应状态码
+    #     self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    #     # 检查响应内容
+    #     data = response.json()
+    #     self.assertTrue(data['success'])
+    #     self.assertIn(f"Accommodation with ID {self.accommodation1.id} has been deleted.", data['message'])

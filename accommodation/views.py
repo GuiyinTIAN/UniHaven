@@ -295,7 +295,6 @@ def add_accommodation(request):
                 floor_number = serializer.validated_data.get('floor_number')
                 flat_number = serializer.validated_data.get('flat_number')
                 geo_address = result.get("GeoAddress", "")
-                
                 if Accommodation.objects.filter(
                     geo_address=geo_address,
                     room_number=room_number,
@@ -343,6 +342,7 @@ def add_accommodation(request):
             {"success": False, "errors": serializer.errors}, 
             status=status.HTTP_400_BAD_REQUEST
         )
+
 
 @extend_schema(
     summary="Delete Accommodation",
@@ -405,7 +405,7 @@ def delete_accommodation(request):
     summary="List Accommodations",
     description="List all accommodations with optional filters",
     parameters=[
-        OpenApiParameter(name="type", description="Accommodation type", type=str, required=False),
+        OpenApiParameter(name="type", description="Accommodation type", type=str, required=False,enum=["APARTMENT", "HOUSE", "HOSTEL"]),
         OpenApiParameter(name="region", description="Region", type=str, required=False),
         OpenApiParameter(name="available_from", description="Available from date", type=OpenApiTypes.DATE, required=False),
         OpenApiParameter(name="available_to", description="Available to date", type=OpenApiTypes.DATE, required=False),
@@ -576,7 +576,7 @@ def list_accommodation(request):
     summary="Search Accommodations",
     description="Search for accommodations with at least one filter",
     parameters=[
-        OpenApiParameter(name="type", description="Accommodation type", type=str, required=False),
+        OpenApiParameter(name="type", description="Accommodation type", type=str, required=False,enum=["APARTMENT", "HOUSE", "HOSTEL"]),
         OpenApiParameter(name="region", description="Region", type=str, required=False),
         OpenApiParameter(name="available_from", description="Available from date", type=OpenApiTypes.DATE, required=False),
         OpenApiParameter(name="available_to", description="Available to date", type=OpenApiTypes.DATE, required=False),
