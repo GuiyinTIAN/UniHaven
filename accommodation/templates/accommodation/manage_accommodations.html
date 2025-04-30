@@ -33,16 +33,17 @@
     
     .accommodation-card {
         background-color: white;
-        border-radius: 6px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        padding: 15px;
+        border-radius: 8px;
+        box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+        padding: 20px;
         position: relative;
-        transition: transform 0.2s, box-shadow 0.2s;
+        transition: transform 0.3s, box-shadow 0.3s;
+        border-top: 4px solid var(--primary-color);
     }
     
     .accommodation-card:hover {
-        transform: translateY(-3px);
-        box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        transform: translateY(-5px);
+        box-shadow: 0 6px 15px rgba(0,0,0,0.15);
     }
     
     .card-header {
@@ -52,27 +53,30 @@
     }
     
     .accommodation-title {
-        font-size: 1.2em;
-        margin: 0;
+        font-size: 1.3em;
+        margin: 0 0 5px 0;
         color: var(--primary-color);
+        font-weight: 600;
     }
     
     .status-badge {
         display: inline-block;
-        padding: 3px 10px;
+        padding: 4px 12px;
         border-radius: 20px;
-        font-size: 0.8em;
-        font-weight: 500;
+        font-size: 0.75em;
+        font-weight: 600;
+        letter-spacing: 0.5px;
+        text-transform: uppercase;
     }
     
     .status-badge.status-reserved {
-        background-color: #f8d7da;
-        color: #721c24;
+        background-color: #ffe5e8;
+        color: #e83e8c;
     }
     
     .status-badge.status-available {
-        background-color: #d4edda;
-        color: #155724;
+        background-color: #e6f7ee;
+        color: #28a745;
     }
     
     .status-badge.valid {
@@ -87,71 +91,125 @@
     .accommodation-details {
         display: flex;
         flex-wrap: wrap;
-        gap: 10px;
-        margin-bottom: 15px;
+        gap: 12px;
+        margin: 15px 0;
+        background-color: #f8f9fa;
+        padding: 12px;
+        border-radius: 6px;
     }
     
     .detail-group {
         display: flex;
         align-items: center;
-        gap: 5px;
+        gap: 8px;
+        padding: 5px 10px;
+        background-color: white;
+        border-radius: 4px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        min-width: 110px; /* 添加最小宽度以确保有足够的空间 */
     }
     
     .detail-icon {
-        font-size: 1.2em;
+        font-size: 1.1em;
         color: var(--primary-color);
+        width: 20px;
+        text-align: center;
+        flex-shrink: 0; /* 防止图标缩小 */
     }
     
     .detail-text {
         font-size: 0.9em;
+        font-weight: 500;
+        flex: 1; /* 使文本占据剩余空间 */
+        white-space: nowrap; /* 防止文本换行 */
+        overflow: hidden; /* 隐藏溢出内容 */
+        text-overflow: ellipsis; /* 溢出时显示省略号 */
     }
     
     .card-meta {
         display: flex;
         justify-content: space-between;
-        margin-top: 10px;
+        margin-top: 15px;
+        background-color: rgba(0, 123, 255, 0.05);
+        padding: 10px;
+        border-radius: 6px;
     }
     
     .meta-item {
         font-size: 0.9em;
-        color: #6c757d;
+        color: #495057;
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+    
+    .meta-item i {
+        color: var(--primary-color);
     }
     
     .card-footer {
         display: flex;
         justify-content: flex-end;
-        gap: 10px;
-        margin-top: 15px;
+        gap: 12px;
+        margin-top: 20px;
+        padding-top: 15px;
+        border-top: 1px solid #eee;
     }
     
-    .delete-btn {
-        background-color: #dc3545;
-        color: white;
-        border: none;
-        border-radius: 4px;
-        padding: 6px 12px;
-        cursor: pointer;
-        transition: background-color 0.2s;
-    }
-    
-    .delete-btn:hover {
-        background-color: #bd2130;
+    .view-btn, .delete-btn {
+        border-radius: 6px;
+        padding: 8px 16px;
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        transition: all 0.3s;
     }
     
     .view-btn {
         background-color: var(--primary-color);
         color: white;
-        border: none;
-        border-radius: 4px;
-        padding: 6px 12px;
-        cursor: pointer;
-        text-decoration: none;
-        display: inline-block;
-        transition: background-color 0.2s;
     }
     
     .view-btn:hover {
         background-color: #0056b3;
+        transform: translateY(-2px);
+    }
+    
+    .delete-btn {
+        background-color: #f8f9fa;
+        color: #dc3545;
+        border: 1px solid #dc3545;
+    }
+    
+    .delete-btn:hover {
+        background-color: #dc3545;
+        color: white;
+        transform: translateY(-2px);
+    }
+    
+    .reservation-info {
+        margin-top: 15px;
+        padding: 15px;
+        border-radius: 6px;
+        background-color: #fff3cd;
+        border-left: 4px solid #ffc107;
+    }
+    
+    .reservation-info h4 {
+        font-size: 1em;
+        color: #856404;
+        margin-bottom: 10px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    
+    .reservation-info p {
+        font-size: 0.9em;
+        margin: 8px 0;
+        color: #555;
     }
     
     .empty-message {
@@ -263,13 +321,13 @@
 
 {% block content %}
 <div class="container">
-    <!-- API密钥警告 -->
+    <!-- API Key Warning -->
     <div id="apiKeyWarning" class="api-key-warning">
         <strong>Attention!</strong> The API key was not detected. Deleting accommodation requires a valid API key for authentication.
         <a href="{% url 'api_key_management' %}">Click here to set your API key</a>
     </div>
     
-    <!-- 大学信息面板 -->
+    <!-- University Information Panel -->
     <div id="universityInfo" class="university-info" style="display: none;">
         <div>
             <span>Organization:</span>
@@ -283,8 +341,7 @@
     </div>
     
     <div class="page-info">
-        <!-- <h2>Manage Your Listed Accommodations</h2> -->
-        <p style="text-align: center;">This page shows all accommodations that realted to your organization and allows to delete them if needed.</p>
+        <p style="text-align: center;">This page shows all accommodations that related to your organization and allows to delete them if needed.</p>
     </div>
     
     <!-- loading display -->
@@ -348,7 +405,7 @@
                 document.getElementById('universityCode').textContent = data.code || '';
                 document.getElementById('universityInfo').style.display = 'flex';
             } else {
-                // API jey is invalid
+                // API key is invalid
                 document.getElementById('apiKeyWarning').style.display = 'block';
             }
         } catch (error) {
@@ -400,8 +457,8 @@
             let html = '<div class="cards-grid">';
             for (const accommodation of accommodationsData) {
                 const ratingDisplay = accommodation.rating > 0 
-                    ? accommodation.rating.toFixed(1) 
-                    : 'No Ratings';
+                    ? `<span style="color: #ffc107;"><i class="fas fa-star"></i> ${accommodation.rating.toFixed(1)}</span>` 
+                    : '<span style="color: #6c757d;"><i class="fas fa-star"></i> No ratings yet</span>';
                    
                 const distanceDisplay = typeof accommodation.distance === 'number' 
                     ? accommodation.distance.toFixed(1) + ' km' 
@@ -445,9 +502,16 @@
                                     <i class="fas fa-location-arrow"></i> ${distanceDisplay}
                                 </div>
                                 <div class="meta-item">
-                                    <i class="fas fa-star"></i> rating: ${ratingDisplay}
+                                    ${ratingDisplay}
                                 </div>
                             </div>
+        
+                            ${accommodation.reserved ? `
+                            <div class="reservation-info">
+                                <p><strong>Reserved by:</strong> ${accommodation.userID || 'Unknown'}</p>
+                                <p><strong>Contact:</strong> ${accommodation.reservation_contact_number || 'No contact provided'}</p>
+                            </div>
+                            ` : ''}
                         </div>
                         <div class="card-footer">
                             <a href="/api/accommodation_detail/${accommodation.id}/" class="view-btn">

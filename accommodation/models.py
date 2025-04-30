@@ -23,6 +23,7 @@ class Accommodation(models.Model):
 
     # userID is the ID for resevation and cancellation
     userID = models.CharField(max_length=255, blank=True, default="")
+    reservation_contact_number = models.CharField(max_length=100, blank=True, null=True)
     reserved = models.BooleanField(default=False)
     contract_status = models.BooleanField(default=False, help_text="Whether the accommodation is singed contract")
 

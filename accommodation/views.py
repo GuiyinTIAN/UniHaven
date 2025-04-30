@@ -842,6 +842,9 @@ class ReservationView(GenericAPIView):
             OpenApiParameter(name="id", location=OpenApiParameter.QUERY, description="Accommodation ID", type=int, required=True),
             OpenApiParameter(name="User ID", location=OpenApiParameter.QUERY, 
                     description="User ID, you need to assign which school you are from,e.g. If from HKU, that is HKU_XXX, if HKUST, that is HKUST_xxx, if CUHK, CUHK_xxx", 
+                    type=str, required=True),
+            OpenApiParameter(name="contact_number", location=OpenApiParameter.QUERY, 
+                    description="Your contact phone number for this reservation", 
                     type=str, required=True)
         ],
         responses={
@@ -863,12 +866,17 @@ class ReservationView(GenericAPIView):
         """
         accommodation_id = request.query_params.get('id')
         user_id = request.query_params.get('User ID')
+        contact_number = request.query_params.get('contact_number')
 
         if not accommodation_id:
             return Response({'success': False, 'message': 'Accommodation ID is required'}, 
                             status=status.HTTP_400_BAD_REQUEST)
         if not user_id:
             return Response({'success': False, 'message': 'User ID is required.'}, 
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        if not contact_number:
+            return Response({'success': False, 'message': 'Contact number is required for reservation.'}, 
                             status=status.HTTP_400_BAD_REQUEST)
         try:
             accommodation = get_object_or_404(Accommodation, id=accommodation_id)
@@ -893,6 +901,7 @@ class ReservationView(GenericAPIView):
             
             accommodation.reserved = True
             accommodation.userID = user_id
+            accommodation.reservation_contact_number = contact_number
             accommodation.save()
             
             student_name = student_name = user_id.split('_')[1]
@@ -994,6 +1003,7 @@ class CancellationView(GenericAPIView):
 
             accommodation.reserved = False
             accommodation.userID = ""
+            accommodation.reservation_contact_number = None  # 确保清除联系电话
             accommodation.save()
 
             student_name = user_id.split('_')[1]

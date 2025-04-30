@@ -290,7 +290,14 @@
         if (action === 'reserve') {
             const urlParams = new URLSearchParams(window.location.search);
             let userId = urlParams.get('user_id');
-            reserveAccommodation(accommodationId, userId);
+
+            let contactNumber = prompt("Please enter your contact phone number:");
+            if (!contactNumber) {
+                alert("Contact number is required for reservation");
+                return;
+            }
+            
+            reserveAccommodation(accommodationId, userId, contactNumber);
         } else if (action === 'cancel') {
             let userId = prompt("Please enter your User ID to cancel the reservation");
             if (!userId) return;
@@ -299,10 +306,10 @@
     }
     
     // Reserve accommodation
-    async function reserveAccommodation(accommodationId, userId) {
+    async function reserveAccommodation(accommodationId, userId, contactNumber) {
         const csrfToken = getCSRFToken();
         try {
-            const response = await fetch(`/api/reserve_accommodation/?id=${accommodationId}&User%20ID=${encodeURIComponent(userId)}`, {
+            const response = await fetch(`/api/reserve_accommodation/?id=${accommodationId}&User%20ID=${encodeURIComponent(userId)}&contact_number=${encodeURIComponent(contactNumber)}`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

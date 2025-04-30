@@ -302,7 +302,7 @@ class AccommodationAPITestCase(APITestCase):
         """测试通过 POST 请求成功预订宿舍"""
         # 确保宿舍未被预订
         url = reverse('reserve_accommodation')  # 动态生成 URL
-        query_params = f"id={self.accommodation_1.id}&User%20ID=HKU_123"
+        query_params = f"id={self.accommodation_1.id}&User%20ID=HKU_123&contact_number=98765432"  # 添加contact_number
         
         # 构造带查询参数的完整 URL
         full_url = f"{url}?{query_params}"
@@ -317,6 +317,7 @@ class AccommodationAPITestCase(APITestCase):
         self.accommodation_1.refresh_from_db()
         self.assertTrue(self.accommodation_1.reserved)
         self.assertEqual(self.accommodation_1.userID, "HKU_123")
+        self.assertEqual(self.accommodation_1.reservation_contact_number, "98765432")
         """测试不能预定已经预定的宿舍"""
         query_params = f"id={self.accommodation_1.id}&User%20ID=CUHK_123"
         
@@ -331,7 +332,7 @@ class AccommodationAPITestCase(APITestCase):
     def test_reserve_accommodation_only_for_specified_university_post(self):
         """测试只能为指定大学预订宿舍"""
         url = reverse('reserve_accommodation')  # 动态生成 URL
-        query_params = f"id={self.accommodation_3.id}&User%20ID=HKU_123"
+        query_params = f"id={self.accommodation_3.id}&User%20ID=HKU_123&contact_number=98765432"
         
         # 构造带查询参数的完整 URL
         full_url = f"{url}?{query_params}"
@@ -341,7 +342,7 @@ class AccommodationAPITestCase(APITestCase):
     def test_cancel_reservation_success(self):
         """测试成功取消预订"""
         url = reverse('reserve_accommodation')  # 动态生成 URL
-        query_params = f"id={self.accommodation_1.id}&User%20ID=HKU_123"
+        query_params = f"id={self.accommodation_1.id}&User%20ID=HKU_123&contact_number=98765432"
         
         # 构造带查询参数的完整 URL
         full_url = f"{url}?{query_params}"
@@ -363,12 +364,13 @@ class AccommodationAPITestCase(APITestCase):
         self.accommodation_1.refresh_from_db()
         self.assertFalse(self.accommodation_1.reserved)
         self.assertEqual(self.accommodation_1.userID, "")
+        self.assertEqual(self.accommodation_1.reservation_contact_number, None)  # 检查联系电话被清除
     
     def test_cancel_reservation_wrong_user(self):
         """测试用户尝试取消不属于自己的预订"""
 
         url = reverse('reserve_accommodation')  # 动态生成 URL
-        query_params = f"id={self.accommodation_1.id}&User%20ID=HKU_123"
+        query_params = f"id={self.accommodation_1.id}&User%20ID=HKU_123&contact_number=98765432"
         
         # 构造带查询参数的完整 URL
         full_url = f"{url}?{query_params}"
@@ -410,7 +412,7 @@ class AccommodationAPITestCase(APITestCase):
     def test_submit_rating_success(self):
         """测试成功提交评分"""
         url = reverse('reserve_accommodation')  # 动态生成 URL
-        query_params = f"id={self.accommodation_1.id}&User%20ID=HKU_123"
+        query_params = f"id={self.accommodation_1.id}&User%20ID=HKU_123&contact_number=98765432"
         
         # 构造带查询参数的完整 URL
         full_url = f"{url}?{query_params}"
@@ -438,7 +440,7 @@ class AccommodationAPITestCase(APITestCase):
     def test_submit_invalid_rating_value(self):
         """测试评分值无效（超出范围）"""
         url = reverse('reserve_accommodation')  # 动态生成 URL
-        query_params = f"id={self.accommodation_1.id}&User%20ID=HKU_123"
+        query_params = f"id={self.accommodation_1.id}&User%20ID=HKU_123&contact_number=98765432"  # 添加contact_number
         
         # 构造带查询参数的完整 URL
         full_url = f"{url}?{query_params}"
@@ -472,7 +474,7 @@ class AccommodationAPITestCase(APITestCase):
         """测试用户已经评分的住宿"""
  
         url = reverse('reserve_accommodation')  # 动态生成 URL
-        query_params = f"id={self.accommodation_1.id}&User%20ID=HKU_123"
+        query_params = f"id={self.accommodation_1.id}&User%20ID=HKU_123&contact_number=98765432"  # 添加contact_number
         
         # 构造带查询参数的完整 URL
         full_url = f"{url}?{query_params}"
@@ -497,7 +499,7 @@ class AccommodationAPITestCase(APITestCase):
 
     def test_submit_rating_not_reserved_by_user(self):
         url = reverse('reserve_accommodation')  # 动态生成 URL
-        query_params = f"id={self.accommodation_1.id}&User%20ID=HKU_123"
+        query_params = f"id={self.accommodation_1.id}&User%20ID=HKU_123&contact_number=98765432"  # 添加contact_number
         
         # 构造带查询参数的完整 URL
         full_url = f"{url}?{query_params}"

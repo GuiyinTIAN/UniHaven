@@ -120,7 +120,8 @@ class AccommodationListSerializer(serializers.ModelSerializer):
         fields = ['id', 'title', 'building_name', 'description', 'type', 'price', 'beds', 'bedrooms',
                  'available_from', 'available_to', 'region', 'distance', 'reserved', 
                  'room_number', 'floor_number', 'flat_number', 'contact_name',
-                 'contact_phone', 'contact_email','rating', 'rating_count', 'rating_sum']
+                 'contact_phone', 'contact_email','rating', 'rating_count', 'rating_sum',
+                 'userID', 'reservation_contact_number']  
         
 class RatingSerializer(serializers.Serializer):
     """Serializer for validating accommodation rating input"""
