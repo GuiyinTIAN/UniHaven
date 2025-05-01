@@ -21,10 +21,10 @@ class Accommodation(models.Model):
     contact_phone = models.CharField(max_length=20, blank=True, null=True)
     contact_email = models.EmailField(blank=True, null=True)
 
-    # userID is the ID for resevation and cancellation
+    # 以下字段将被废弃，但暂时保留以保持兼容性
     userID = models.CharField(max_length=255, blank=True, default="")
     reservation_contact_number = models.CharField(max_length=100, blank=True, null=True)
-    reserved = models.BooleanField(default=False)
+    reserved = models.BooleanField(default=False)  # 将不再使用这个字段，而是通过检查ReservationPeriod来确定是否有预定
     contract_status = models.BooleanField(default=False, help_text="Whether the accommodation is singed contract")
 
     building_name = models.CharField(max_length=200, default="", blank=True)
@@ -70,6 +70,52 @@ class Accommodation(models.Model):
         ]
         return ", ".join(filter(None, parts))
 
+    def is_available(self, start_date, end_date):
+        """
+        检查在给定的时间段内是否可预定
+        """
+        # 检查是否在住宿的可用时间范围内
+        if start_date < self.available_from or end_date > self.available_to:
+            return False
+            
+        # 检查是否与现有预定时间段重叠
+        overlapping_reservations = self.reservation_periods.filter(
+            models.Q(start_date__lte=end_date) & models.Q(end_date__gte=start_date)
+        ).exists()
+        
+        return not overlapping_reservations
+
+    def get_available_periods(self):
+        """
+        获取所有可用的时间段，返回一个时间段列表
+        """
+        if not self.available_from or not self.available_to:
+            return []
+            
+        # 获取所有预定期间，按开始日期排序
+        reserved_periods = list(self.reservation_periods.all().order_by('start_date'))
+        
+        # 如果没有预定，则整个时间段都可用
+        if not reserved_periods:
+            return [(self.available_from, self.available_to)]
+            
+        available_periods = []
+        current_date = self.available_from
+        
+        # 遍历所有预定期间，找出中间的可用时间段
+        for period in reserved_periods:
+            # 如果当前日期小于预定开始日期，则添加可用时间段
+            if current_date < period.start_date:
+                available_periods.append((current_date, period.start_date))
+            # 更新当前日期为预定结束日期的下一天
+            current_date = period.end_date
+            
+        # 检查最后一个预定结束日期到可用结束日期是否还有空闲时间段
+        if current_date < self.available_to:
+            available_periods.append((current_date, self.available_to))
+            
+        return available_periods
+
     class Meta:
         unique_together = (
             'room_number',
@@ -77,6 +123,25 @@ class Accommodation(models.Model):
             'floor_number',
             'geo_address',
         )
+
+class ReservationPeriod(models.Model):
+    """模型用于记录住宿预定的具体时间段"""
+    accommodation = models.ForeignKey(
+        Accommodation, 
+        on_delete=models.CASCADE, 
+        related_name='reservation_periods'
+    )
+    user_id = models.CharField(max_length=255, help_text="预定学生的ID")
+    contact_number = models.CharField(max_length=100, blank=True, null=True)
+    start_date = models.DateField(help_text="预定开始日期")
+    end_date = models.DateField(help_text="预定结束日期")
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    def __str__(self):
+        return f"{self.accommodation.title} - {self.start_date} to {self.end_date} by {self.user_id}"
+    
+    class Meta:
+        ordering = ['start_date']
 
 class AccommodationRating(models.Model):
     accommodation = models.ForeignKey(Accommodation, on_delete=models.CASCADE, related_name='ratings')

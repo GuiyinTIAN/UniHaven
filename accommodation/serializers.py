@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from drf_spectacular.utils import extend_schema_field
-from .models import Accommodation
+from .models import Accommodation, AccommodationRating, ReservationPeriod
 
 class AddAccommodationSerializer(serializers.ModelSerializer):
     """Serializer specifically for creating new accommodation"""
@@ -89,27 +89,34 @@ class AccommodationSerializer(serializers.ModelSerializer):
         }
         return representation
 
+class ReservationPeriodSerializer(serializers.ModelSerializer):
+    """序列化器用于预定时间段"""
+    class Meta:
+        model = ReservationPeriod
+        fields = ['id', 'user_id', 'contact_number', 'start_date', 'end_date', 'created_at']
+
 class AccommodationDetailSerializer(serializers.ModelSerializer):
-    """Serializer for displaying accommodation details"""
-    formatted_address = serializers.SerializerMethodField()
-    affiliated_university_codes = serializers.SerializerMethodField()
+    """Serializer for accommodation detail view"""
+    formatted_address = serializers.CharField(read_only=True)
+    university_codes = serializers.SerializerMethodField()
+    reservation_periods = ReservationPeriodSerializer(many=True, read_only=True)
+    available_periods = serializers.SerializerMethodField()
     
     class Meta:
         model = Accommodation
-        fields = ['id', 'title', 'description', 'type', 'price', 'beds', 'bedrooms', 
-                 'available_from', 'available_to', 'region', 'reserved', 'formatted_address',
-                 'building_name', 'userID', 'room_number', 'floor_number', 'flat_number',
-                 'contact_name','contact_phone', 'contact_email', 'rating', 'rating_count', 'rating_sum',
-                 'affiliated_university_codes']
-    
-    @extend_schema_field(serializers.CharField())
-    def get_formatted_address(self, obj) -> str:
-        return obj.formatted_address()
-        
-    @extend_schema_field(serializers.ListField(child=serializers.CharField()))
-    def get_affiliated_university_codes(self, obj):
-        """Get the code list of the associated university"""
+        fields = ['id', 'title', 'description', 'type', 'beds', 'bedrooms',
+                  'price', 'available_from', 'available_to', 'latitude', 'longitude',
+                  'formatted_address', 'rating', 'reserved', 'userID',
+                  'reservation_contact_number', 'region', 'university_codes',
+                  'reservation_periods', 'available_periods']
+                  
+    def get_university_codes(self, obj):
         return [univ.code for univ in obj.affiliated_universities.all()]
+        
+    def get_available_periods(self, obj):
+        """获取可用时间段"""
+        periods = obj.get_available_periods()
+        return [{'start_date': start_date, 'end_date': end_date} for start_date, end_date in periods]
 
 class AccommodationListSerializer(serializers.ModelSerializer):
     """Serializer for listing accommodations"""

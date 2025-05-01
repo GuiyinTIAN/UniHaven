@@ -28,7 +28,7 @@ from rest_framework.generics import GenericAPIView
 from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiResponse
 from drf_spectacular.types import OpenApiTypes
 
-from .models import Accommodation, AccommodationRating, UniversityAPIKey
+from .models import Accommodation, AccommodationRating, UniversityAPIKey, ReservationPeriod
 from .forms import AccommodationForm
 from .serializers import (
     AccommodationSerializer, 
@@ -534,6 +534,8 @@ def delete_accommodation(request):
             type=OpenApiTypes.STR,
             required=False,
         ),
+        OpenApiParameter(name="reservation_start", description="Reservation start date (yyyy-MM-DD)", type=OpenApiTypes.DATE, required=False),
+        OpenApiParameter(name="reservation_end", description="Reservation end date (yyyy-MM-DD)", type=OpenApiTypes.DATE, required=False),
     ] + API_KEY_PARAMETER,
     responses={
         200: AccommodationListResponseSerializer,
@@ -549,6 +551,8 @@ def list_accommodation(request):
     Distance calculation uses the Haversine formula.
 
     If user_id is provided, only shows accommodations affiliated with the user's university.
+
+    If reservation_start and reservation_end are provided, only shows accommodations available during that period.
     """
     accommodations = Accommodation.objects.all()
     
@@ -603,6 +607,8 @@ def list_accommodation(request):
     order_by_distance = request.query_params.get("order_by_distance", "false").lower() == "true"
     campus = request.query_params.get("campus", "HKU_main")  # Default to "HKU_main" campus
     user_id = request.query_params.get("user_id", "")
+    reservation_start = request.query_params.get("reservation_start", "")
+    reservation_end = request.query_params.get("reservation_end", "")
         
     # if user_id is provided, check if it is valid
     if user_id:
@@ -681,6 +687,26 @@ def list_accommodation(request):
         max_distance = float(max_distance)
         accommodations = accommodations.filter(distance__lte=max_distance)
 
+    if reservation_start and reservation_end:
+        reservation_start = parse_date(reservation_start)
+        reservation_end = parse_date(reservation_end)
+        
+        if reservation_start and reservation_end:
+            print(f"[DEBUG-Backend] 筛选预定时间范围: {reservation_start} 至 {reservation_end}")
+            
+            # 获取原始数量
+            original_count = accommodations.count()
+            
+            # 排除有重叠预定的住宿
+            unavailable_accommodation_ids = []
+            for accommodation in accommodations:
+                if not accommodation.is_available(reservation_start, reservation_end):
+                    unavailable_accommodation_ids.append(accommodation.id)
+            
+            accommodations = accommodations.exclude(id__in=unavailable_accommodation_ids)
+            
+            print(f"[DEBUG-Backend] 时间段筛选前 {original_count} 个住宿, 筛选后剩余 {accommodations.count()} 个")
+
     if order_by:
         if order_by == 'distance':
             accommodations = accommodations.order_by('distance')
@@ -699,6 +725,12 @@ def list_accommodation(request):
     
     if request.headers.get('Accept') == 'application/json' or request.query_params.get('format') == 'json':
         serializer = AccommodationListSerializer(accommodations, many=True)
+        for acc_data in serializer.data:
+            accommodation = Accommodation.objects.get(id=acc_data['id'])
+            acc_data['available_periods'] = [
+                {'start_date': period[0], 'end_date': period[1]} 
+                for period in accommodation.get_available_periods()
+            ]
         return Response({'accommodations': serializer.data})
     return render(request, 'accommodation/accommodation_list.html', {
         "buildingName": building_name,
@@ -714,6 +746,8 @@ def list_accommodation(request):
         'order_by': order_by,
         'order_by_distance': order_by_distance,
         'user_id': user_id, 
+        'reservation_start': reservation_start,
+        'reservation_end': reservation_end,
             })
 
 @extend_schema(
@@ -837,7 +871,7 @@ class ReservationView(GenericAPIView):
 
     @extend_schema(
         summary="Reserve Accommodation",
-        description="Reserve an accommodation using query parameter id and user id",
+        description="Reserve an accommodation for a specific time period",
         parameters=[
             OpenApiParameter(name="id", location=OpenApiParameter.QUERY, description="Accommodation ID", type=int, required=True),
             OpenApiParameter(name="User ID", location=OpenApiParameter.QUERY, 
@@ -845,7 +879,13 @@ class ReservationView(GenericAPIView):
                     type=str, required=True),
             OpenApiParameter(name="contact_number", location=OpenApiParameter.QUERY, 
                     description="Your contact phone number for this reservation", 
-                    type=str, required=True)
+                    type=str, required=True),
+            OpenApiParameter(name="start_date", location=OpenApiParameter.QUERY, 
+                    description="Reservation start date (YYYY-MM-DD)", 
+                    type=str, required=True),
+            OpenApiParameter(name="end_date", location=OpenApiParameter.QUERY, 
+                    description="Reservation end date (YYYY-MM-DD)", 
+                    type=str, required=True),
         ],
         responses={
             200: ReservationResponseSerializer,
@@ -855,11 +895,12 @@ class ReservationView(GenericAPIView):
     )
     def post(self, request):
         """
-        Reserve an accommodation using query parameter id.
-
+        Reserve an accommodation for a specific time period.
+        
         Args:
-            request: HTTP POST request with accommodation ID and user cookie
-            
+            request: HTTP POST request with accommodation ID, user ID, contact number, 
+                    start date and end date
+                
         Returns:
             - Reservation confirmation with accommodation details
             - Error responses for various failure conditions
@@ -867,6 +908,8 @@ class ReservationView(GenericAPIView):
         accommodation_id = request.query_params.get('id')
         user_id = request.query_params.get('User ID')
         contact_number = request.query_params.get('contact_number')
+        start_date = request.query_params.get('start_date')
+        end_date = request.query_params.get('end_date')
 
         if not accommodation_id:
             return Response({'success': False, 'message': 'Accommodation ID is required'}, 
@@ -874,23 +917,41 @@ class ReservationView(GenericAPIView):
         if not user_id:
             return Response({'success': False, 'message': 'User ID is required.'}, 
                             status=status.HTTP_400_BAD_REQUEST)
-
         if not contact_number:
             return Response({'success': False, 'message': 'Contact number is required for reservation.'}, 
                             status=status.HTTP_400_BAD_REQUEST)
+        if not start_date or not end_date:
+            return Response({'success': False, 'message': 'Start date and end date are required.'}, 
+                            status=status.HTTP_400_BAD_REQUEST)
+                            
+        try:
+            start_date = parse_date(start_date)
+            end_date = parse_date(end_date)
+            if not start_date or not end_date:
+                return Response({'success': False, 'message': 'Invalid date format. Use YYYY-MM-DD.'}, 
+                                status=status.HTTP_400_BAD_REQUEST)
+                                
+            if start_date >= end_date:
+                return Response({'success': False, 'message': 'End date must be after start date.'}, 
+                                status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({'success': False, 'message': f'Date parsing error: {str(e)}'}, 
+                            status=status.HTTP_400_BAD_REQUEST)
+            
         try:
             accommodation = get_object_or_404(Accommodation, id=accommodation_id)
 
-            if accommodation.reserved:
+            # 检查住宿在指定时间段是否可用
+            if not accommodation.is_available(start_date, end_date):
                 return Response({
                     'success': False,
-                    'message': f'Accommodation "{accommodation.title}" is already reserved by [{accommodation.userID}].'
+                    'message': f'Accommodation "{accommodation.title}" is not available for the selected dates.'
                 }, status=status.HTTP_400_BAD_REQUEST)
             
-            # Get the university from the user ID
+            # 获取大学信息
             university = get_university_from_user_id(user_id)
             
-            # Check whether the user is eligible to book the accommodation (whether it belongs to the affiliated university)
+            # 检查用户是否有权预定该住宿
             if university and accommodation.affiliated_universities.exists():
                 if not accommodation.affiliated_universities.filter(id=university.id).exists():
                     university_codes = [u.code for u in accommodation.affiliated_universities.all()]
@@ -899,23 +960,35 @@ class ReservationView(GenericAPIView):
                         'message': f'You are not eligible to reserve this accommodation. It is only available to students from: {", ".join(university_codes)}.'
                     }, status=status.HTTP_403_FORBIDDEN)
             
-            accommodation.reserved = True
-            accommodation.userID = user_id
-            accommodation.reservation_contact_number = contact_number
+            # 创建新的预定记录
+            reservation = ReservationPeriod.objects.create(
+                accommodation=accommodation,
+                user_id=user_id,
+                contact_number=contact_number,
+                start_date=start_date,
+                end_date=end_date
+            )
+            
+            # 为了兼容性，更新旧的预定字段（但实际应用中我们将使用ReservationPeriod）
+            # 注意：这部分代码将来可以移除，现在保留只是为了兼容现有系统
+            accommodation.reserved = True  # 这个字段之后将被弃用
+            accommodation.userID = user_id  # 这个字段之后将被弃用
+            accommodation.reservation_contact_number = contact_number  # 这个字段之后将被弃用
             accommodation.save()
             
-            student_name = student_name = user_id.split('_')[1]
+            # 发送电子邮件确认
+            student_name = user_id.split('_')[1]
             
-            # Send confirmation email to the student
+            # 发送确认邮件给学生
             student_email = f"{student_name}@example.com"  
             send_mail(
                 subject="Reservation Confirmed - UniHaven",
-                message=f"Hi {student_name},\n\nYour reservation for '{accommodation.title}' is confirmed.\nThank you!",
+                message=f"Hi {student_name},\n\nYour reservation for '{accommodation.title}' from {start_date} to {end_date} is confirmed.\nThank you!",
                 from_email=settings.DEFAULT_FROM_EMAIL,
                 recipient_list=[student_email],
             )
             
-            # Send notification email to the housing specialist
+            # 发送通知邮件给住宿专家
             if university:
                 specialist_email = university.specialist_email
                 university_name = university.code
@@ -925,16 +998,18 @@ class ReservationView(GenericAPIView):
                 
             send_mail(
                 subject=f"[UniHaven] New Reservation Alert - {university_name}",
-                message=f"Dear {university_name} Housing Specialist,\n\nStudent {student_name} has reserved the accommodation: '{accommodation.title}'.\nPlease follow up for contract processing.\n\nRegards,\nUniHaven System",
+                message=f"Dear {university_name} Housing Specialist,\n\nStudent {student_name} has reserved the accommodation: '{accommodation.title}' for the period from {start_date} to {end_date}.\nPlease follow up for contract processing.\n\nRegards,\nUniHaven System",
                 from_email=settings.DEFAULT_FROM_EMAIL,
                 recipient_list=[specialist_email],
             )
             
+            # 返回成功响应
             serializer = AccommodationDetailSerializer(accommodation)
             return Response({
                 'success': True,
-                'message': f'Accommodation "{accommodation.title}" has been reserved.',
+                'message': f'Accommodation "{accommodation.title}" has been reserved for the period from {start_date} to {end_date}.',
                 'UserID': user_id,
+                'period': {'start_date': start_date, 'end_date': end_date},
                 'accommodation': serializer.data
             })
         except Accommodation.DoesNotExist:
@@ -952,12 +1027,15 @@ class CancellationView(GenericAPIView):
 
     @extend_schema(
         summary="Cancel Reservation",
-        description="Cancel an accommodation reservation using query parameter id and user id",
+        description="Cancel an accommodation reservation for a specific time period",
         parameters=[
             OpenApiParameter(name="id", location=OpenApiParameter.QUERY, description="Accommodation ID", type=int, required=True),
             OpenApiParameter(name="User ID", location=OpenApiParameter.QUERY, 
                              description="User ID, you need to assign which school you are from,e. if you from HKU, that is HKU_XXX, if HKUST, that is HKUST_xxx, if CUHK, CUHK_xxx", 
-                             type=str, required=True)
+                             type=str, required=True),
+            OpenApiParameter(name="reservation_id", location=OpenApiParameter.QUERY, 
+                             description="ID of the reservation period to cancel", 
+                             type=int, required=True)
         ],
         responses={
             200: ReservationResponseSerializer,
@@ -967,9 +1045,10 @@ class CancellationView(GenericAPIView):
         }
     )
     def post(self, request):
-        """Cancel an accommodation reservation using query parameter id."""
+        """Cancel a specific reservation period."""
         accommodation_id = request.query_params.get('id')
         user_id = request.query_params.get('User ID')
+        reservation_id = request.query_params.get('reservation_id')
 
         if not accommodation_id:
             return Response({'success': False, 'message': 'Accommodation ID is required'}, 
@@ -977,64 +1056,87 @@ class CancellationView(GenericAPIView):
         if not user_id:
             return Response({'success': False, 'message': 'User ID is required.'}, 
                             status=status.HTTP_400_BAD_REQUEST)
+        if not reservation_id:
+            return Response({'success': False, 'message': 'Reservation ID is required.'}, 
+                            status=status.HTTP_400_BAD_REQUEST)
+                            
         try:
             accommodation = get_object_or_404(Accommodation, id=accommodation_id)
-
-            if not accommodation.reserved:
-                return Response({
-                    'success': False,
-                    'message': f'Accommodation "{accommodation.title}" is not reserved.'
-                }, status=status.HTTP_400_BAD_REQUEST)
-            if str(accommodation.userID) != user_id:
-                return Response({
-                    'success': False,
-                    'message': f'You are not authorized to cancel this reservation. The accommodation can only be canceled by [{accommodation.userID}].'
-                }, status=status.HTTP_403_FORBIDDEN)
             
-            # Get the university from the user ID
+            try:
+                reservation = ReservationPeriod.objects.get(id=reservation_id, accommodation=accommodation)
+            except ReservationPeriod.DoesNotExist:
+                return Response({'success': False, 'message': 'Reservation not found.'}, 
+                                status=status.HTTP_404_NOT_FOUND)
+                                
+            # 检查是否是本人的预定
+            if reservation.user_id != user_id:
+                return Response({
+                    'success': False, 
+                    'message': 'You can only cancel your own reservations.'
+                }, status=status.HTTP_403_FORBIDDEN)
+                
+            # 获取大学信息
             university = get_university_from_user_id(user_id)
+            
+            # 检查用户权限
             if university and accommodation.affiliated_universities.exists():
                 if not accommodation.affiliated_universities.filter(id=university.id).exists():
                     university_codes = [u.code for u in accommodation.affiliated_universities.all()]
                     return Response({
                         'success': False,
-                        'message': f'You are not eligible to cancel this accommodation. It is only available to students from: {", ".join(university_codes)}.'
+                        'message': f'You are not affiliated with this accommodation. It is only available to students from: {", ".join(university_codes)}.'
                     }, status=status.HTTP_403_FORBIDDEN)
-
-            accommodation.reserved = False
-            accommodation.userID = ""
-            accommodation.reservation_contact_number = None  # 确保清除联系电话
-            accommodation.save()
-
+                    
+            # 存储日期信息用于电子邮件
+            start_date = reservation.start_date
+            end_date = reservation.end_date
+            
+            # 删除预定
+            reservation.delete()
+            
+            # 检查是否还有其他预定
+            if not ReservationPeriod.objects.filter(accommodation=accommodation).exists():
+                # 如果没有其他预定，更新旧的预定字段（兼容性）
+                accommodation.reserved = False
+                accommodation.userID = ""
+                accommodation.reservation_contact_number = None
+                accommodation.save()
+                
+            # 发送确认邮件
             student_name = user_id.split('_')[1]
             student_email = f"{student_name}@example.com"
             send_mail(
                 subject="Reservation Cancelled - UniHaven",
-                message=f"Hi {student_name},\n\nYour reservation for '{accommodation.title}' has been cancelled.",
+                message=f"Hi {student_name},\n\nYour reservation for '{accommodation.title}' from {start_date} to {end_date} has been cancelled.",
                 from_email=settings.DEFAULT_FROM_EMAIL,
                 recipient_list=[student_email],
             )
 
+            # 发送通知给专家
             if university:
                 specialist_email = university.specialist_email
                 university_name = university.code
             else:
                 specialist_email = "cedars@hku.hk"
                 university_name = "HKU"
-            # specialist_email = "cedars@hku.hk"  
+                
             send_mail(
                 subject="[UniHaven] Reservation Cancelled",
-                message=f"Dear {university_name},\n\nStudent {student_name} has cancelled their reservation for '{accommodation.title}'.\nNo further action is required.\n\nRegards,\nUniHaven System",
+                message=f"Dear {university_name},\n\nStudent {student_name} has cancelled their reservation for '{accommodation.title}' from {start_date} to {end_date}.\nNo further action is required.\n\nRegards,\nUniHaven System",
                 from_email=settings.DEFAULT_FROM_EMAIL,
                 recipient_list=[specialist_email],
             )
+            
+            # 返回成功响应
             serializer = AccommodationDetailSerializer(accommodation)
             return Response({
                 'success': True,
-                'message': f'Reservation for accommodation "{accommodation.title}" has been canceled.',
+                'message': f'Reservation for accommodation "{accommodation.title}" from {start_date} to {end_date} has been canceled.',
                 'UserID': user_id,
                 'accommodation': serializer.data
             })
+                
         except Accommodation.DoesNotExist:
             return Response({'success': False, 'message': 'Accommodation not found.'}, 
                             status=status.HTTP_404_NOT_FOUND)
