@@ -118,6 +118,101 @@
         align-items: center;
         gap: 10px; 
     }
+
+    .availability-periods {
+        margin-top: 20px;
+        padding: 15px;
+        background-color: #f8f9fa;
+        border-radius: 8px;
+    }
+    
+    .availability-periods h3 {
+        font-size: 1.2em;
+        margin-bottom: 15px;
+        color: var(--primary-color);
+    }
+    
+    .period-list {
+        list-style: none;
+        padding: 0;
+    }
+    
+    .period-list li {
+        border-bottom: 1px solid #dee2e6;
+        padding: 10px 5px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .period-list li:last-child {
+        border-bottom: none;
+    }
+    
+    .period-dates {
+        font-weight: 600;
+    }
+    
+    .reservation-form {
+        margin-top: 20px;
+        padding: 20px;
+        background-color: #f8f9fa;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .reservation-form h3 {
+        margin-bottom: 15px;
+    }
+    
+    .form-group {
+        margin-bottom: 15px;
+    }
+    
+    .form-group label {
+        font-weight: 600;
+        display: block;
+        margin-bottom: 5px;
+    }
+
+    .custom-date-section {
+        background-color: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        padding: 20px;
+        margin-top: 25px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+    
+    .custom-date-section h4 {
+        color: var(--primary-color);
+        margin-bottom: 15px;
+        font-weight: 600;
+    }
+    
+    .date-inputs {
+        display: flex;
+        gap: 15px;
+        margin-bottom: 15px;
+    }
+    
+    .date-inputs .form-group {
+        flex: 1;
+    }
+    
+    .btn-check-dates {
+        background-color: var(--primary-color);
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: background-color 0.3s;
+    }
+    
+    .btn-check-dates:hover {
+        background-color: var(--primary-color-dark);
+    }
 </style>
 {% endblock %}
 
@@ -199,6 +294,50 @@
                 <p><i>This accommodation is specifically available to students from the above-listed universities.</i></p>
             </div>
             {% endif %}
+            
+            <div class="availability-periods">
+                <h3>Available Periods</h3>
+                {% if accommodation.get_available_periods %}
+                    <ul class="period-list">
+                        {% for start_date, end_date in accommodation.get_available_periods %}
+                            <li>
+                                <span class="period-dates">{{ start_date|date:"Y-m-d" }} to {{ end_date|date:"Y-m-d" }}</span>
+                                <button class="btn btn-sm btn-primary reserve-period-btn" 
+                                        data-start="{{ start_date|date:"Y-m-d" }}" 
+                                        data-end="{{ end_date|date:"Y-m-d" }}"
+                                        onclick="selectPeriod('{{ start_date|date:"Y-m-d" }}', '{{ end_date|date:"Y-m-d" }}')">
+                                    Reserve This Period
+                                </button>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                    
+                    <div class="custom-date-section">
+                        <h4>Custom Date Selection</h4>
+                        <p class="text-muted small">If you don't see your preferred dates above, select your own dates:</p>
+                        
+                        <div class="date-inputs">
+                            <div class="form-group">
+                                <label for="customStartDate">Start Date:</label>
+                                <input type="date" id="customStartDate" class="form-control" 
+                                       min="{{ accommodation.available_from|date:"Y-m-d" }}" 
+                                       max="{{ accommodation.available_to|date:"Y-m-d" }}">
+                            </div>
+                            <div class="form-group">
+                                <label for="customEndDate">End Date:</label>
+                                <input type="date" id="customEndDate" class="form-control" 
+                                       min="{{ accommodation.available_from|date:"Y-m-d" }}" 
+                                       max="{{ accommodation.available_to|date:"Y-m-d" }}">
+                            </div>
+                        </div>
+                        
+                        <button class="btn btn-primary" onclick="checkCustomPeriod()">Check & Reserve</button>
+                        <div id="customDateMessage" class="mt-3 alert alert-danger" style="display: none;"></div>
+                    </div>
+                {% else %}
+                    <p>This accommodation is fully booked.</p>
+                {% endif %}
+            </div>
         </div>
 
         <div class="detail-section">
@@ -222,30 +361,44 @@
                     </div>
                 </div>
                 
-                <span class="status-badge {% if accommodation.reserved %}status-reserved{% else %}status-available{% endif %}">
-                    <i class="fas {% if accommodation.reserved %}fa-calendar-times{% else %}fa-calendar-check{% endif %}"></i>
-                    {% if accommodation.reserved %}Reserved{% else %}Available{% endif %}
+                <span class="status-badge {% if accommodation.get_available_periods %}status-available{% else %}status-reserved{% endif %}">
+                    <i class="fas {% if accommodation.get_available_periods %}fa-calendar-check{% else %}fa-calendar-times{% endif %}"></i>
+                    {% if accommodation.get_available_periods %}Available{% else %}Fully Booked{% endif %}
                 </span>
             </div>
         </div>
         
-        <!-- Student-specific actions section - Will be hidden for specialists -->
-        <div id="studentActionsSection" style="display: flex; justify-content: center; margin-top: 15px;">
-            <!-- Reserve button -->
-            <a href="javascript:void(0);" onclick="showUserIdPrompt('reserve', '{{ accommodation.id }}')" class="btn btn-primary back-button">Reserve</a>
-            <!-- Cancel button -->
-            <a href="javascript:void(0);" onclick="showUserIdPrompt('cancel', '{{ accommodation.id }}')" class="btn btn-secondary back-button" style="background-color: red;">Cancel</a>
+        <div id="studentActionsSection" style="margin-top: 30px;">
+            <div id="reservationForm" class="reservation-form" style="display: none;">
+                <h3>Reserve Accommodation</h3>
+                <div class="form-group">
+                    <label for="userId">User ID</label>
+                    <input type="text" id="userId" class="form-control" placeholder="Example: HKU_12345678">
+                </div>
+                <div class="form-group">
+                    <label for="contactNumber">Contact Phone Number</label>
+                    <input type="text" id="contactNumber" class="form-control" placeholder="Your contact number">
+                </div>
+                <div class="form-group">
+                    <label>Selected Period</label>
+                    <p id="selectedPeriod" class="form-control-static">No period selected</p>
+                </div>
+                <div class="button-group" style="display: flex; gap: 10px; justify-content: center;">
+                    <button id="submitReservationBtn" class="btn btn-primary" onclick="submitReservation()">Confirm Reservation</button>
+                    <button class="btn btn-secondary" onclick="hideReservationForm()">Cancel</button>
+                </div>
+            </div>
+            
+            <div style="display: flex; justify-content: center; gap: 10px; margin-top: 15px;"></div>
+                <a href="{% url 'view_reservations' %}" class="btn btn-secondary back-button">View My Reservations</a>
+            </div>
         </div>
         
-        <!-- Student navigation buttons -->
         <div id="studentButtonGroup" class="button-group" style="display: flex; gap: 10px; justify-content: center; margin-top: 15px;">
-            <!-- Back to Listings button with all original query parameters -->
             <a href="{% url 'list_accommodation' %}?{{ query_string }}" class="btn btn-primary back-button">Back to Listings</a>
-            <!-- Back to Search button -->
             <a href="{% url 'search_accommodation' %}" class="btn btn-secondary back-button">Back to Search</a>
         </div>
         
-        <!-- Administrator Function Area (API key required) -->
         <div id="adminSection" class="admin-section">
             <h3>Specialist</h3>
             <div style="display: flex; justify-content: center; gap: 10px; margin-top: 10px;">
@@ -257,7 +410,6 @@
     </div>
 </div>
 
-<!-- Delete the confirmation modal box-->
 <div id="deleteModal" class="modal">
     <div class="modal-content">
         <h3 style="text-align: center;">Confirm deletion</h3>
@@ -273,43 +425,120 @@
 
 {% block extra_js %}
 <script>
-    // Check if there is an API key and display the administrator function
     document.addEventListener('DOMContentLoaded', function() {
         const apiKey = localStorage.getItem('unihaven_api_key');
         if (apiKey) {
-            // Show admin section and hide student actions for specialists
             document.getElementById('adminSection').style.display = 'block';
             document.getElementById('studentActionsSection').style.display = 'none';
-            
-            // Show specialist navigation and hide student navigation
             document.getElementById('studentButtonGroup').style.display = 'none';
         }
     });
     
-    function showUserIdPrompt(action, accommodationId) {
-        if (action === 'reserve') {
-            const urlParams = new URLSearchParams(window.location.search);
-            let userId = urlParams.get('user_id');
+    let selectedStartDate = null;
+    let selectedEndDate = null;
+    
+    function selectPeriod(startDate, endDate) {
+        selectedStartDate = startDate;
+        selectedEndDate = endDate;
+        document.getElementById('selectedPeriod').textContent = `${startDate} to ${endDate}`;
+        document.getElementById('reservationForm').style.display = 'block';
+        document.getElementById('reservationForm').scrollIntoView({ behavior: 'smooth' });
+    }
+    
+    async function checkCustomPeriod() {
+        const startDate = document.getElementById('customStartDate').value;
+        const endDate = document.getElementById('customEndDate').value;
+        const messageEl = document.getElementById('customDateMessage');
+        
+        messageEl.style.display = 'none';
+        messageEl.textContent = '';
+        
+        if (!startDate || !endDate) {
+            messageEl.textContent = 'Please select both start and end dates.';
+            messageEl.style.display = 'block';
+            return;
+        }
+        
+        if (new Date(startDate) >= new Date(endDate)) {
+            messageEl.textContent = 'End date must be after start date.';
+            messageEl.style.display = 'block';
+            return;
+        }
+        
+        const diffTime = Math.abs(new Date(endDate) - new Date(startDate));
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        if (diffDays < 2) {
+            messageEl.textContent = 'Minimum booking period is 2 days.';
+            messageEl.style.display = 'block';
+            return;
+        }
+        
+        const availableFrom = new Date("{{ accommodation.available_from|date:'Y-m-d' }}");
+        const availableTo = new Date("{{ accommodation.available_to|date:'Y-m-d' }}");
+        
+        if (new Date(startDate) < availableFrom || new Date(endDate) > availableTo) {
+            messageEl.textContent = `Dates must be within available range: {{ accommodation.available_from|date:"Y-m-d" }} to {{ accommodation.available_to|date:"Y-m-d" }}`;
+            messageEl.style.display = 'block';
+            return;
+        }
+        
+        try {
+            const csrfToken = getCSRFToken();
+            const response = await fetch(`/api/check_availability/?id={{ accommodation.id }}&start_date=${startDate}&end_date=${endDate}`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken
+                }
+            });
 
-            let contactNumber = prompt("Please enter your contact phone number:");
-            if (!contactNumber) {
-                alert("Contact number is required for reservation");
-                return;
-            }
+            const data = await response.json();
             
-            reserveAccommodation(accommodationId, userId, contactNumber);
-        } else if (action === 'cancel') {
-            let userId = prompt("Please enter your User ID to cancel the reservation");
-            if (!userId) return;
-            cancelReservation(accommodationId, userId);
+            if (response.ok && data.available) {
+                selectPeriod(startDate, endDate);
+            } else {
+                messageEl.textContent = data.message || 'The selected dates overlap with existing reservations.';
+                messageEl.style.display = 'block';
+            }
+        } catch (error) {
+            console.error('Error checking availability:', error);
+            messageEl.textContent = 'Error checking availability. Please try again.';
+            messageEl.style.display = 'block';
         }
     }
     
-    // Reserve accommodation
-    async function reserveAccommodation(accommodationId, userId, contactNumber) {
+    function hideReservationForm() {
+        document.getElementById('reservationForm').style.display = 'none';
+        selectedStartDate = null;
+        selectedEndDate = null;
+    }
+    
+    function submitReservation() {
+        const userId = document.getElementById('userId').value;
+        const contactNumber = document.getElementById('contactNumber').value;
+        
+        if (!userId) {
+            alert("User ID is required");
+            return;
+        }
+        
+        if (!contactNumber) {
+            alert("Contact number is required");
+            return;
+        }
+        
+        if (!selectedStartDate || !selectedEndDate) {
+            alert("Please select an available period");
+            return;
+        }
+        
+        reserveAccommodation('{{ accommodation.id }}', userId, contactNumber, selectedStartDate, selectedEndDate);
+    }
+    
+    async function reserveAccommodation(accommodationId, userId, contactNumber, startDate, endDate) {
         const csrfToken = getCSRFToken();
         try {
-            const response = await fetch(`/api/reserve_accommodation/?id=${accommodationId}&User%20ID=${encodeURIComponent(userId)}&contact_number=${encodeURIComponent(contactNumber)}`, {
+            const response = await fetch(`/api/reserve_accommodation/?id=${accommodationId}&User%20ID=${encodeURIComponent(userId)}&contact_number=${encodeURIComponent(contactNumber)}&start_date=${startDate}&end_date=${endDate}`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -340,72 +569,48 @@
                 document.body.appendChild(form);
                 form.submit();
             } else {
-                alert(`Fail to Reserve: ${data.message}`);
+                alert(`Reservation failed: ${data.message}`);
             }
         } catch (error) {
             console.error('Error reserving accommodation:', error);
-            alert('An error occurred when booking accommodation.');
+            alert('An error occurred while making the reservation.');
         }
     }
 
-    // cancel reservation
-    async function cancelReservation(accommodationId, userId) {
-        const csrfToken = getCSRFToken();
-        try {
-            const response = await fetch(`/api/cancel_reservation/?id=${accommodationId}&User%20ID=${encodeURIComponent(userId)}`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': csrfToken
-                }
-            });
-
-            const data = await response.json();
+    function showUserIdPrompt(action, accommodationId) {
+        if (action === 'cancel') {
+            let userId = prompt("Please enter your User ID to view your reservations:");
+            if (!userId) return;
             
-            if (response.ok) {
-                alert(data.message);
-                // location.reload();
-                const form = document.createElement('form');
-                form.method = 'POST';
-                form.action = "{% url 'view_reservations' %}";
-                
-                // 添加CSRF token
-                const csrfInput = document.createElement('input');
-                csrfInput.type = 'hidden';
-                csrfInput.name = 'csrfmiddlewaretoken';
-                csrfInput.value = csrfToken;
-                form.appendChild(csrfInput);
-                
-                // Pass the user ID to the form
-                const userIdInput = document.createElement('input');
-                userIdInput.type = 'hidden';
-                userIdInput.name = 'user_id';
-                userIdInput.value = userId;
-                form.appendChild(userIdInput);
-                
-                // Add to the page and submit
-                document.body.appendChild(form);
-                form.submit();
-            } else {
-                alert(`Failed to cancel the reservation: ${data.message}`);
-            }
-        } catch (error) {
-            console.error('Error canceling reservation:', error);
-            alert('An error occurred when canceling the reservation.');
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = "{% url 'view_reservations' %}";
+            
+            const csrfInput = document.createElement('input');
+            csrfInput.type = 'hidden';
+            csrfInput.name = 'csrfmiddlewaretoken';
+            csrfInput.value = getCSRFToken();
+            form.appendChild(csrfInput);
+            
+            const userIdInput = document.createElement('input');
+            userIdInput.type = 'hidden';
+            userIdInput.name = 'user_id';
+            userIdInput.value = userId;
+            form.appendChild(userIdInput);
+            
+            document.body.appendChild(form);
+            form.submit();
         }
     }
     
-    // Display the deletion confirmation modal box
     function showDeleteModal() {
         document.getElementById('deleteModal').style.display = 'block';
     }
     
-    // Hide the deletion confirmation modal box
     function hideDeleteModal() {
         document.getElementById('deleteModal').style.display = 'none';
     }
     
-    // delete accommodation
     async function deleteAccommodation(accommodationId) {
         const apiKey = localStorage.getItem('unihaven_api_key');
         if (!apiKey) {
@@ -443,12 +648,10 @@
         }
     }
 
-    // get CSRF token from cookies
     function getCSRFToken() {
         return getCookie('csrftoken');
     }
 
-    // get cookie
     function getCookie(name) {
         const cookies = document.cookie.split(';');
         for (let i = 0; i < cookies.length; i++) {
@@ -463,9 +666,8 @@
     document.addEventListener('DOMContentLoaded', function () {
         const userIdentifier = getCookie('user_identifier');
         if (!userIdentifier) {
-            // Generate a unique identifier for the user (e.g., a random string or UUID)
             const uniqueId = 'user_' + Math.random().toString(36).substring(2, 15);
-            setCookie('user_identifier', uniqueId, 365); // Set cookie to expire in 1 year
+            setCookie('user_identifier', uniqueId, 365);
             console.log('User identifier cookie set:', uniqueId);
         } else {
             console.log('User identifier cookie already exists:', userIdentifier);

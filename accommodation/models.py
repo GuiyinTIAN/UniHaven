@@ -1,5 +1,6 @@
 from django.db import models
 from django.core.validators import MinValueValidator, MaxValueValidator
+from datetime import timedelta
 
 class Accommodation(models.Model):
     TYPE_CHOICES = [
@@ -21,11 +22,8 @@ class Accommodation(models.Model):
     contact_phone = models.CharField(max_length=20, blank=True, null=True)
     contact_email = models.EmailField(blank=True, null=True)
 
-    # 以下字段将被废弃，但暂时保留以保持兼容性
-    userID = models.CharField(max_length=255, blank=True, default="")
-    reservation_contact_number = models.CharField(max_length=100, blank=True, null=True)
-    reserved = models.BooleanField(default=False)  # 将不再使用这个字段，而是通过检查ReservationPeriod来确定是否有预定
-    contract_status = models.BooleanField(default=False, help_text="Whether the accommodation is singed contract")
+    # 移除过时字段
+    # contract_status 字段已移除，合同状态将记录在ReservationPeriod中
 
     building_name = models.CharField(max_length=200, default="", blank=True)
     estate_name = models.CharField(max_length=200, default="", blank=True)
@@ -88,10 +86,14 @@ class Accommodation(models.Model):
     def get_available_periods(self):
         """
         获取所有可用的时间段，返回一个时间段列表
+        只返回长度不少于MIN_BOOKING_DAYS天的时间段
         """
         if not self.available_from or not self.available_to:
             return []
             
+        # 设置最小可预订时间（天）
+        MIN_BOOKING_DAYS = 2
+        
         # 获取所有预定期间，按开始日期排序
         reserved_periods = list(self.reservation_periods.all().order_by('start_date'))
         
@@ -105,16 +107,27 @@ class Accommodation(models.Model):
         # 遍历所有预定期间，找出中间的可用时间段
         for period in reserved_periods:
             # 如果当前日期小于预定开始日期，则添加可用时间段
+            # 修复：使用预定开始日期减去1天作为可用时间段的结束日期
             if current_date < period.start_date:
-                available_periods.append((current_date, period.start_date))
-            # 更新当前日期为预定结束日期的下一天
-            current_date = period.end_date
+                end_date = period.start_date - timedelta(days=1)
+                # 检查这个时间段是否至少有MIN_BOOKING_DAYS天
+                days_available = (end_date - current_date).days + 1
+                if days_available >= MIN_BOOKING_DAYS:
+                    available_periods.append((current_date, end_date))
+            # 更新当前日期为预定结束日期加1天
+            current_date = period.end_date + timedelta(days=1)
             
         # 检查最后一个预定结束日期到可用结束日期是否还有空闲时间段
-        if current_date < self.available_to:
-            available_periods.append((current_date, self.available_to))
+        if current_date <= self.available_to:
+            days_available = (self.available_to - current_date).days + 1
+            if days_available >= MIN_BOOKING_DAYS:
+                available_periods.append((current_date, self.available_to))
             
         return available_periods
+
+    def is_reserved(self):
+        """Check if the accommodation has been fully booked (there are no available time slots)"""
+        return len(self.get_available_periods()) == 0
 
     class Meta:
         unique_together = (
@@ -125,17 +138,19 @@ class Accommodation(models.Model):
         )
 
 class ReservationPeriod(models.Model):
-    """模型用于记录住宿预定的具体时间段"""
+    """Model to store Users' reservation periods for accommodations"""
     accommodation = models.ForeignKey(
         Accommodation, 
         on_delete=models.CASCADE, 
         related_name='reservation_periods'
     )
-    user_id = models.CharField(max_length=255, help_text="预定学生的ID")
+    user_id = models.CharField(max_length=255, help_text="Student's ID")
     contact_number = models.CharField(max_length=100, blank=True, null=True)
-    start_date = models.DateField(help_text="预定开始日期")
-    end_date = models.DateField(help_text="预定结束日期")
+    start_date = models.DateField(help_text="Reservation start date")
+    end_date = models.DateField(help_text="Reservation end date")
     created_at = models.DateTimeField(auto_now_add=True)
+    # 添加合同状态字段到预订记录
+    contract_status = models.BooleanField(default=False, help_text="Whether this reservation has a signed contract")
     
     def __str__(self):
         return f"{self.accommodation.title} - {self.start_date} to {self.end_date} by {self.user_id}"

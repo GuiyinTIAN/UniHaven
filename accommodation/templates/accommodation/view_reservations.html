@@ -90,6 +90,50 @@
         border-radius: 8px;
         margin-top: 20px;
     }
+    
+    .reservation-periods {
+        margin-top: 15px;
+    }
+    
+    .reservation-periods h4 {
+        font-size: 1.2em;
+        font-weight: 600;
+        margin-bottom: 10px;
+    }
+    
+    .reservation-periods ul {
+        list-style: none;
+        padding: 0;
+    }
+    
+    .reservation-periods li {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 10px;
+        padding: 8px;
+        border-radius: 4px;
+        background-color: #f8f9fa;
+    }
+    
+    .period-dates {
+        font-size: 0.95em;
+        color: #495057;
+    }
+
+    .cancel-btn {
+        background-color: #dc3545;
+        color: white;
+        border: none;
+        padding: 5px 10px;
+        border-radius: 4px;
+        font-size: 0.9em;
+        cursor: pointer;
+    }
+    
+    .cancel-btn:hover {
+        background-color: #c82333;
+    }
 </style>
 {% endblock %}
 
@@ -152,12 +196,25 @@
                 </div>
             </div>
             
+            <div class="reservation-periods">
+                <h4>Your Reservation Periods:</h4>
+                <ul>
+                    {% for period in accommodation.user_reservation_periods %}
+                    <li>
+                        <div class="period-dates">
+                            {{ period.start_date|date:"Y-m-d" }} to {{ period.end_date|date:"Y-m-d" }}
+                        </div>
+                        <button class="cancel-btn" 
+                                onclick="showCancelConfirm('{{ accommodation.id }}', '{{ user_id }}', '{{ period.id }}')">
+                            Cancel This Period
+                        </button>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+            
             <div class="actions">
                 <a href="{% url 'accommodation_detail' accommodation.pk %}" class="btn btn-secondary">View Details</a>
-                <button class="btn btn-danger" style="margin-left: 10px;" 
-                        onclick="showUserIdPrompt('cancel', '{{ accommodation.id }}', '{{ user_id }}')">
-                    Cancel Reservation
-                </button>
             </div>
         </div>
         {% endfor %}
@@ -173,20 +230,19 @@
 
 {% block extra_js %}
 <script>
-    // Function to cancel a reservation
-    function showUserIdPrompt(action, accommodationId, userId) {
-        if (action === 'cancel') {
-            if (confirm('Are you sure you want to cancel this reservation?')) {
-                cancelReservation(accommodationId, userId);
-            }
+    // 显示确认取消对话框
+    function showCancelConfirm(accommodationId, userId, reservationId) {
+        if (confirm('Are you sure you want to cancel this reservation period?')) {
+            cancelReservation(accommodationId, userId, reservationId);
         }
     }
     
-    async function cancelReservation(accommodationId, userId) {
+    // 取消预订 - 现在需要传递reservationId
+    async function cancelReservation(accommodationId, userId, reservationId) {
         try {
             const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
-            const response = await fetch(`/api/cancel_reservation/?id=${accommodationId}&User%20ID=${encodeURIComponent(userId)}`, {
-                method: 'POST',
+            const response = await fetch(`/api/cancel_reservation/?id=${accommodationId}&User%20ID=${encodeURIComponent(userId)}&reservation_id=${reservationId}`, {
+                method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
                     'X-CSRFToken': csrfToken

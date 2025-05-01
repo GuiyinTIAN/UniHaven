@@ -13,7 +13,7 @@ import math
 from django.shortcuts import render, redirect, get_object_or_404
 from django.conf import settings
 from django.utils.dateparse import parse_date
-from django.db.models import Q, F, Func, FloatField, ExpressionWrapper
+from django.db.models import Q, F, Func, FloatField, ExpressionWrapper, Exists, OuterRef
 from django.urls import reverse
 from django.core.mail import send_mail
 
@@ -44,7 +44,11 @@ from .response_serializers import (
     ErrorResponseSerializer,
     ReservationResponseSerializer,
     AccommodationListResponseSerializer,
-    DeleteAccommodationRequestSerializer
+    DeleteAccommodationRequestSerializer,
+    DuplicateAccommodationResponseSerializer,
+    TemplateResponseSerializer,
+    LinkAccommodationResponseSerializer,
+    ApiKeyTestResponseSerializer
 )
 from .utils import get_university_from_user_id
 from .authentication import UniversityAPIKeyAuthentication
@@ -52,9 +56,6 @@ from .permissions import UniversityAccessPermission
 
 #------------------------------------------------------------------------------
 # Constants and Configurations
-#------------------------------------------------------------------------------
-
-# Geographic coordinates of The University of Hong Kong (used for distance calculations)
 CAMPUS_LOCATIONS = {
     "HKU_main": {"latitude": 22.28405, "longitude": 114.13784},
     "HKU_sassoon": {"latitude": 22.2675, "longitude": 114.12881},
@@ -83,7 +84,6 @@ API_KEY_PARAMETER = [
         required=False
     )
 ]
-
 
 #------------------------------------------------------------------------------
 # Home Page
@@ -588,8 +588,7 @@ def list_accommodation(request):
         print("[DEBUG-Backend] No API Key is provided. Student user view.")
     
     if not is_specialist:
-        print("[DEBUG-Backend] Student User view - ignore the reserved accommodation")
-        accommodations = accommodations.exclude(reserved=True)
+        print("[DEBUG-Backend] Student User view - show accommodations with available periods")
     else:
         print(f"[DEBUG-Backend] Specialist - only show {specialist_university.name}'s accommodations (including reserved)")
         accommodations = accommodations.filter(affiliated_universities=specialist_university)
@@ -692,12 +691,12 @@ def list_accommodation(request):
         reservation_end = parse_date(reservation_end)
         
         if reservation_start and reservation_end:
-            print(f"[DEBUG-Backend] 筛选预定时间范围: {reservation_start} 至 {reservation_end}")
+            print(f"[DEBUG-Backend] Filtering reservation date range: {reservation_start} to {reservation_end}")
             
-            # 获取原始数量
+            # Get original count
             original_count = accommodations.count()
             
-            # 排除有重叠预定的住宿
+            # Exclude accommodations with overlapping reservations
             unavailable_accommodation_ids = []
             for accommodation in accommodations:
                 if not accommodation.is_available(reservation_start, reservation_end):
@@ -705,7 +704,17 @@ def list_accommodation(request):
             
             accommodations = accommodations.exclude(id__in=unavailable_accommodation_ids)
             
-            print(f"[DEBUG-Backend] 时间段筛选前 {original_count} 个住宿, 筛选后剩余 {accommodations.count()} 个")
+            print(f"[DEBUG-Backend] Before date filter: {original_count} accommodations, after filter: {accommodations.count()} accommodations")
+    else:
+        # If no reservation dates are specified, only show accommodations with any available periods
+        if not is_specialist:
+            unavailable_accommodation_ids = []
+            for accommodation in accommodations:
+                if not accommodation.get_available_periods():
+                    unavailable_accommodation_ids.append(accommodation.id)
+            
+            accommodations = accommodations.exclude(id__in=unavailable_accommodation_ids)
+            print(f"[DEBUG-Backend] Filtered out fully booked accommodations, remaining: {accommodations.count()}")
 
     if order_by:
         if order_by == 'distance':
@@ -941,17 +950,17 @@ class ReservationView(GenericAPIView):
         try:
             accommodation = get_object_or_404(Accommodation, id=accommodation_id)
 
-            # 检查住宿在指定时间段是否可用
+            # Check if accommodation is available for the selected dates
             if not accommodation.is_available(start_date, end_date):
                 return Response({
                     'success': False,
                     'message': f'Accommodation "{accommodation.title}" is not available for the selected dates.'
                 }, status=status.HTTP_400_BAD_REQUEST)
             
-            # 获取大学信息
+            # Get university information
             university = get_university_from_user_id(user_id)
             
-            # 检查用户是否有权预定该住宿
+            # Check if user is eligible to reserve the accommodation
             if university and accommodation.affiliated_universities.exists():
                 if not accommodation.affiliated_universities.filter(id=university.id).exists():
                     university_codes = [u.code for u in accommodation.affiliated_universities.all()]
@@ -960,7 +969,7 @@ class ReservationView(GenericAPIView):
                         'message': f'You are not eligible to reserve this accommodation. It is only available to students from: {", ".join(university_codes)}.'
                     }, status=status.HTTP_403_FORBIDDEN)
             
-            # 创建新的预定记录
+            # Create new reservation record
             reservation = ReservationPeriod.objects.create(
                 accommodation=accommodation,
                 user_id=user_id,
@@ -968,18 +977,13 @@ class ReservationView(GenericAPIView):
                 start_date=start_date,
                 end_date=end_date
             )
-            
-            # 为了兼容性，更新旧的预定字段（但实际应用中我们将使用ReservationPeriod）
-            # 注意：这部分代码将来可以移除，现在保留只是为了兼容现有系统
-            accommodation.reserved = True  # 这个字段之后将被弃用
-            accommodation.userID = user_id  # 这个字段之后将被弃用
-            accommodation.reservation_contact_number = contact_number  # 这个字段之后将被弃用
+
             accommodation.save()
             
-            # 发送电子邮件确认
+            # Send confirmation emails
             student_name = user_id.split('_')[1]
             
-            # 发送确认邮件给学生
+            # Send confirmation email to student
             student_email = f"{student_name}@example.com"  
             send_mail(
                 subject="Reservation Confirmed - UniHaven",
@@ -988,12 +992,12 @@ class ReservationView(GenericAPIView):
                 recipient_list=[student_email],
             )
             
-            # 发送通知邮件给住宿专家
+            # Send notification email to housing specialist
             if university:
                 specialist_email = university.specialist_email
                 university_name = university.code
             else:
-                specialist_email = "cedars@hku.hk"  # 默认的HKU联系人
+                specialist_email = "cedars@hku.hk"  # Default HKU contact
                 university_name = "HKU"
                 
             send_mail(
@@ -1003,7 +1007,7 @@ class ReservationView(GenericAPIView):
                 recipient_list=[specialist_email],
             )
             
-            # 返回成功响应
+            # Return success response
             serializer = AccommodationDetailSerializer(accommodation)
             return Response({
                 'success': True,
@@ -1069,17 +1073,17 @@ class CancellationView(GenericAPIView):
                 return Response({'success': False, 'message': 'Reservation not found.'}, 
                                 status=status.HTTP_404_NOT_FOUND)
                                 
-            # 检查是否是本人的预定
+            # Check if the reservation belongs to the user
             if reservation.user_id != user_id:
                 return Response({
                     'success': False, 
                     'message': 'You can only cancel your own reservations.'
                 }, status=status.HTTP_403_FORBIDDEN)
                 
-            # 获取大学信息
+            # Get university information
             university = get_university_from_user_id(user_id)
             
-            # 检查用户权限
+            # Check user permissions
             if university and accommodation.affiliated_universities.exists():
                 if not accommodation.affiliated_universities.filter(id=university.id).exists():
                     university_codes = [u.code for u in accommodation.affiliated_universities.all()]
@@ -1088,22 +1092,18 @@ class CancellationView(GenericAPIView):
                         'message': f'You are not affiliated with this accommodation. It is only available to students from: {", ".join(university_codes)}.'
                     }, status=status.HTTP_403_FORBIDDEN)
                     
-            # 存储日期信息用于电子邮件
+            # Store date information for email
             start_date = reservation.start_date
             end_date = reservation.end_date
             
-            # 删除预定
+            # Delete reservation
             reservation.delete()
             
-            # 检查是否还有其他预定
+            # Check if there are other reservations
             if not ReservationPeriod.objects.filter(accommodation=accommodation).exists():
-                # 如果没有其他预定，更新旧的预定字段（兼容性）
-                accommodation.reserved = False
-                accommodation.userID = ""
-                accommodation.reservation_contact_number = None
                 accommodation.save()
                 
-            # 发送确认邮件
+            # Send confirmation email
             student_name = user_id.split('_')[1]
             student_email = f"{student_name}@example.com"
             send_mail(
@@ -1113,7 +1113,7 @@ class CancellationView(GenericAPIView):
                 recipient_list=[student_email],
             )
 
-            # 发送通知给专家
+            # Send notification to specialist
             if university:
                 specialist_email = university.specialist_email
                 university_name = university.code
@@ -1128,7 +1128,7 @@ class CancellationView(GenericAPIView):
                 recipient_list=[specialist_email],
             )
             
-            # 返回成功响应
+            # Return success response
             serializer = AccommodationDetailSerializer(accommodation)
             return Response({
                 'success': True,
@@ -1234,6 +1234,7 @@ cancel_reservation = CancellationView.as_view()
 rate_accommodation = RatingView.as_view()
 
 @api_view(['GET'])
+@extend_schema(responses=TemplateResponseSerializer)
 @renderer_classes([TemplateHTMLRenderer])
 def api_key_management(request):
     """ATest whether the API key is valid"""
@@ -1241,11 +1242,13 @@ def api_key_management(request):
 
 @api_view(['GET'])
 @renderer_classes([TemplateHTMLRenderer])
+@extend_schema(responses=TemplateResponseSerializer)
 def manage_accommodations(request):
     """The dormitory administrator page view is used to delete accommodation"""
     return Response(template_name='accommodation/manage_accommodations.html')
 
 @api_view(['GET'])
+@extend_schema(responses=ApiKeyTestResponseSerializer)
 @authentication_classes([UniversityAPIKeyAuthentication])
 def test_api_key(request):
     """Test whether the API key is valid"""
@@ -1267,7 +1270,8 @@ def test_api_key(request):
         OpenApiParameter(name="room_number", location=OpenApiParameter.QUERY, description="Room number", type=str, required=False),
     ] + API_KEY_PARAMETER,
     responses={
-        200: OpenApiResponse(description="List of potential duplicate accommodations"),
+        200: DuplicateAccommodationResponseSerializer,
+        400: ErrorResponseSerializer,
         401: OpenApiResponse(description="API key authentication failed"),
     }
 )
@@ -1393,13 +1397,14 @@ def check_duplicate_accommodation(request):
         OpenApiParameter(name="id", location=OpenApiParameter.PATH, description="Accommodation ID to link to", type=int, required=True),
     ] + API_KEY_PARAMETER,
     responses={
-
         200: SuccessResponseSerializer,
+400: ErrorResponseSerializer,
         401: OpenApiResponse(description="API key authentication failed"),
         404: ErrorResponseSerializer
     }
 )
 @api_view(['POST'])
+@extend_schema(responses=LinkAccommodationResponseSerializer)
 @authentication_classes([UniversityAPIKeyAuthentication])
 def link_to_accommodation(request, id):
     """
@@ -1451,10 +1456,26 @@ def view_reservations(request):
         if not (user_id.count('_') == 1 and any(user_id.upper().startswith(code.upper() + "_") for code in ["HKU", "HKUST", "CUHK"])):
             return Response({'error': 'Invalid User ID format. Please use format like HKU_12345678.'}, template_name='accommodation/view_reservations.html')
         
-        # Get all reservations for this user
-        reservations = Accommodation.objects.filter(reserved=True, userID=user_id)
+        # Query reservations through ReservationPeriod instead of using the userID field of accommodation
+        reservation_periods = ReservationPeriod.objects.filter(user_id=user_id).select_related('accommodation')
+        accommodations = []
+        seen_ids = set()
         
-        return Response({'reservations': reservations, 'user_id': user_id}, template_name='accommodation/view_reservations.html')
+        # Group reservation periods under their respective accommodation objects
+        for period in reservation_periods:
+            accommodation = period.accommodation
+            if accommodation.id not in seen_ids:
+                seen_ids.add(accommodation.id)
+                accommodations.append(accommodation)
+                # Add the user's reservation periods to the accommodation object
+                accommodation.user_reservation_periods = []
+            
+            # Find the current accommodation object and add the reservation period
+            for acc in accommodations:
+                if acc.id == accommodation.id:
+                    acc.user_reservation_periods.append(period)
+        
+        return Response({'reservations': accommodations, 'user_id': user_id}, template_name='accommodation/view_reservations.html')
     else:
         # Show a form to enter User ID
         return Response({}, template_name='accommodation/view_reservations.html')
@@ -1579,3 +1600,124 @@ class UpdateAccommodationView(GenericAPIView):
                 {"success": False, "message": f"An error occurred: {str(e)}"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+
+@extend_schema(
+    summary="Check Accommodation Availability",
+    description="Check if an accommodation is available for specific dates",
+    parameters=[
+        OpenApiParameter(name="id", location=OpenApiParameter.QUERY, description="Accommodation ID", type=int, required=True),
+        OpenApiParameter(name="start_date", location=OpenApiParameter.QUERY, description="Start date (YYYY-MM-DD)", type=str, required=True),
+        OpenApiParameter(name="end_date", location=OpenApiParameter.QUERY, description="End date (YYYY-MM-DD)", type=str, required=True),
+    ],
+    responses={
+        200: SuccessResponseSerializer,
+        400: ErrorResponseSerializer,
+        404: ErrorResponseSerializer
+    }
+)
+@api_view(['GET'])
+def check_availability(request):
+    """
+    Check if an accommodation is available for specific dates.
+    """
+    accommodation_id = request.query_params.get('id')
+    start_date = request.query_params.get('start_date')
+    end_date = request.query_params.get('end_date')
+    
+    if not all([accommodation_id, start_date, end_date]):
+        return Response({
+            'success': False,
+            'message': 'Missing required parameters.',
+            'available': False
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    try:
+        start_date = parse_date(start_date)
+        end_date = parse_date(end_date)
+        
+        if not start_date or not end_date:
+            return Response({
+                'success': False,
+                'message': 'Invalid date format. Use YYYY-MM-DD.',
+                'available': False
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        if start_date >= end_date:
+            return Response({
+                'success': False,
+                'message': 'End date must be after start date.',
+                'available': False
+            }, status=status.HTTP_400_BAD_REQUEST)
+            
+        # Set minimum booking duration
+        MIN_BOOKING_DAYS = 2
+        booking_days = (end_date - start_date).days
+        if booking_days < MIN_BOOKING_DAYS:
+            return Response({
+                'success': False,
+                'message': f'Minimum booking period is {MIN_BOOKING_DAYS} days.',
+                'available': False
+            }, status=status.HTTP_400_BAD_REQUEST)
+            
+        accommodation = get_object_or_404(Accommodation, id=accommodation_id)
+        
+        # Check if dates are within accommodation's available range
+        if start_date < accommodation.available_from or end_date > accommodation.available_to:
+            return Response({
+                'success': False,
+                'message': f'Dates must be within available range: {accommodation.available_from} to {accommodation.available_to}',
+                'available': False
+            }, status=status.HTTP_400_BAD_REQUEST)
+            
+        # Check if dates overlap with existing reservations
+        is_available = accommodation.is_available(start_date, end_date)
+        
+        if is_available:
+            return Response({
+                'success': True,
+                'message': 'Selected dates are available.',
+                'available': True
+            })
+        else:
+            return Response({
+                'success': False,
+                'message': 'Selected dates overlap with existing reservations.',
+                'available': False
+            }, status=status.HTTP_200_OK)
+            
+    except Accommodation.DoesNotExist:
+        return Response({
+            'success': False,
+            'message': 'Accommodation not found.',
+            'available': False
+        }, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        return Response({
+            'success': False,
+            'message': str(e),
+            'available': False
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+# Update is_available method in Accommodation model
+def is_available(self, start_date, end_date):
+    """
+    Check if accommodation is available for the given time period.
+    """
+    # Set minimum booking duration
+    MIN_BOOKING_DAYS = 2
+    
+    # Check if booking duration meets minimum requirement
+    booking_days = (end_date - start_date).days
+    if booking_days < MIN_BOOKING_DAYS:
+        return False
+        
+    # Check if dates are within accommodation's available range
+    if start_date < self.available_from or end_date > self.available_to:
+        return False
+        
+    # Check if dates overlap with existing reservations
+    overlapping_reservations = self.reservation_periods.filter(
+        Q(start_date__lte=end_date) & Q(end_date__gte=start_date)
+    ).exists()
+    
+    return not overlapping_reservations

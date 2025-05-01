@@ -6,7 +6,7 @@ from rest_framework import status
 from django.core.exceptions import ValidationError
 from django.urls import reverse
 from django.utils.timezone import now
-from accommodation.models import Accommodation, University, AccommodationRating, AccommodationUniversity,UniversityAPIKey
+from accommodation.models import Accommodation, University, AccommodationRating, AccommodationUniversity, UniversityAPIKey, ReservationPeriod
 import datetime
 import uuid
 
@@ -143,7 +143,6 @@ class AccommodationAPITestCase(APITestCase):
             'reserved': self.accommodation_1.reserved,
             'formatted_address': self.accommodation_1.formatted_address(),  # 添加 formatted_address 字段
             'building_name': self.accommodation_1.building_name,
-            'userID': self.accommodation_1.userID,  # 添加 userID 字段
             'room_number': self.accommodation_1.room_number,
             'floor_number': self.accommodation_1.floor_number,
             'flat_number': self.accommodation_1.flat_number,
@@ -326,12 +325,14 @@ class AccommodationAPITestCase(APITestCase):
         # 检查响应状态码
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-
-        # # 检查数据库中住宿的状态
+        # 检查数据库中住宿的状态
         self.accommodation_1.refresh_from_db()
-        self.assertTrue(self.accommodation_1.reserved)
-        self.assertEqual(self.accommodation_1.userID, "HKU_123")
-        self.assertEqual(self.accommodation_1.reservation_contact_number, "98765432")
+        
+        # 验证是否已创建ReservationPeriod
+        reservation = ReservationPeriod.objects.get(accommodation=self.accommodation_1, user_id="HKU_123")
+        self.assertEqual(reservation.user_id, "HKU_123")
+        self.assertEqual(reservation.contact_number, "98765432")
+
         """测试不能预定已经预定的宿舍"""
         query_params = f"id={self.accommodation_1.id}&User%20ID=CUHK_123"
         
@@ -375,11 +376,8 @@ class AccommodationAPITestCase(APITestCase):
         # 检查响应状态码
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-        # 检查数据库中的预订状态是否更新
-        self.accommodation_1.refresh_from_db()
-        self.assertFalse(self.accommodation_1.reserved)
-        self.assertEqual(self.accommodation_1.userID, "")
-        self.assertEqual(self.accommodation_1.reservation_contact_number, None)  # 检查联系电话被清除
+        # 检查ReservationPeriod是否已被删除
+        self.assertFalse(ReservationPeriod.objects.filter(accommodation=self.accommodation_1, user_id="HKU_123").exists())
     
     def test_cancel_reservation_wrong_user(self):
         """测试用户尝试取消不属于自己的预订"""

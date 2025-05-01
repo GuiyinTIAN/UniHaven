@@ -19,4 +19,5 @@ urlpatterns = [
     path('link-accommodation/<int:id>/', views.link_to_accommodation, name='link_to_accommodation'),
     path("view_reservations/", views.view_reservations, name="view_reservations"),
     path('api/accommodation/<int:id>/update/', UpdateAccommodationView.as_view(), name='update_accommodation'),
+    path("check_availability/", views.check_availability, name="check_availability"),
 ]

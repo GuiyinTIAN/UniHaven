@@ -42,7 +42,7 @@ def debug_accommodation_dates():
             'title': acc.title,
             'available_from': acc.available_from,
             'available_to': acc.available_to,
-            'is_reserved': acc.reserved
+            'is_reserved': acc.is_reserved()  # 使用新的is_reserved方法
         })
     
     return date_info

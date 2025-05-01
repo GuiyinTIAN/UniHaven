@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.contrib import messages
 from django.db import connection
-from .models import Accommodation, AccommodationRating, University, AccommodationUniversity, UniversityAPIKey
+from .models import Accommodation, AccommodationRating, University, AccommodationUniversity, UniversityAPIKey, ReservationPeriod
 
 class AccommodationUniversityInline(admin.TabularInline):
     model = AccommodationUniversity
@@ -15,13 +15,24 @@ class UniversityAPIKeyInline(admin.StackedInline):
     readonly_fields = ('created_at', 'last_used')
     fields = ('key', 'is_active', 'created_at', 'last_used')
 
+class ReservationPeriodInline(admin.TabularInline):
+    model = ReservationPeriod
+    extra = 0
+    fields = ('user_id', 'contact_number', 'start_date', 'end_date')
+
 @admin.register(Accommodation)
 class AccommodationAdmin(admin.ModelAdmin):
-    list_display = ('id', 'title', 'type', 'price', 'region', 'reserved', 'get_universities')
-    list_filter = ('type', 'region', 'reserved', 'affiliated_universities')
+    list_display = ('id', 'title', 'type', 'price', 'region', 'has_reservations', 'get_universities')
+    list_filter = ('type', 'region', 'affiliated_universities')
     search_fields = ('title', 'description', 'building_name')
     actions = ['reset_ids']
-    inlines = [AccommodationUniversityInline]
+    inlines = [AccommodationUniversityInline, ReservationPeriodInline]
+    
+    def has_reservations(self, obj):
+        """检查住宿是否有任何预订"""
+        return obj.reservation_periods.exists()
+    has_reservations.boolean = True
+    has_reservations.short_description = "Reserved"
     
     def reset_ids(self, request, queryset):
         """Delete all records and reset the ID sequence to 1"""
@@ -83,4 +94,17 @@ class UniversityAPIKeyAdmin(admin.ModelAdmin):
         if obj:
             return self.readonly_fields + ('university',) 
         return self.readonly_fields
+
+@admin.register(ReservationPeriod)
+class ReservationPeriodAdmin(admin.ModelAdmin):
+    """Admin configuration for ReservationPeriod model"""
+    list_display = ('id', 'accommodation', 'user_id', 'start_date', 'end_date', 'created_at')
+    list_filter = ('start_date', 'end_date', 'created_at')
+    search_fields = ('user_id', 'contact_number', 'accommodation__title')
+    raw_id_fields = ('accommodation',)
+    date_hierarchy = 'start_date'
+    
+    def get_queryset(self, request):
+        """Optimize queryset by prefetching related accommodation"""
+        return super().get_queryset(request).select_related('accommodation')
 
