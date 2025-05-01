@@ -956,7 +956,7 @@ class CancellationView(GenericAPIView):
         parameters=[
             OpenApiParameter(name="id", location=OpenApiParameter.QUERY, description="Accommodation ID", type=int, required=True),
             OpenApiParameter(name="User ID", location=OpenApiParameter.QUERY, 
-                             description="User ID, you need to assign which school you are from,e. if you from HKU, that is HKU_XXX, if HKUST, that is HKUST_xxx, if CUHK, CUHK_xxx", 
+                             description="User ID, you need to assign which school you are from, e.g., if you are from HKU, that is HKU_XXX, if HKUST, that is HKUST_xxx, if CUHK, CUHK_xxx", 
                              type=str, required=True)
         ],
         responses={
@@ -966,7 +966,7 @@ class CancellationView(GenericAPIView):
             404: ErrorResponseSerializer
         }
     )
-    def post(self, request):
+    def put(self, request):
         """Cancel an accommodation reservation using query parameter id."""
         accommodation_id = request.query_params.get('id')
         user_id = request.query_params.get('User ID')
@@ -1021,7 +1021,6 @@ class CancellationView(GenericAPIView):
             else:
                 specialist_email = "cedars@hku.hk"
                 university_name = "HKU"
-            # specialist_email = "cedars@hku.hk"  
             send_mail(
                 subject="[UniHaven] Reservation Cancelled",
                 message=f"Dear {university_name},\n\nStudent {student_name} has cancelled their reservation for '{accommodation.title}'.\nNo further action is required.\n\nRegards,\nUniHaven System",
@@ -1356,3 +1355,124 @@ def view_reservations(request):
     else:
         # Show a form to enter User ID
         return Response({}, template_name='accommodation/view_reservations.html')
+    
+class UpdateAccommodationView(GenericAPIView):
+    """
+    API View to update accommodation information.
+
+    Allows updating of accommodation information if the accommodation is associated
+    with the user's university (determined by API key authentication).
+    """
+    serializer_class = AddAccommodationSerializer  # 使用与创建宿舍相同的序列化器
+
+    @extend_schema(
+        summary="Update Accommodation",
+        description="Update information of an existing accommodation by ID. Requires API key authentication.",
+        parameters=[
+            OpenApiParameter(name="id", location=OpenApiParameter.PATH, description="Accommodation ID", type=int, required=True)
+        ] + API_KEY_PARAMETER,
+        request=AddAccommodationSerializer,
+        responses={
+            200: SuccessResponseSerializer,
+            400: ErrorResponseSerializer,
+            401: OpenApiResponse(description="API key authentication failed"),
+            403: OpenApiResponse(description="Not allowed to update this accommodation"),
+            404: ErrorResponseSerializer
+        }
+    )
+    def put(self, request, id):
+        """
+        Update an accommodation by ID.
+
+        Args:
+            request: HTTP PUT request with updated accommodation data.
+            id: ID of the accommodation to update.
+
+        Returns:
+            JSON response with success message and updated accommodation data.
+        """
+        try:
+            # 获取宿舍对象
+            accommodation = get_object_or_404(Accommodation, id=id)
+
+            # 验证当前大学是否关联此宿舍
+            university = request.user
+            if not accommodation.affiliated_universities.filter(id=university.id).exists():
+                return Response(
+                    {"success": False, "message": f"{university.name} is not associated with this accommodation."},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+
+            # 验证并更新宿舍信息
+            serializer = self.serializer_class(accommodation, data=request.data, partial=False)  # 使用完整更新
+            if serializer.is_valid():
+                updated_accommodation = serializer.save()
+                updated_accommodation.affiliated_universities.add(university)  # 确保大学仍然关联
+
+                return Response(
+                    {"success": True, "message": "Accommodation updated successfully.", "accommodation": serializer.data},
+                    status=status.HTTP_200_OK
+                )
+            else:
+                return Response(
+                    {"success": False, "errors": serializer.errors},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+        except Accommodation.DoesNotExist:
+            return Response(
+                {"success": False, "message": "Accommodation not found."},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as e:
+            return Response(
+                {"success": False, "message": f"An error occurred: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+    def patch(self, request, id):
+        """
+        Partially update an accommodation by ID.
+
+        Args:
+            request: HTTP PATCH request with partial accommodation data.
+            id: ID of the accommodation to update.
+
+        Returns:
+            JSON response with success message and updated accommodation data.
+        """
+        try:
+            # 获取宿舍对象
+            accommodation = get_object_or_404(Accommodation, id=id)
+
+            # 验证当前大学是否关联此宿舍
+            university = request.user
+            if not accommodation.affiliated_universities.filter(id=university.id).exists():
+                return Response(
+                    {"success": False, "message": f"{university.name} is not associated with this accommodation."},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+
+            # 验证并部分更新宿舍信息
+            serializer = self.serializer_class(accommodation, data=request.data, partial=True)  # 使用部分更新
+            if serializer.is_valid():
+                updated_accommodation = serializer.save()
+
+                return Response(
+                    {"success": True, "message": "Accommodation updated successfully.", "accommodation": serializer.data},
+                    status=status.HTTP_200_OK
+                )
+            else:
+                return Response(
+                    {"success": False, "errors": serializer.errors},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+        except Accommodation.DoesNotExist:
+            return Response(
+                {"success": False, "message": "Accommodation not found."},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as e:
+            return Response(
+                {"success": False, "message": f"An error occurred: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
