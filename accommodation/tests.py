@@ -167,7 +167,7 @@ class AccommodationAPITestCase(APITestCase):
 
         # 请求数据
         data = {
-            "title": "test case ",
+            "title": "test case",
             "description": "1",
             "type": "APARTMENT",
             "price": "3100.00",
@@ -194,6 +194,17 @@ class AccommodationAPITestCase(APITestCase):
         self.assertEqual(accommodation.description, data['description'])
         self.assertEqual(accommodation.type, data['type'])
         self.assertEqual(accommodation.price, float(data['price']))
+        self.assertEqual(accommodation.title, data['title'])
+        self.assertEqual(accommodation.beds, data['beds'])
+        self.assertEqual(accommodation.bedrooms, data['bedrooms'])
+        self.assertEqual(str(accommodation.available_from), data['available_from'])
+        self.assertEqual(str(accommodation.available_to), data['available_to'])
+        # self.assertEqual(accommodation.building_name, data['building_name'])
+        self.assertEqual(accommodation.room_number, data['room_number'])
+        self.assertEqual(accommodation.floor_number, data['floor_number'])
+        self.assertEqual(accommodation.flat_number, data['flat_number'])
+        self.assertEqual(accommodation.contact_phone, data['contact_phone'])
+        self.assertEqual(accommodation.contact_email, data['contact_email'])
         # 测试不同的大学能否添加同样的宿舍
         url = f'/api/add-accommodation/?api_key={self.hku_api_key.key}'
         data = {
@@ -350,15 +361,16 @@ class AccommodationAPITestCase(APITestCase):
         # 构造带查询参数的完整 URL
         full_url = f"{url}?{query_params}"
         
-        response = self.client.post(full_url)  # 发送 POST 请求
+        response = self.client.post(full_url)  # 发送 POST 请求预订
         
-        # 检查响应状态码
+        # 检查预订状态码
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        url = reverse('cancel_reservation') 
-        query_params = f"id={self.accommodation_1.id}&User%20ID=HKU_123"
+
+        url = reverse('cancel_reservation')  # 动态生成取消预订的 URL
+        query_params = f"id={self.accommodation_1.id}&User%20ID=HKU_123"  # 添加必要的查询参数
         full_url = f"{url}?{query_params}"
 
-        response = self.client.post(full_url)
+        response = self.client.put(full_url)  # 改为发送 PUT 请求
 
         # 检查响应状态码
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -378,36 +390,38 @@ class AccommodationAPITestCase(APITestCase):
         # 构造带查询参数的完整 URL
         full_url = f"{url}?{query_params}"
         
-        response = self.client.post(full_url)  # 发送 POST 请求
+        response = self.client.post(full_url)  # 发送 POST 请求预订
         
-        # 检查响应状态码
+        # 检查预订状态码
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        url = reverse('cancel_reservation')
+
+        url = reverse('cancel_reservation')  # 动态生成取消预订的 URL
         query_params = f"id={self.accommodation_1.id}&User%20ID=HKU_456"  # 错误的用户 ID
         full_url = f"{url}?{query_params}"
 
-        response = self.client.post(full_url)
+        response = self.client.put(full_url)  # 改为发送 PUT 请求
 
         # 检查响应状态码
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_cancel_reservation_not_found(self):
         """测试取消不存在的住宿"""
-        url = reverse('cancel_reservation')
+        url = reverse('cancel_reservation')  # 动态生成取消预订的 URL
         query_params = f"id=9999&User%20ID=HKU_123"  # 不存在的住宿 ID
         full_url = f"{url}?{query_params}"
 
-        response = self.client.post(full_url)
+        response = self.client.put(full_url)  # 改为发送 PUT 请求
+
         # 检查响应状态码
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
     def test_cancel_reservation_not_reserved(self):
         """测试取消未预订的住宿"""
-        url = reverse('cancel_reservation')
-        query_params = f"id={self.accommodation_1.id}&User%20ID=HKU_123"
+        url = reverse('cancel_reservation')  # 动态生成取消预订的 URL
+        query_params = f"id={self.accommodation_1.id}&User%20ID=HKU_123"  # 未预订的住宿
         full_url = f"{url}?{query_params}"
 
-        response = self.client.post(full_url)
+        response = self.client.put(full_url)  # 改为发送 PUT 请求
 
         # 检查响应状态码
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -600,7 +614,44 @@ class AccommodationAPITestCase(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(response.json()["success"], False)
         self.assertEqual(response.json()["message"], "Accommodation not found.")
+    
+    def test_distance_calculation(self):
+        """测试距离计算"""
+        # 定义 API URL 和查询参数
+        url = '/api/list-accommodation/'
+        params = {
+            "price": 2000,
+            "type": "APARTMENT",  # 查询 APARTMENT 类型
+            "format": "json",
+            "distance": "5",  # 设置距离为 5 公里
+            "campus": "HKU_main",  # 设置校园为 HKU
+        }
+        
+        # 发起 GET 请求
+        response = self.client.get(url, params)
+        
+        # 检查响应状态码是否为 200
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        
+        # 打印 JSON 响应数据用于调试
+        response_data = response.json()
+        print(response_data)
 
+        
+        # 检查返回的住宿列表是否存在
+        accommodations = response_data.get("accommodations", [])
+        self.assertGreater(len(accommodations), 0, "No accommodations found in the response.")
+    
+
+        # 验证第一个住宿的距离是否符合预期
+        first_accommodation = accommodations[0]
+        print("title:",first_accommodation["title"])
+        self.assertIn("distance", first_accommodation, "Distance key is missing in the accommodation data.")
+        self.assertAlmostEqual(
+            first_accommodation["distance"], 
+            0.21358179659004045
+        )
+            
 
 
 def generate_unique_code(base="UNI"):
@@ -671,6 +722,8 @@ class AccommodationModelTest(TestCase):
         self.assertEqual(acc.floor_number, "")
         self.assertEqual(acc.flat_number, "")
         self.assertEqual(acc.geo_address, "")
+    
+
 
 class AccommodationRatingModelTest(TestCase):
     def setUp(self):
