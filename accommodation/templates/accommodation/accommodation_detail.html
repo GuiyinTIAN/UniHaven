@@ -305,7 +305,7 @@
                                 <button class="btn btn-sm btn-primary reserve-period-btn" 
                                         data-start="{{ start_date|date:"Y-m-d" }}" 
                                         data-end="{{ end_date|date:"Y-m-d" }}"
-                                        onclick="selectPeriod('{{ start_date|date:"Y-m-d" }}', '{{ end_date|date:"Y-m-d" }}')">
+                                        onclick="selectPeriod(this.getAttribute('data-start'), this.getAttribute('data-end'))">
                                     Reserve This Period
                                 </button>
                             </li>
@@ -425,12 +425,29 @@
 
 {% block extra_js %}
 <script>
+    function getUrlParameter(name) {
+        name = name.replace(/[\[]/, '\\[').replace(/[\]]/, '\\]');
+        var regex = new RegExp('[\\?&]' + name + '=([^&#]*)');
+        var results = regex.exec(location.search);
+        return results === null ? '' : decodeURIComponent(results[1].replace(/\+/g, ' '));
+    }
+
     document.addEventListener('DOMContentLoaded', function() {
         const apiKey = localStorage.getItem('unihaven_api_key');
         if (apiKey) {
             document.getElementById('adminSection').style.display = 'block';
             document.getElementById('studentActionsSection').style.display = 'none';
             document.getElementById('studentButtonGroup').style.display = 'none';
+        }
+        
+        const urlUserId = getUrlParameter('user_id');
+        if (urlUserId) {
+    
+            const userIdInput = document.getElementById('userId');
+            if (userIdInput) {
+                userIdInput.value = urlUserId;
+                userIdInput.readOnly = true;
+            }
         }
     });
     
@@ -467,8 +484,8 @@
         
         const diffTime = Math.abs(new Date(endDate) - new Date(startDate));
         const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-        if (diffDays < 2) {
-            messageEl.textContent = 'Minimum booking period is 2 days.';
+        if (diffDays < 1) {
+            messageEl.textContent = 'Minimum booking period is 1 day.';
             messageEl.style.display = 'block';
             return;
         }
@@ -514,7 +531,7 @@
     }
     
     function submitReservation() {
-        const userId = document.getElementById('userId').value;
+        let userId = getUrlParameter('user_id') || document.getElementById('userId').value;
         const contactNumber = document.getElementById('contactNumber').value;
         
         if (!userId) {

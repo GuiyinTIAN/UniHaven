@@ -6,6 +6,7 @@ from .models import Accommodation, AccommodationRating, University, Accommodatio
 class AccommodationUniversityInline(admin.TabularInline):
     model = AccommodationUniversity
     extra = 1
+    can_delete = False
 
 class UniversityAPIKeyInline(admin.StackedInline):
     model = UniversityAPIKey
@@ -18,7 +19,8 @@ class UniversityAPIKeyInline(admin.StackedInline):
 class ReservationPeriodInline(admin.TabularInline):
     model = ReservationPeriod
     extra = 0
-    fields = ('user_id', 'contact_number', 'start_date', 'end_date')
+    can_delete = False
+    fields = ('user_id', 'contact_number', 'start_date', 'end_date', 'contract_status')
 
 @admin.register(Accommodation)
 class AccommodationAdmin(admin.ModelAdmin):
@@ -40,10 +42,10 @@ class AccommodationAdmin(admin.ModelAdmin):
             messages.error(request, "Only superusers can perform this operation")
             return
             
-        # 删除所有记录
+        # delete all records in the Accommodation model
         Accommodation.objects.all().delete()
         
-        # 根据数据库类型重置序列
+        # reset the ID sequence to 1
         db_engine = connection.vendor
         with connection.cursor() as cursor:
             cursor.execute("DELETE FROM accommodation_accommodation;")
@@ -98,8 +100,8 @@ class UniversityAPIKeyAdmin(admin.ModelAdmin):
 @admin.register(ReservationPeriod)
 class ReservationPeriodAdmin(admin.ModelAdmin):
     """Admin configuration for ReservationPeriod model"""
-    list_display = ('id', 'accommodation', 'user_id', 'start_date', 'end_date', 'created_at')
-    list_filter = ('start_date', 'end_date', 'created_at')
+    list_display = ('id', 'accommodation', 'user_id', 'start_date', 'end_date', 'contract_status', 'created_at')
+    list_filter = ('start_date', 'end_date', 'created_at', 'contract_status')
     search_fields = ('user_id', 'contact_number', 'accommodation__title')
     raw_id_fields = ('accommodation',)
     date_hierarchy = 'start_date'

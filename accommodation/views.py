@@ -736,10 +736,21 @@ def list_accommodation(request):
         serializer = AccommodationListSerializer(accommodations, many=True)
         for acc_data in serializer.data:
             accommodation = Accommodation.objects.get(id=acc_data['id'])
+            # 添加可用期间
             acc_data['available_periods'] = [
                 {'start_date': period[0], 'end_date': period[1]} 
                 for period in accommodation.get_available_periods()
             ]
+            # 添加预订信息
+            acc_data['reservations'] = []
+            for period in accommodation.reservation_periods.all():
+                acc_data['reservations'].append({
+                    'id': period.id,
+                    'start_date': period.start_date,
+                    'end_date': period.end_date,
+                    'user_id': period.user_id,
+                    'contract_status': period.contract_status
+                })
         return Response({'accommodations': serializer.data})
     return render(request, 'accommodation/accommodation_list.html', {
         "buildingName": building_name,
@@ -1080,6 +1091,25 @@ class CancellationView(GenericAPIView):
                     'message': 'You can only cancel your own reservations.'
                 }, status=status.HTTP_403_FORBIDDEN)
                 
+            # Check the contract status and user roles
+            # Get API key to determine if user is a specialist
+            api_key = request.META.get('HTTP_X_API_KEY') or request.query_params.get('api_key')
+            is_specialist = False
+            
+            if api_key:
+                try:
+                    api_key_obj = UniversityAPIKey.objects.get(key=api_key, is_active=True)
+                    is_specialist = True
+                except UniversityAPIKey.DoesNotExist:
+                    is_specialist = False
+            
+            # If a contract has been signed and the user is not an expert, cancellation is not allowed
+            if reservation.contract_status and not is_specialist:
+                return Response({
+                    'success': False,
+                    'message': 'This reservation has a signed contract and cannot be cancelled by students. Please contact housing office for assistance.'
+                }, status=status.HTTP_403_FORBIDDEN)
+                
             # Get university information
             university = get_university_from_user_id(user_id)
             
@@ -1099,6 +1129,11 @@ class CancellationView(GenericAPIView):
             # Delete reservation
             reservation.delete()
             
+            # Special notifications will be sent for cases where signed reservations are cancelled by experts
+            message_suffix = ""
+            if reservation.contract_status and is_specialist:
+                message_suffix = " Note: This reservation had a signed contract and was cancelled by housing office."
+            
             # Check if there are other reservations
             if not ReservationPeriod.objects.filter(accommodation=accommodation).exists():
                 accommodation.save()
@@ -1108,7 +1143,7 @@ class CancellationView(GenericAPIView):
             student_email = f"{student_name}@example.com"
             send_mail(
                 subject="Reservation Cancelled - UniHaven",
-                message=f"Hi {student_name},\n\nYour reservation for '{accommodation.title}' from {start_date} to {end_date} has been cancelled.",
+                message=f"Hi {student_name},\n\nYour reservation for '{accommodation.title}' from {start_date} to {end_date} has been cancelled.{message_suffix}",
                 from_email=settings.DEFAULT_FROM_EMAIL,
                 recipient_list=[student_email],
             )
@@ -1123,7 +1158,7 @@ class CancellationView(GenericAPIView):
                 
             send_mail(
                 subject="[UniHaven] Reservation Cancelled",
-                message=f"Dear {university_name},\n\nStudent {student_name} has cancelled their reservation for '{accommodation.title}' from {start_date} to {end_date}.\nNo further action is required.\n\nRegards,\nUniHaven System",
+                message=f"Dear {university_name},\n\nStudent {student_name} has cancelled their reservation for '{accommodation.title}' from {start_date} to {end_date}.{message_suffix}\nNo further action is required.\n\nRegards,\nUniHaven System",
                 from_email=settings.DEFAULT_FROM_EMAIL,
                 recipient_list=[specialist_email],
             )
@@ -1132,7 +1167,7 @@ class CancellationView(GenericAPIView):
             serializer = AccommodationDetailSerializer(accommodation)
             return Response({
                 'success': True,
-                'message': f'Reservation for accommodation "{accommodation.title}" from {start_date} to {end_date} has been canceled.',
+                'message': f'Reservation for accommodation "{accommodation.title}" from {start_date} to {end_date} has been canceled.{message_suffix}',
                 'UserID': user_id,
                 'accommodation': serializer.data
             })
@@ -1487,7 +1522,7 @@ class UpdateAccommodationView(GenericAPIView):
     Allows updating of accommodation information if the accommodation is associated
     with the user's university (determined by API key authentication).
     """
-    serializer_class = AddAccommodationSerializer  # 使用与创建宿舍相同的序列化器
+    serializer_class = AddAccommodationSerializer  # Use the same serializer as for creating accommodations
 
     @extend_schema(
         summary="Update Accommodation",
@@ -1516,10 +1551,10 @@ class UpdateAccommodationView(GenericAPIView):
             JSON response with success message and updated accommodation data.
         """
         try:
-            # 获取宿舍对象
+            # Get the accommodation object
             accommodation = get_object_or_404(Accommodation, id=id)
 
-            # 验证当前大学是否关联此宿舍
+            # Verify if the current university is associated with this accommodation
             university = request.user
             if not accommodation.affiliated_universities.filter(id=university.id).exists():
                 return Response(
@@ -1527,11 +1562,11 @@ class UpdateAccommodationView(GenericAPIView):
                     status=status.HTTP_403_FORBIDDEN
                 )
 
-            # 验证并更新宿舍信息
-            serializer = self.serializer_class(accommodation, data=request.data, partial=False)  # 使用完整更新
+            # Validate and update accommodation information
+            serializer = self.serializer_class(accommodation, data=request.data, partial=False)  # Use complete update
             if serializer.is_valid():
                 updated_accommodation = serializer.save()
-                updated_accommodation.affiliated_universities.add(university)  # 确保大学仍然关联
+                updated_accommodation.affiliated_universities.add(university)  # Ensure the university remains associated
 
                 return Response(
                     {"success": True, "message": "Accommodation updated successfully.", "accommodation": serializer.data},
@@ -1565,10 +1600,10 @@ class UpdateAccommodationView(GenericAPIView):
             JSON response with success message and updated accommodation data.
         """
         try:
-            # 获取宿舍对象
+            # Get the accommodation object
             accommodation = get_object_or_404(Accommodation, id=id)
 
-            # 验证当前大学是否关联此宿舍
+            # Verify if the current university is associated with this accommodation
             university = request.user
             if not accommodation.affiliated_universities.filter(id=university.id).exists():
                 return Response(
@@ -1576,8 +1611,8 @@ class UpdateAccommodationView(GenericAPIView):
                     status=status.HTTP_403_FORBIDDEN
                 )
 
-            # 验证并部分更新宿舍信息
-            serializer = self.serializer_class(accommodation, data=request.data, partial=True)  # 使用部分更新
+            # Validate and partially update accommodation information
+            serializer = self.serializer_class(accommodation, data=request.data, partial=True)  # Use partial update
             if serializer.is_valid():
                 updated_accommodation = serializer.save()
 
@@ -1650,7 +1685,7 @@ def check_availability(request):
             }, status=status.HTTP_400_BAD_REQUEST)
             
         # Set minimum booking duration
-        MIN_BOOKING_DAYS = 2
+        MIN_BOOKING_DAYS = 1
         booking_days = (end_date - start_date).days
         if booking_days < MIN_BOOKING_DAYS:
             return Response({
@@ -1704,7 +1739,7 @@ def is_available(self, start_date, end_date):
     Check if accommodation is available for the given time period.
     """
     # Set minimum booking duration
-    MIN_BOOKING_DAYS = 2
+    MIN_BOOKING_DAYS = 1
     
     # Check if booking duration meets minimum requirement
     booking_days = (end_date - start_date).days
