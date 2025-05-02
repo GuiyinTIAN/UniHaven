@@ -523,8 +523,8 @@ def delete_accommodation(request):
             type=OpenApiTypes.STR,
             required=False,
         ),
-        OpenApiParameter(name="reservation_start", description="Reservation start date (yyyy-MM-DD)", type=OpenApiTypes.DATE, required=True),
-        OpenApiParameter(name="reservation_end", description="Reservation end date (yyyy-MM-DD)", type=OpenApiTypes.DATE, required=True),
+        OpenApiParameter(name="reservation_start", description="Reservation start date (yyyy-MM-DD)", type=OpenApiTypes.DATE, required=False),
+        OpenApiParameter(name="reservation_end", description="Reservation end date (yyyy-MM-DD)", type=OpenApiTypes.DATE, required=False),
     ] + API_KEY_PARAMETER,
     responses={
         200: AccommodationListResponseSerializer,
@@ -1553,7 +1553,7 @@ class UpdateAccommodationView(GenericAPIView):
                 
                 # record the API key for debugging
                 print(f"[DEBUG-Backend] Received API key: {api_key}")
-                
+            
                 if not api_key:
                     return Response(
                         {"success": False, "message": "API key is required for adding accommodations"},
@@ -1608,53 +1608,6 @@ class UpdateAccommodationView(GenericAPIView):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
-    def patch(self, request, id):
-        """
-        Partially update an accommodation by ID.
-
-        Args:
-            request: HTTP PATCH request with partial accommodation data.
-            id: ID of the accommodation to update.
-
-        Returns:
-            JSON response with success message and updated accommodation data.
-        """
-        try:
-            # Get the accommodation object
-            accommodation = get_object_or_404(Accommodation, id=id)
-
-            # Verify if the current university is associated with this accommodation
-            university = request.user
-            if not accommodation.affiliated_universities.filter(id=university.id).exists():
-                return Response(
-                    {"success": False, "message": f"{university.name} is not associated with this accommodation."},
-                    status=status.HTTP_403_FORBIDDEN
-                )
-
-            # Validate and partially update accommodation information
-            serializer = self.serializer_class(accommodation, data=request.data, partial=True)  # Use partial update
-            if serializer.is_valid():
-                updated_accommodation = serializer.save()
-
-                return Response(
-                    {"success": True, "message": "Accommodation updated successfully.", "accommodation": serializer.data},
-                    status=status.HTTP_200_OK
-                )
-            else:
-                return Response(
-                    {"success": False, "errors": serializer.errors},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-        except Accommodation.DoesNotExist:
-            return Response(
-                {"success": False, "message": "Accommodation not found."},
-                status=status.HTTP_404_NOT_FOUND
-            )
-        except Exception as e:
-            return Response(
-                {"success": False, "message": f"An error occurred: {str(e)}"},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
         
 @extend_schema(
     summary="Check Accommodation Availability",

@@ -6,7 +6,7 @@ from rest_framework import status
 from django.core.exceptions import ValidationError
 from django.urls import reverse
 from django.utils.timezone import now
-from accommodation.models import Accommodation, University, AccommodationRating, AccommodationUniversity,UniversityAPIKey
+from accommodation.models import Accommodation, University, AccommodationRating, AccommodationUniversity,UniversityAPIKey, ReservationPeriod
 import datetime
 import uuid
 
@@ -96,8 +96,8 @@ class AccommodationAPITestCase(APITestCase):
             price=8000.00,
             beds=4,
             bedrooms=3,
-            available_from="2025-07-01",
-            available_to="2025-09-01",
+            available_from="2025-04-26",
+            available_to="2025-05-08",
             # reserved=False,
             building_name="kennedy Town",
             room_number="C3003",
@@ -105,6 +105,24 @@ class AccommodationAPITestCase(APITestCase):
             floor_number="30",
             latitude=22.28367,
             longitude=114.12809,
+            # reservation_periods =[
+            # {
+            # "id": 10,
+            # "start_date": "2025-04-28",
+            # "end_date": "2025-05-01",
+            # "user_id": "HKUST_123"
+            # }
+            # ],
+            # available_periods =[
+            # {
+            # "start_date": "2025-04-26",
+            # "end_date": "2025-04-27"
+            # },
+            # {
+            # "start_date": "2025-05-02",
+            # "end_date": "2025-05-08"
+            # }
+            # ]
         )
         # 将住宿与大学关联
         cls.accommodation_1.affiliated_universities.add(cls.hku, cls.hkust, cls.cuhk)
@@ -292,7 +310,24 @@ class AccommodationAPITestCase(APITestCase):
         accommodations = response.json()["accommodations"]
         prices = [float(accommodation["price"]) for accommodation in accommodations]
         self.assertEqual(prices, sorted(prices))
+    
+    def test_list_accommodation_price_filter(self):
+        """测试根据价格范围过滤住宿"""
+        url = '/api/list-accommodation/'
+        params = {
+            "max_price" : 5000,  # 按价格升序排序
+            "format": "json"
+        }
+        response = self.client.get(url, params)
 
+        # 检查响应状态码
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        # 检查返回的住宿是否按价格升序排序
+        accommodations = response.json()["accommodations"]
+        print("accommodations", accommodations)
+        prices = [float(accommodation["price"]) for accommodation in accommodations]
+        self.assertEqual(len(prices), 2)
     def test_list_accommodation_date_filter(self):
         """测试根据可用日期范围过滤住宿"""
         url = '/api/list-accommodation/'
@@ -428,13 +463,18 @@ class AccommodationAPITestCase(APITestCase):
     def test_cancel_reservation_not_reserved(self):
         """测试取消未预订的住宿"""
         url = reverse('cancel_reservation')  # 动态生成取消预订的 URL
-        query_params = f"id={self.accommodation_1.id}&User%20ID=HKU_123"  # 未预订的住宿
+        query_params = f"&User%20ID=CUHK_890&id={self.accommodation_1.id}&reservation_id=1"  # 添加必要的查询参数
         full_url = f"{url}?{query_params}"
 
-        response = self.client.put(full_url)  # 改为发送 PUT 请求
+        response = self.client.put(full_url)  
 
         # 检查响应状态码
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        expected_response = {
+        "success": False,
+        "message": "Reservation not found."
+        }
+        self.assertEqual(response.json(), expected_response)
     
     def test_submit_rating_success(self):
         """测试成功提交评分"""
@@ -670,8 +710,80 @@ class AccommodationAPITestCase(APITestCase):
             first_accommodation["distance"], 
             0.21358179659004045
         )
-            
 
+    def test_update_accommodation_success(self):
+        """测试成功更新住宿信息"""
+        # 新的更新数据
+        updated_data = {
+            "title": "Test_9",
+            "description": "123",
+            "type": "APARTMENT",
+            "price": 9517,
+            "beds": 1,
+            "bedrooms": 2,
+            "available_from": "2025-05-02",
+            "available_to": "2025-05-02",
+            "building_name": "top",
+            "room_number": "string",
+            "floor_number": "string",
+            "flat_number": "string",
+            "contact_name": "string",
+            "contact_phone": "string",
+            "contact_email": "user@example.com"
+        }
+        url = f"/api/update_accommodation/{self.accommodation_1.id}"
+        response = self.client.put(
+            f"{url}?api_key={self.hku_api_key.key}",
+            data=updated_data,
+            format='json'
+        )
+
+        # 检查响应状态码
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        # 检查响应内容
+        self.assertTrue(response.json()["success"])
+        self.assertEqual(response.json()["message"], "Accommodation updated successfully.")
+            # 从数据库中获取更新后的住宿对象
+        self.accommodation_1.refresh_from_db()
+
+        # 验证数据库中的字段值是否与 updated_data 一致
+        self.assertEqual(self.accommodation_1.title, updated_data["title"])
+        self.assertEqual(self.accommodation_1.description, updated_data["description"])
+        self.assertEqual(self.accommodation_1.type, updated_data["type"])
+        self.assertEqual(int(self.accommodation_1.price), updated_data["price"])  # 注意 price 是字符串
+        self.assertEqual(self.accommodation_1.beds, updated_data["beds"])
+        self.assertEqual(self.accommodation_1.bedrooms, updated_data["bedrooms"])
+        self.assertEqual(str(self.accommodation_1.available_from), updated_data["available_from"])
+        self.assertEqual(str(self.accommodation_1.available_to), updated_data["available_to"])
+        self.assertEqual(self.accommodation_1.building_name, updated_data["building_name"])
+        self.assertEqual(self.accommodation_1.room_number, updated_data["room_number"])
+        self.assertEqual(self.accommodation_1.floor_number, updated_data["floor_number"])
+        self.assertEqual(self.accommodation_1.flat_number, updated_data["flat_number"])
+        self.assertEqual(self.accommodation_1.contact_name, updated_data["contact_name"])
+        self.assertEqual(self.accommodation_1.contact_phone, updated_data["contact_phone"])
+        self.assertEqual(self.accommodation_1.contact_email, updated_data["contact_email"])
+    
+    def test_list_accommodation_with_reservation_period_filters(self):
+        """测试带过滤条件的住宿查询"""
+        reservation_1 = ReservationPeriod.objects.create(
+        accommodation= self.accommodation_3,
+        user_id="CUHK_12345",
+        start_date="2025-05-03",
+        end_date="2025-05-05"
+    )
+        self.accommodation_3.reservation_periods.set([reservation_1])
+        url = f'/api/list-accommodation/?api_key={self.cuhk_api_key.key}'
+        params = {
+            "reservation_end" : "2025-05-05",
+            "reservation_start" :"2025-05-03", 
+            "format": "json"
+        }
+        response = self.client.get(url, params)
+        # 检查响应状态码
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.json()["accommodations"]), 1) # 检查返回的住宿数量
+        # 检查返回的住宿数量
 
 def generate_unique_code(base="UNI"):
     """Generate a unique code to avoid UNIQUE constraint conflict"""
@@ -718,7 +830,7 @@ class AccommodationModelTest(TestCase):
 
     # def test_reserved_default_false(self):
     #     """Test that reserved is False by default when creating Accommodation"""
-    #     self.assertFalse(self.accommodation.reserved)
+    #     self.assertFalse(self.accommodation.is_reserved())
 
     def test_save_method_cleans_none_fields(self):
         """Test that save() automatically cleans None fields"""
