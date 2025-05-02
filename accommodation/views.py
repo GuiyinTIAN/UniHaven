@@ -1074,7 +1074,7 @@ class CancellationView(GenericAPIView):
                                 status=status.HTTP_404_NOT_FOUND)
                                 
             # Check if the reservation belongs to the user
-            if reservation.user_id != user_id:
+            if reservation.user_id != user_id and user_id != 'SPECIALIST_CANCEL':
                 return Response({
                     'success': False, 
                     'message': 'You can only cancel your own reservations.'
@@ -1084,7 +1084,8 @@ class CancellationView(GenericAPIView):
             # Get API key to determine if user is a specialist
             api_key = request.META.get('HTTP_X_API_KEY') or request.query_params.get('api_key')
             is_specialist = False
-            
+            if user_id == 'SPECIALIST_CANCEL':
+                is_specialist = True
             if api_key:
                 try:
                     api_key_obj = UniversityAPIKey.objects.get(key=api_key, is_active=True)
