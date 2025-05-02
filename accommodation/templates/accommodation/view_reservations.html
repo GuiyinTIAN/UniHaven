@@ -1,0 +1,271 @@
+{% extends 'accommodation/base.html' %}
+{% load static %}
+
+{% block title %}UniHaven - View Reservation{% endblock %}
+{% block nav_title %}View Reservation{% endblock %}
+
+{% block extra_css %}
+<style>
+    .user-id-form {
+        max-width: 500px;
+        margin: 30px auto;
+        padding: 20px;
+        background-color: #f8f9fa;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    
+    .reservations-list {
+        margin-top: 30px;
+    }
+    
+    .reservations-title {
+        font-size: 1.5em;
+        font-weight: 600;
+        color: var(--primary-color);
+        margin-bottom: 20px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #eee;
+    }
+    
+    .reservation-card {
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        padding: 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        transition: transform 0.2s;
+        background-color: white;
+    }
+    
+    .reservation-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    
+    .reservation-title {
+        font-size: 1.4em;
+        color: var(--primary-color);
+        margin-bottom: 15px;
+        font-weight: 600;
+    }
+    
+    .reservation-details {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 15px;
+        margin-bottom: 15px;
+    }
+    
+    .detail-item {
+        font-size: 0.95em;
+        flex: 1 1 200px;
+        min-width: 0;
+    }
+    
+    .detail-label {
+        font-weight: bold;
+        color: #495057;
+    }
+    
+    .actions {
+        margin-top: 15px;
+        display: flex;
+        justify-content: flex-end;
+    }
+    
+    .error-message {
+        color: #dc3545;
+        background-color: #f8d7da;
+        border: 1px solid #f5c6cb;
+        border-radius: 4px;
+        padding: 10px 15px;
+        margin-bottom: 20px;
+    }
+    
+    .no-reservations {
+        text-align: center;
+        padding: 30px;
+        background-color: #f8f9fa;
+        border-radius: 8px;
+        margin-top: 20px;
+    }
+    
+    .reservation-periods {
+        margin-top: 15px;
+    }
+    
+    .reservation-periods h4 {
+        font-size: 1.2em;
+        font-weight: 600;
+        margin-bottom: 10px;
+    }
+    
+    .reservation-periods ul {
+        list-style: none;
+        padding: 0;
+    }
+    
+    .reservation-periods li {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 10px;
+        padding: 8px;
+        border-radius: 4px;
+        background-color: #f8f9fa;
+    }
+    
+    .period-dates {
+        font-size: 0.95em;
+        color: #495057;
+    }
+
+    .cancel-btn {
+        background-color: #dc3545;
+        color: white;
+        border: none;
+        padding: 5px 10px;
+        border-radius: 4px;
+        font-size: 0.9em;
+        cursor: pointer;
+    }
+    
+    .cancel-btn:hover {
+        background-color: #c82333;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    
+    {% if error %}
+    <div class="error-message">
+        {{ error }}
+    </div>
+    {% endif %}
+    
+    <div class="user-id-form">
+        <form method="post" id="userIdForm">
+            {% csrf_token %}
+            <div class="form-group">
+                <label for="user_id">Enter your User ID to view your reservations:</label>
+                <input type="text" name="user_id" id="user_id" class="form-control" 
+                       placeholder="e.g. HKU_12345678, HKUST_87654321, CUHK_12345678" required
+                       {% if user_id %}value="{{ user_id }}"{% endif %}>
+                <small class="form-text text-muted" >Format: [University_Code]_[Student Number]</small>
+            </div>
+            <div class="button-group" style="display: flex;justify-content: center; gap: 10px; margin-top: 15px;">
+                <button type="submit" class="btn btn-primary">View My Reservations</button>
+                {% if user_id %}
+                <button type="button" class="btn btn-secondary" onclick="clearForm()">Clear Form</button>
+                {% endif %}
+            </div>
+        </form>
+    </div>
+    
+    {% if reservations %}
+    <div class="reservations-list">
+        <h2 class="reservations-title">Your Reservations</h2>
+        
+        {% for accommodation in reservations %}
+        <div class="reservation-card">
+            <div class="reservation-title">{{ accommodation.title }}</div>
+            
+            <div class="reservation-details">
+                <div class="detail-item">
+                    <div class="detail-label">Type:</div>
+                    <div>{{ accommodation.get_type_display }}</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">Price:</div>
+                    <div>HK${{ accommodation.price }}</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">Available From:</div>
+                    <div>{{ accommodation.available_from|date:"Y-m-d" }}</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">Available To:</div>
+                    <div>{{ accommodation.available_to|date:"Y-m-d" }}</div>
+                </div>
+                <div class="detail-item">
+                    <div class="detail-label">Address:</div>
+                    <div>{{ accommodation.formatted_address }}</div>
+                </div>
+            </div>
+            
+            <div class="reservation-periods">
+                <h4>Your Reservation Periods:</h4>
+                <ul>
+                    {% for period in accommodation.user_reservation_periods %}
+                    <li>
+                        <div class="period-dates">
+                            {{ period.start_date|date:"Y-m-d" }} to {{ period.end_date|date:"Y-m-d" }}
+                        </div>
+                        <button class="cancel-btn" 
+                                onclick="showCancelConfirm('{{ accommodation.id }}', '{{ user_id }}', '{{ period.id }}')">
+                            Cancel This Period
+                        </button>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+            
+            <div class="actions">
+                <a href="{% url 'accommodation_detail' accommodation.pk %}" class="btn btn-secondary">View Details</a>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% elif user_id %}
+    <div class="no-reservations">
+        <p>No reservations found for user ID: {{ user_id }}</p>
+        <a href="{% url 'search_accommodation' %}" class="btn btn-primary">Search for Accommodations</a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // 显示确认取消对话框
+    function showCancelConfirm(accommodationId, userId, reservationId) {
+        if (confirm('Are you sure you want to cancel this reservation period?')) {
+            cancelReservation(accommodationId, userId, reservationId);
+        }
+    }
+    
+    // 取消预订 - 现在需要传递reservationId
+    async function cancelReservation(accommodationId, userId, reservationId) {
+        try {
+            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+            const response = await fetch(`/api/cancel_reservation/?id=${accommodationId}&User%20ID=${encodeURIComponent(userId)}&reservation_id=${reservationId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken
+                }
+            });
+
+            const data = await response.json();
+            
+            if (response.ok) {
+                alert(data.message);
+                // Reload the page to refresh the reservations list
+                window.location.reload();
+            } else {
+                alert(`Failed to cancel reservation: ${data.message}`);
+            }
+        } catch (error) {
+            console.error('Error canceling reservation:', error);
+            alert('An error occurred when canceling the reservation.');
+        }
+    }
+    
+    function clearForm() {
+        window.location.href = "{% url 'view_reservations' %}";
+    }
+</script>
+{% endblock %}

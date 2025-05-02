@@ -1,6 +1,6 @@
 from django.urls import path
 from . import views
-
+from .views import UpdateAccommodationView
 urlpatterns = [
     path("", views.index, name="index"), 
     path("lookup-address/", views.lookup_address, name="lookup_address"),
@@ -17,4 +17,7 @@ urlpatterns = [
     path('test-auth/', views.test_api_key, name='test_api_key'),
     path('check-duplicate-accommodation/', views.check_duplicate_accommodation, name='check_duplicate_accommodation'),
     path('link-accommodation/<int:id>/', views.link_to_accommodation, name='link_to_accommodation'),
+    path("view_reservations/", views.view_reservations, name="view_reservations"),
+    path('api/accommodation/<int:id>/update/', UpdateAccommodationView.as_view(), name='update_accommodation'),
+    path("check_availability/", views.check_availability, name="check_availability"),
 ]
