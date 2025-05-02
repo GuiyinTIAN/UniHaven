@@ -1518,8 +1518,34 @@ class UpdateAccommodationView(GenericAPIView):
         try:
             # 获取宿舍对象
             accommodation = get_object_or_404(Accommodation, id=id)
-
-            # 验证当前大学是否关联此宿舍
+            if not hasattr(request, 'auth') or not request.auth:
+                # check if the request has an API key in the header or query parameters
+                api_key = request.META.get('HTTP_X_API_KEY') or request.query_params.get('api_key')
+                
+                # record the API key for debugging
+                print(f"[DEBUG-Backend] Received API key: {api_key}")
+                
+                if not api_key:
+                    return Response(
+                        {"success": False, "message": "API key is required for adding accommodations"},
+                        status=status.HTTP_401_UNAUTHORIZED,
+                        content_type= 'application/json'
+                    )
+                
+                try:
+                    api_key_obj = UniversityAPIKey.objects.get(key=api_key, is_active=True)
+                    print(f"[DEBUG-Backend] Found API key object: {api_key_obj}, University: {api_key_obj.university.name}")
+                    
+                    request.user = api_key_obj.university
+                    request.auth = api_key_obj
+                    
+                except UniversityAPIKey.DoesNotExist:
+                    print(f"[DEBUG-Backend] API key not found in database or inactive: {api_key}")
+                    return Response(
+                        {"success": False, "message": "Invalid API key"},
+                        status=status.HTTP_401_UNAUTHORIZED,
+                        content_type= 'application/json'
+                    )
             university = request.user
             if not accommodation.affiliated_universities.filter(id=university.id).exists():
                 return Response(
@@ -1600,7 +1626,7 @@ class UpdateAccommodationView(GenericAPIView):
                 {"success": False, "message": f"An error occurred: {str(e)}"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
-
+        
 @extend_schema(
     summary="Check Accommodation Availability",
     description="Check if an accommodation is available for specific dates",
