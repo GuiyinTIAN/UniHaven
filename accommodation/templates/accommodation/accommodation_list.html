@@ -368,6 +368,11 @@
         <div class="result-count">
             {{ accommodations.count }} results found
         </div>
+        <div class="back-to-search">
+            <a href="{% url 'search_accommodation' %}" class="btn btn-primary btn-sm">
+                <i class="fas fa-search"></i> Back to Search
+            </a>
+        </div>
     </div>
 
     {% if accommodations %}
@@ -426,7 +431,7 @@
         {% endfor %}
     </div>
 
-    <div style="display: flex; justify-content: center; margin: 20px 0;">
+    <div style="display: flex; justify-content: center; margin: 20px 0; gap: 10px;">
         {% if user_id %}
         <form method="post" action="{% url 'view_reservations' %}">
             {% csrf_token %}

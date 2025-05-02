@@ -95,7 +95,7 @@ class AccommodationDetailSerializer(serializers.ModelSerializer):
     """Serializer for accommodation detail view"""
     formatted_address = serializers.CharField(read_only=True)
     university_codes = serializers.SerializerMethodField()
-    reservation_periods = serializers.ListField(child=serializers.DictField(), read_only=True)
+    reservation_periods = serializers.SerializerMethodField()  # 修改为SerializerMethodField
     available_periods = serializers.SerializerMethodField()
     reserved = serializers.SerializerMethodField()
     
@@ -109,17 +109,30 @@ class AccommodationDetailSerializer(serializers.ModelSerializer):
     
     @extend_schema_field(OpenApiTypes.BOOL)
     def get_reserved(self, obj):
-        """检查住宿是否已被预订"""
+        """Check whether the accommodation has been booked"""
         return obj.is_reserved()
         
     @extend_schema_field(serializers.ListField(child=serializers.CharField()))
     def get_university_codes(self, obj):
-        """获取相关大学代码列表"""
+        """Get the list of relevant university codes"""
         return [univ.code for univ in obj.affiliated_universities.all()]
+    
+    @extend_schema_field(serializers.ListField(child=serializers.DictField()))
+    def get_reservation_periods(self, obj):
+        """Get the list of reserved time slots"""
+        periods = []
+        for period in obj.reservation_periods.all():
+            periods.append({
+                'id': period.id,
+                'start_date': period.start_date,
+                'end_date': period.end_date,
+                'user_id': period.user_id
+            })
+        return periods
         
     @extend_schema_field(OpenApiTypes.OBJECT)
     def get_available_periods(self, obj) -> List[Dict[str, Any]]:
-        """获取可用时间段"""
+        """Obtain the available time period"""
         periods = obj.get_available_periods()
         return [{'start_date': start_date, 'end_date': end_date} for start_date, end_date in periods]
 
@@ -133,11 +146,10 @@ class AccommodationListSerializer(serializers.ModelSerializer):
         fields = ['id', 'title', 'building_name', 'description', 'type', 'price', 'beds', 'bedrooms',
                  'available_from', 'available_to', 'region', 'distance', 'reserved', 
                  'room_number', 'floor_number', 'flat_number', 'contact_name',
-                 'contact_phone', 'contact_email','rating', 'rating_count', 'rating_sum',
-                 'reservation_contact_number']
+                 'contact_phone', 'contact_email','rating', 'rating_count', 'rating_sum']
     
     def get_reserved(self, obj):
-        """检查住宿是否已被预订"""
+        """Check whether the accommodation has been booked"""
         return obj.is_reserved()
 
 class RatingSerializer(serializers.Serializer):

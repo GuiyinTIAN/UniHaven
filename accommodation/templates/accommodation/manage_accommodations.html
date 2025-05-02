@@ -106,7 +106,7 @@
         background-color: white;
         border-radius: 4px;
         box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-        min-width: 110px; /* 添加最小宽度以确保有足够的空间 */
+        min-width: 110px;
     }
     
     .detail-icon {
@@ -114,16 +114,16 @@
         color: var(--primary-color);
         width: 20px;
         text-align: center;
-        flex-shrink: 0; /* 防止图标缩小 */
+        flex-shrink: 0;
     }
     
     .detail-text {
         font-size: 0.9em;
         font-weight: 500;
-        flex: 1; /* 使文本占据剩余空间 */
-        white-space: nowrap; /* 防止文本换行 */
-        overflow: hidden; /* 隐藏溢出内容 */
-        text-overflow: ellipsis; /* 溢出时显示省略号 */
+        flex: 1;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
     
     .card-meta {
@@ -150,14 +150,21 @@
     
     .card-footer {
         display: flex;
-        justify-content: flex-end;
+        flex-wrap: wrap;
+        justify-content: space-between;
         gap: 12px;
         margin-top: 20px;
         padding-top: 15px;
         border-top: 1px solid #eee;
     }
     
-    .view-btn, .delete-btn {
+    .action-buttons {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+    
+    .btn-card {
         border-radius: 6px;
         padding: 8px 16px;
         font-weight: 500;
@@ -189,6 +196,18 @@
         transform: translateY(-2px);
     }
     
+    .cancel-btn {
+        background-color: #f8f9fa;
+        color: #fd7e14;
+        border: 1px solid #fd7e14;
+    }
+    
+    .cancel-btn:hover {
+        background-color: #fd7e14;
+        color: white;
+        transform: translateY(-2px);
+    }
+    
     .reservation-info {
         margin-top: 15px;
         padding: 15px;
@@ -210,6 +229,14 @@
         font-size: 0.9em;
         margin: 8px 0;
         color: #555;
+    }
+    
+    .reservation-details {
+        margin: 15px 0;
+        padding: 10px;
+        background-color: #f8f9fa;
+        border-left: 3px solid #fd7e14;
+        border-radius: 4px;
     }
     
     .empty-message {
@@ -316,6 +343,15 @@
         align-items: center;
         gap: 10px; 
     }
+
+    .confirmation-modal-overlay {
+        z-index: 2000 !important;
+    }
+    
+    .modal-content {
+        position: relative;
+        z-index: inherit;
+    }
 </style>
 {% endblock %}
 
@@ -364,6 +400,24 @@
             </div>
         </div>
     </div>
+    
+    <!-- Cancel Reservation Modal -->
+    <div id="cancelReservationModal" class="confirmation-modal">
+        <div class="modal-content">
+            <h3>Confirm Cancellation</h3>
+            <p>You are cancelling the reservation for:</p>
+            <div class="reservation-details">
+                <p><strong>Accommodation:</strong> <span id="cancelAccommodationTitle"></span></p>
+                <p><strong>Reserved by:</strong> <span id="cancelUserID"></span></p>
+                <p><strong>Period:</strong> <span id="cancelPeriod"></span></p>
+            </div>
+            <p><strong>Warning:</strong> This action cannot be undone.</p>
+            <div class="modal-actions">
+                <button class="cancel-btn" onclick="closeCancelModal()">Back</button>
+                <button class="confirm-btn" onclick="confirmCancelReservation()">Confirm Cancellation</button>
+            </div>
+        </div>
+    </div>
 </div>
 {% endblock %}
 
@@ -372,9 +426,10 @@
     let accommodationsData = [];
     let selectedAccommodationId = null;
     let universityData = null;
-    
+    let selectedReservationId = null;
+    let universityCode = '';
+
     document.addEventListener('DOMContentLoaded', async function() {
-        // check if API key is set
         const apiKey = localStorage.getItem('unihaven_api_key');
         if (!apiKey) {
             document.getElementById('apiKeyWarning').style.display = 'block';
@@ -388,7 +443,6 @@
             return;
         }
         
-        // check if API key is valid
         try {
             const response = await fetch('/api/test-auth/', {
                 headers: {
@@ -399,24 +453,21 @@
             if (response.ok) {
                 const data = await response.json();
                 universityData = data;
+                universityCode = data.code || '';
                 
-                // display university information
                 document.getElementById('universityName').textContent = data.university || 'Unknown University';
-                document.getElementById('universityCode').textContent = data.code || '';
+                document.getElementById('universityCode').textContent = universityCode;
                 document.getElementById('universityInfo').style.display = 'flex';
             } else {
-                // API key is invalid
                 document.getElementById('apiKeyWarning').style.display = 'block';
             }
         } catch (error) {
             console.error('Error verifying API key:', error);
         }
         
-        // load accommodations with retrieved University
         await loadAccommodations(apiKey);
     });
     
-    // clear API key
     function clearApiKey() {
         if (confirm('Are you sure you want to remove this API key?')) {
             localStorage.removeItem('unihaven_api_key');
@@ -424,7 +475,6 @@
         }
     }
     
-    // load accommodations list
     async function loadAccommodations(apiKey) {
         try {
             const response = await fetch('/api/list-accommodation/?format=json', {
@@ -453,7 +503,6 @@
                 return;
             }
             
-            // generate accommodation cards
             let html = '<div class="cards-grid">';
             for (const accommodation of accommodationsData) {
                 const ratingDisplay = accommodation.rating > 0 
@@ -468,6 +517,52 @@
                 
                 const reservedClass = accommodation.reserved ? 'status-reserved' : 'status-available';
                 const reservedText = accommodation.reserved ? 'Reserved' : 'Available';
+                
+                let reservationHtml = '';
+                const hasReservations = accommodation.reserved || 
+                    (accommodation.reservations && accommodation.reservations.length > 0);
+                
+                let filteredReservations = [];
+                if (accommodation.reservations && accommodation.reservations.length > 0) {
+                    filteredReservations = accommodation.reservations.filter(reservation => {
+                        return reservation.user_id && reservation.user_id.toUpperCase().startsWith(universityCode.toUpperCase() + '_');
+                    });
+                    
+                    const reservationCount = filteredReservations.length;
+                    
+                    if (reservationCount > 0) {
+                        reservationHtml = `
+                            <div class="reservation-info">
+                                <h4><i class="fas fa-calendar-check"></i> Reservation Information</h4>
+                                <p><strong>Status:</strong> ${reservationCount} active reservation${reservationCount > 1 ? 's' : ''} for ${universityData.university}</p>`;
+                        
+                        if (reservationCount > 0) {
+                            const firstReservation = filteredReservations[0];
+                            reservationHtml += `
+                                <p><strong>Latest reservation:</strong> ${firstReservation.user_id} (${firstReservation.start_date} to ${firstReservation.end_date})</p>
+                                <p>Click "Manage Reservations" button below to view and cancel reservations.</p>`;
+                        }
+                        
+                        reservationHtml += `</div>`;
+                    } else if (accommodation.reserved) {
+                        reservationHtml = `
+                            <div class="reservation-info">
+                                <h4><i class="fas fa-calendar-check"></i> Reserved</h4>
+                                <p><strong>Status:</strong> This accommodation is reserved by other universities.</p>
+                            </div>`;
+                    }
+                } else if (accommodation.reserved) {
+                    reservationHtml = `
+                        <div class="reservation-info">
+                            <h4><i class="fas fa-calendar-check"></i> Reserved</h4>
+                            <p><strong>Status:</strong> This accommodation is currently reserved.</p>
+                            <button class="btn btn-sm btn-primary mt-2" onclick="fetchReservationDetails(${accommodation.id})">
+                                <i class="fas fa-sync"></i> Load Reservation Details
+                            </button>
+                        </div>`;
+                }
+                
+                accommodation.filteredReservations = filteredReservations;
                 
                 html += `
                     <div class="accommodation-card">
@@ -506,19 +601,22 @@
                                 </div>
                             </div>
         
-                            ${accommodation.reserved ? `
-                            <div class="reservation-info">
-                                <p><strong>Reserved by:</strong> ${accommodation.userID || 'Unknown'}</p>
-                            </div>
-                            ` : ''}
+                            ${reservationHtml}
                         </div>
                         <div class="card-footer">
-                            <a href="/api/accommodation_detail/${accommodation.id}/" class="view-btn">
+                            <a href="/api/accommodation_detail/${accommodation.id}/" class="btn-card view-btn">
                                 <i class="fas fa-eye"></i> View Details
                             </a>
-                            <button class="delete-btn" onclick="showDeleteConfirmation(${accommodation.id}, '${accommodation.title.replace(/'/g, "\\'")}')">
-                                <i class="fas fa-trash"></i> Delete
-                            </button>
+                            <div class="action-buttons">
+                                ${accommodation.reserved ? 
+                                    `<button class="btn-card cancel-btn" onclick="showAllReservationCancellations(${accommodation.id}, '${accommodation.title.replace(/'/g, "\\'")}')">
+                                        <i class="fas fa-calendar-times"></i> Manage Reservations
+                                    </button>` :
+                                    `<button class="btn-card delete-btn" onclick="showDeleteConfirmation(${accommodation.id}, '${accommodation.title.replace(/'/g, "\\'")}')">
+                                        <i class="fas fa-trash"></i> Delete
+                                    </button>`
+                                }
+                            </div>
                         </div>
                     </div>
                 `;
@@ -537,6 +635,39 @@
                 </div>
             `;
             document.getElementById('accommodationList').style.display = 'block';
+        }
+    }
+    
+    async function fetchReservationDetails(accommodationId) {
+        try {
+            const apiKey = localStorage.getItem('unihaven_api_key');
+            if (!apiKey) {
+                alert('API key is required to fetch reservation details');
+                return;
+            }
+            
+            const response = await fetch(`/api/accommodation_detail/${accommodationId}/?format=json`, {
+                headers: {
+                    'X-API-Key': apiKey
+                }
+            });
+            
+            if (!response.ok) {
+                throw new Error('Failed to fetch reservation details');
+            }
+            
+            const data = await response.json();
+            
+            if (data.reservation_periods && data.reservation_periods.length > 0) {
+                document.getElementById('loadingSpinner').style.display = 'block';
+                document.getElementById('accommodationList').style.display = 'none';
+                await loadAccommodations(apiKey);
+            } else {
+                alert('No reservation details available for this accommodation');
+            }
+        } catch (error) {
+            console.error('Error fetching reservation details:', error);
+            alert('Error fetching reservation details. Please try again.');
         }
     }
     
@@ -590,6 +721,205 @@
             console.error('Error:', error);
             alert('An error occurred while deleting the accommodation');
             closeConfirmationModal();
+        }
+    }
+    
+    function showCancelReservationConfirmation(accommodationId, title, reservationId, userId, period) {
+        selectedAccommodationId = accommodationId;
+        selectedReservationId = reservationId;
+        
+        document.getElementById('cancelAccommodationTitle').textContent = title;
+        document.getElementById('cancelUserID').textContent = userId;
+        document.getElementById('cancelPeriod').textContent = period;
+        
+        const cancelModal = document.getElementById('cancelReservationModal');
+        cancelModal.style.display = 'block';
+        cancelModal.style.zIndex = '2000';
+        
+        const backButton = cancelModal.querySelector('.cancel-btn');
+        backButton.onclick = function() {
+            closeCancelModalWithoutRefresh();
+        };
+    }
+
+    function closeCancelModalWithoutRefresh() {
+        const cancelModal = document.getElementById('cancelReservationModal');
+        cancelModal.style.display = 'none';
+        cancelModal.style.zIndex = '1000';
+        selectedReservationId = null;
+    }
+
+    function closeCancelModal() {
+        document.getElementById('cancelReservationModal').style.display = 'none';
+        document.getElementById('cancelReservationModal').style.zIndex = '1000';
+        selectedReservationId = null;
+        
+        const existingModals = document.querySelectorAll('.custom-modal');
+        existingModals.forEach(modal => {
+            modal.remove();
+        });
+    }
+
+    async function confirmCancelReservation() {
+        if (!selectedAccommodationId || !selectedReservationId) return;
+        
+        const apiKey = localStorage.getItem('unihaven_api_key');
+        if (!apiKey) {
+            alert('API key required to cancel reservation');
+            closeCancelModal();
+            return;
+        }
+        
+        try {
+            const response = await fetch(`/api/cancel_reservation/?id=${selectedAccommodationId}&reservation_id=${selectedReservationId}&User%20ID=SPECIALIST_CANCEL`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-API-Key': apiKey,
+                    'X-CSRFToken': getCSRFToken()
+                }
+            });
+            
+            const data = await response.json();
+            
+            if (response.ok) {
+                alert('Reservation successfully cancelled');
+                closeCancelModal();
+                document.getElementById('loadingSpinner').style.display = 'block';
+                document.getElementById('accommodationList').style.display = 'none';
+                await loadAccommodations(apiKey);
+            } else {
+                alert(`Cancellation failed: ${data.message || 'Unknown error'}`);
+                closeCancelModalWithoutRefresh();
+            }
+        } catch (error) {
+            console.error('Error cancelling reservation:', error);
+            alert('An error occurred while cancelling the reservation');
+            closeCancelModalWithoutRefresh();
+        }
+    }
+
+    function showAllReservationCancellations(accommodationId, title) {
+        const accommodation = accommodationsData.find(acc => acc.id === accommodationId);
+        
+        if (!accommodation || !accommodation.filteredReservations || accommodation.filteredReservations.length === 0) {
+            alert('No reservations found for this accommodation from your university students.');
+            return;
+        }
+        
+        const existingModals = document.querySelectorAll('.custom-modal');
+        existingModals.forEach(modal => {
+            modal.remove();
+        });
+        
+        let cancelHtml = `<div class="reservation-list"><h3>Reservations for ${title}</h3>`;
+        
+        accommodation.filteredReservations.forEach(reservation => {
+            cancelHtml += `
+                <div class="reservation-item">
+                    <div class="reservation-info-row">
+                        <div>
+                            <p><strong>Reserved by:</strong> ${reservation.user_id}</p>
+                            <p><strong>Period:</strong> ${reservation.start_date} to ${reservation.end_date}</p>
+                        </div>
+                        <button class="btn btn-warning" onclick="showCancelReservationConfirmation(
+                            ${accommodationId}, 
+                            '${title.replace(/'/g, "\\'")}', 
+                            ${reservation.id},
+                            '${reservation.user_id}',
+                            '${reservation.start_date} to ${reservation.end_date}'
+                        )">Cancel Reservation</button>
+                    </div>
+                </div>
+            `;
+        });
+        
+        cancelHtml += `</div>`;
+        
+        const modalEl = document.createElement('div');
+        modalEl.className = 'custom-modal';
+        modalEl.id = 'reservationsListModal';
+        modalEl.innerHTML = `
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Manage Reservations</h3>
+                    <span class="close-btn" onclick="closeCustomModal('reservationsListModal')">&times;</span>
+                </div>
+                <div class="modal-body">
+                    ${cancelHtml}
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" onclick="closeCustomModal('reservationsListModal')">Close</button>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modalEl);
+        
+        if (!document.getElementById('customModalStyles')) {
+            const style = document.createElement('style');
+            style.id = 'customModalStyles';
+            style.textContent = `
+                .custom-modal {
+                    display: block;
+                    position: fixed;
+                    z-index: 1000;
+                    left: 0;
+                    top: 0;
+                    width: 100%;
+                    height: 100%;
+                    background-color: rgba(0,0,0,0.5);
+                }
+                .custom-modal .modal-content {
+                    background-color: white;
+                    margin: 10% auto;
+                    padding: 20px;
+                    width: 80%;
+                    max-width: 600px;
+                    border-radius: 5px;
+                    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+                    max-height: 80vh;
+                    overflow-y: auto;
+                }
+                .custom-modal .modal-header {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    border-bottom: 1px solid #dee2e6;
+                    padding-bottom: 15px;
+                    margin-bottom: 15px;
+                }
+                .custom-modal .close-btn {
+                    font-size: 1.5rem;
+                    font-weight: bold;
+                    cursor: pointer;
+                }
+                .custom-modal .reservation-item {
+                    border: 1px solid #dee2e6;
+                    border-radius: 5px;
+                    padding: 15px;
+                    margin-bottom: 15px;
+                    background-color: #f8f9fa;
+                }
+                .custom-modal .reservation-info-row {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                }
+                .custom-modal .modal-footer {
+                    margin-top: 20px;
+                    display: flex;
+                    justify-content: flex-end;
+                }
+            `;
+            document.head.appendChild(style);
+        }
+    }
+    
+    function closeCustomModal(modalId) {
+        const modal = document.getElementById(modalId);
+        if (modal) {
+            modal.remove();
         }
     }
     

@@ -92,7 +92,7 @@ class Accommodation(models.Model):
             return []
             
         # 设置最小可预订时间（天）
-        MIN_BOOKING_DAYS = 2
+        MIN_BOOKING_DAYS = 1
         
         # 获取所有预定期间，按开始日期排序
         reserved_periods = list(self.reservation_periods.all().order_by('start_date'))
@@ -149,7 +149,6 @@ class ReservationPeriod(models.Model):
     start_date = models.DateField(help_text="Reservation start date")
     end_date = models.DateField(help_text="Reservation end date")
     created_at = models.DateTimeField(auto_now_add=True)
-    # 添加合同状态字段到预订记录
     contract_status = models.BooleanField(default=False, help_text="Whether this reservation has a signed contract")
     
     def __str__(self):

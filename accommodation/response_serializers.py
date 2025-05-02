@@ -49,24 +49,24 @@ class DuplicateAccommodationResponseSerializer(serializers.Serializer):
     accommodation_title = serializers.CharField(required=False)
 
 class TemplateResponseSerializer(serializers.Serializer):
-    """空序列化器，用于返回模板响应的视图"""
+    """Empty serializer for views that return template responses"""
     pass
 
 class ApiKeyTestResponseSerializer(serializers.Serializer):
-    """用于API密钥测试响应的序列化器"""
+    """Serializer for API key test responses"""
     success = serializers.BooleanField()
     message = serializers.CharField()
     university = serializers.CharField()
     code = serializers.CharField()
 
 class LinkAccommodationResponseSerializer(serializers.Serializer):
-    """用于关联宿舍响应的序列化器"""
+    """Serializer for accommodation linking responses"""
     success = serializers.BooleanField()
     message = serializers.CharField()
     id = serializers.IntegerField(required=False)
 
 class ReservationViewResponseSerializer(serializers.Serializer):
-    """用于查看预订响应的序列化器"""
+    """Serializer for reservation view responses"""
     reservations = serializers.ListField(required=False)
     user_id = serializers.CharField(required=False)
     error = serializers.CharField(required=False)
