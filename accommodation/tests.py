@@ -628,7 +628,33 @@ class AccommodationAPITestCase(APITestCase):
         }
         response = self.client.get(url, params)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.json()["accommodations"]), 1) 
+        self.assertEqual(len(response.json()["accommodations"]), 1)
+    def test_reservation_with_university_other_reservation_periods_code(self):
+        """"Test avaliable reservation of accommodations for the accommodations with other reservations."""
+        url = reverse('reserve_accommodation')
+        query_params = f"&User%20ID=CUHK_789&contact_number=123&end_date=2025-9-30&id={self.accommodation_1.id}&start_date=2025-08-02"
+        full_url = f"{url}?{query_params}"
+        response = self.client.post(full_url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        url = reverse('reserve_accommodation')
+        query_params = f"&User%20ID=CUHK_789&contact_number=123&end_date=2025-06-30&id={self.accommodation_1.id}&start_date=2025-05-03"
+        full_url = f"{url}?{query_params}"
+        response = self.client.post(full_url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        """Test unavaliable reservation of accommodations for the accommodations with other reservations."""
+        url = reverse('reserve_accommodation')
+        query_params = f"&User%20ID=CUHK_123&contact_number=123&end_date=2025-08-02&id={self.accommodation_1.id}&start_date=2025-05-30"
+        full_url = f"{url}?{query_params}"
+        response = self.client.post(full_url)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertFalse(response.data["success"])
+        self.assertEqual(response.data["message"], 'Accommodation "Luxury Apartment" is not available for the selected dates.')
+
+    
+
+    
   
     
 
