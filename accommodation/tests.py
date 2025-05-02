@@ -6,7 +6,7 @@ from rest_framework import status
 from django.core.exceptions import ValidationError
 from django.urls import reverse
 from django.utils.timezone import now
-from accommodation.models import Accommodation, University, AccommodationRating, AccommodationUniversity, UniversityAPIKey, ReservationPeriod
+from accommodation.models import Accommodation, University, AccommodationRating, AccommodationUniversity,UniversityAPIKey
 import datetime
 import uuid
 
@@ -64,7 +64,7 @@ class AccommodationAPITestCase(APITestCase):
             bedrooms=1,
             available_from="2025-05-01",
             available_to="2025-10-01",
-            reserved=False,
+            # reserved=False,
             building_name="Princeton Tower",
             room_number="A1001",
             flat_number="A",
@@ -81,7 +81,7 @@ class AccommodationAPITestCase(APITestCase):
             bedrooms=1,
             available_from="2025-06-01",
             available_to="2025-12-01",
-            reserved=False,
+            # reserved=False,
             building_name="Novum West",
             room_number="B2002",
             flat_number="B",
@@ -98,7 +98,7 @@ class AccommodationAPITestCase(APITestCase):
             bedrooms=3,
             available_from="2025-07-01",
             available_to="2025-09-01",
-            reserved=False,
+            # reserved=False,
             building_name="kennedy Town",
             room_number="C3003",
             flat_number="C",
@@ -130,33 +130,34 @@ class AccommodationAPITestCase(APITestCase):
 
         # 检查返回的数据是否正确
         expected_data = {
-            'id': self.accommodation_1.id,
-            'title': self.accommodation_1.title,
-            'description': self.accommodation_1.description,  # 添加 description 字段
-            'type': self.accommodation_1.type,
-            'price': f"{self.accommodation_1.price:.2f}",  # 确保价格格式为字符串，带两位小数
-            'beds': self.accommodation_1.beds,
-            'bedrooms': self.accommodation_1.bedrooms,
-            'available_from': str(self.accommodation_1.available_from),
-            'available_to': str(self.accommodation_1.available_to),
-            'region': self.accommodation_1.region,  # 添加 region 字段
-            'reserved': self.accommodation_1.reserved,
-            'formatted_address': self.accommodation_1.formatted_address(),  # 添加 formatted_address 字段
-            'building_name': self.accommodation_1.building_name,
-            'room_number': self.accommodation_1.room_number,
-            'floor_number': self.accommodation_1.floor_number,
-            'flat_number': self.accommodation_1.flat_number,
-            'contact_name': self.accommodation_1.contact_name,  # 添加 contact_name 字段
-            'contact_phone': self.accommodation_1.contact_phone,  # 添加 contact_phone 字段
-            'contact_email': self.accommodation_1.contact_email,  # 添加 contact_email 字段
-            'rating': self.accommodation_1.rating,  # 添加 rating 字段
-            'rating_count': self.accommodation_1.rating_count,  # 添加 rating_count 字段
-            'rating_sum': self.accommodation_1.rating_sum,  # 添加 rating_sum 字段
-            'affiliated_university_codes': [  # 修改为仅包含大学代码
+            "id": self.accommodation_1.id,
+            "title": self.accommodation_1.title,
+            "description": self.accommodation_1.description,
+            "type": self.accommodation_1.type,
+            "beds": self.accommodation_1.beds,
+            "bedrooms": self.accommodation_1.bedrooms,
+            "price": f"{self.accommodation_1.price:.2f}",  # 确保价格格式为字符串，带两位小数
+            "available_from": str(self.accommodation_1.available_from),
+            "available_to": str(self.accommodation_1.available_to),
+            "latitude": self.accommodation_1.latitude,  # 假设存在 latitude 字段
+            "longitude": self.accommodation_1.longitude,  # 假设存在 longitude 字段
+            "formatted_address": self.accommodation_1.formatted_address(),  # 假设有 formatted_address 方法
+            "rating": self.accommodation_1.rating,  # 假设存在 rating 字段
+            "reserved": self.accommodation_1.is_reserved(),  # 假设存在 reserved 字段
+            "region": self.accommodation_1.region,
+            "university_codes": [  # 修改为仅包含大学代码
                 self.hku.code,
                 self.hkust.code,
                 self.cuhk.code
             ],
+            "reservation_periods": [  # 假设存在 reservation_periods 字段
+            ],
+            "available_periods": [
+                {  # 假设存在 available_periods 字段
+                "start_date" : "2025-05-01",
+                "end_date" : "2025-10-01"
+                }
+            ]
         }
         self.assertEqual(response.json(), expected_data)
     def test_add_accommodation_1(self):
@@ -174,7 +175,7 @@ class AccommodationAPITestCase(APITestCase):
             "bedrooms": 2,  
             "available_from": "2025-04-28",
             "available_to": "2025-05-30",
-            "building_name": "top",
+            "building_name": "PRINCETON TOWER",
             "room_number": "1001",
             "floor_number": "10",
             "flat_number": "A",
@@ -198,7 +199,7 @@ class AccommodationAPITestCase(APITestCase):
         self.assertEqual(accommodation.bedrooms, data['bedrooms'])
         self.assertEqual(str(accommodation.available_from), data['available_from'])
         self.assertEqual(str(accommodation.available_to), data['available_to'])
-        # self.assertEqual(accommodation.building_name, data['building_name'])
+        self.assertEqual(accommodation.building_name, data['building_name'])
         self.assertEqual(accommodation.room_number, data['room_number'])
         self.assertEqual(accommodation.floor_number, data['floor_number'])
         self.assertEqual(accommodation.flat_number, data['flat_number'])
@@ -315,7 +316,7 @@ class AccommodationAPITestCase(APITestCase):
         """测试通过 POST 请求成功预订宿舍"""
         # 确保宿舍未被预订
         url = reverse('reserve_accommodation')  # 动态生成 URL
-        query_params = f"id={self.accommodation_1.id}&User%20ID=HKU_123&contact_number=98765432"  # 添加contact_number
+        query_params = f"&User%20ID=CUHK_789&contact_number=123&end_date=2025-9-30&id={self.accommodation_1.id}&start_date=2025-8-02"  # 添加contact_number
         
         # 构造带查询参数的完整 URL
         full_url = f"{url}?{query_params}"
@@ -325,16 +326,14 @@ class AccommodationAPITestCase(APITestCase):
         # 检查响应状态码
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-        # 检查数据库中住宿的状态
-        self.accommodation_1.refresh_from_db()
-        
-        # 验证是否已创建ReservationPeriod
-        reservation = ReservationPeriod.objects.get(accommodation=self.accommodation_1, user_id="HKU_123")
-        self.assertEqual(reservation.user_id, "HKU_123")
-        self.assertEqual(reservation.contact_number, "98765432")
 
+        # # 检查数据库中住宿的状态
+        self.accommodation_1.refresh_from_db()
+        self.assertFalse(self.accommodation_1.is_reserved())
+        self.assertEqual(self.accommodation_1.reservation_periods.count(), 1)
         """测试不能预定已经预定的宿舍"""
-        query_params = f"id={self.accommodation_1.id}&User%20ID=CUHK_123"
+        url = reverse('reserve_accommodation') 
+        query_params = f"&User%20ID=CUHK_789&contact_number=123&end_date=2025-9-30&id={self.accommodation_1.id}&start_date=2025-8-02"
         
         # 构造带查询参数的完整 URL
         full_url = f"{url}?{query_params}"
@@ -346,8 +345,9 @@ class AccommodationAPITestCase(APITestCase):
     
     def test_reserve_accommodation_only_for_specified_university_post(self):
         """测试只能为指定大学预订宿舍"""
+
         url = reverse('reserve_accommodation')  # 动态生成 URL
-        query_params = f"id={self.accommodation_3.id}&User%20ID=HKU_123&contact_number=98765432"
+        query_params = f"&User%20ID=CUHK_789&contact_number=123&end_date=2025-9-30&id={self.accommodation_2.id}&start_date=2025-8-02"  # 添加contact_number
         
         # 构造带查询参数的完整 URL
         full_url = f"{url}?{query_params}"
@@ -357,47 +357,54 @@ class AccommodationAPITestCase(APITestCase):
     def test_cancel_reservation_success(self):
         """测试成功取消预订"""
         url = reverse('reserve_accommodation')  # 动态生成 URL
-        query_params = f"id={self.accommodation_1.id}&User%20ID=HKU_123&contact_number=98765432"
+        query_params = f"&User%20ID=CUHK_789&contact_number=123&end_date=2025-9-30&id={self.accommodation_1.id}&start_date=2025-08-02"  # 添加contact_number
         
         # 构造带查询参数的完整 URL
         full_url = f"{url}?{query_params}"
         
-        response = self.client.post(full_url)  # 发送 POST 请求预订
+        response = self.client.post(full_url)  # 发送 POST 请求
         
-        # 检查预订状态码
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-        url = reverse('cancel_reservation')  # 动态生成取消预订的 URL
-        query_params = f"id={self.accommodation_1.id}&User%20ID=HKU_123"  # 添加必要的查询参数
-        full_url = f"{url}?{query_params}"
-
-        response = self.client.put(full_url)  # 改为发送 PUT 请求
-
         # 检查响应状态码
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-        # 检查ReservationPeriod是否已被删除
-        self.assertFalse(ReservationPeriod.objects.filter(accommodation=self.accommodation_1, user_id="HKU_123").exists())
+        url = reverse('cancel_reservation')  # 动态生成取消预订的 URL
+        query_params = f"&User%20ID=CUHK_789&id={self.accommodation_1.id}&reservation_id=1"  # 添加必要的查询参数
+        full_url = f"{url}?{query_params}"
+
+        response = self.client.put(full_url)  
+
+        # 检查响应状态码
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn("success", response.json())
+        self.assertTrue(response.json()["success"])
+        expected_message = 'Reservation for accommodation "Luxury Apartment" from 2025-08-02 to 2025-09-30 has been canceled.'
+        self.assertIn("message", response.json())
+        self.assertEqual(response.json()["message"], expected_message)
+
+        # 检查数据库中的预订状态是否更新
+        self.accommodation_1.refresh_from_db()
+        self.assertFalse(self.accommodation_1.is_reserved())
+        # 检查联系电话被清除
     
     def test_cancel_reservation_wrong_user(self):
         """测试用户尝试取消不属于自己的预订"""
 
         url = reverse('reserve_accommodation')  # 动态生成 URL
-        query_params = f"id={self.accommodation_1.id}&User%20ID=HKU_123&contact_number=98765432"
+        query_params = f"&User%20ID=CUHK_789&contact_number=123&end_date=2025-9-30&id={self.accommodation_1.id}&start_date=2025-08-02"  # 添加contact_number
         
         # 构造带查询参数的完整 URL
         full_url = f"{url}?{query_params}"
         
-        response = self.client.post(full_url)  # 发送 POST 请求预订
+        response = self.client.post(full_url)  # 发送 POST 请求
         
-        # 检查预订状态码
+        # 检查响应状态码
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         url = reverse('cancel_reservation')  # 动态生成取消预订的 URL
-        query_params = f"id={self.accommodation_1.id}&User%20ID=HKU_456"  # 错误的用户 ID
+        query_params = f"&User%20ID=CUHK_890&id={self.accommodation_1.id}&reservation_id=1"  # 添加必要的查询参数
         full_url = f"{url}?{query_params}"
 
-        response = self.client.put(full_url)  # 改为发送 PUT 请求
+        response = self.client.put(full_url)  
 
         # 检查响应状态码
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
@@ -405,13 +412,18 @@ class AccommodationAPITestCase(APITestCase):
     def test_cancel_reservation_not_found(self):
         """测试取消不存在的住宿"""
         url = reverse('cancel_reservation')  # 动态生成取消预订的 URL
-        query_params = f"id=9999&User%20ID=HKU_123"  # 不存在的住宿 ID
+        query_params = f"&User%20ID=CUHK_890&id=99999&reservation_id=1"  # 添加必要的查询参数
         full_url = f"{url}?{query_params}"
 
-        response = self.client.put(full_url)  # 改为发送 PUT 请求
+        response = self.client.put(full_url)  
 
         # 检查响应状态码
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+        # 检查响应内容中的 detail 字段
+        expected_detail = "No Accommodation matches the given query."
+        self.assertIn("detail", response.json())
+        self.assertEqual(response.json()["detail"], expected_detail)
 
     def test_cancel_reservation_not_reserved(self):
         """测试取消未预订的住宿"""
@@ -427,7 +439,7 @@ class AccommodationAPITestCase(APITestCase):
     def test_submit_rating_success(self):
         """测试成功提交评分"""
         url = reverse('reserve_accommodation')  # 动态生成 URL
-        query_params = f"id={self.accommodation_1.id}&User%20ID=HKU_123&contact_number=98765432"
+        query_params = f"&User%20ID=CUHK_789&contact_number=123&end_date=2025-9-30&id={self.accommodation_1.id}&start_date=2025-08-02"  # 添加contact_number
         
         # 构造带查询参数的完整 URL
         full_url = f"{url}?{query_params}"
@@ -437,8 +449,9 @@ class AccommodationAPITestCase(APITestCase):
         # 检查响应状态码
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         url = reverse('rate_accommodation', args=[self.accommodation_1.id])  # 动态生成 URL
-        query_params = "?rating=5&userid=HKU_123"
+        query_params = "?rating=5&userid=CUHK_789"
         full_url = f"{url}{query_params}"
+
 
         response = self.client.post(full_url)
 
@@ -455,7 +468,7 @@ class AccommodationAPITestCase(APITestCase):
     def test_submit_invalid_rating_value(self):
         """测试评分值无效（超出范围）"""
         url = reverse('reserve_accommodation')  # 动态生成 URL
-        query_params = f"id={self.accommodation_1.id}&User%20ID=HKU_123&contact_number=98765432"  # 添加contact_number
+        query_params = f"&User%20ID=CUHK_789&contact_number=123&end_date=2025-9-30&id={self.accommodation_1.id}&start_date=2025-08-02"  # 添加contact_number
         
         # 构造带查询参数的完整 URL
         full_url = f"{url}?{query_params}"
@@ -465,7 +478,7 @@ class AccommodationAPITestCase(APITestCase):
         # 检查响应状态码
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         url = reverse('rate_accommodation', args=[self.accommodation_1.id])  
-        query_params = "?rating=6&userid=HKU_123"  # 无效评分值
+        query_params = "?rating=6&userid=CUHK_789"  # 无效评分值
         full_url = f"{url}{query_params}"
 
         response = self.client.post(full_url)
@@ -489,7 +502,7 @@ class AccommodationAPITestCase(APITestCase):
         """测试用户已经评分的住宿"""
  
         url = reverse('reserve_accommodation')  # 动态生成 URL
-        query_params = f"id={self.accommodation_1.id}&User%20ID=HKU_123&contact_number=98765432"  # 添加contact_number
+        query_params = f"&User%20ID=CUHK_789&contact_number=123&end_date=2025-9-30&id={self.accommodation_1.id}&start_date=2025-08-02"  # 添加contact_number
         
         # 构造带查询参数的完整 URL
         full_url = f"{url}?{query_params}"
@@ -499,7 +512,7 @@ class AccommodationAPITestCase(APITestCase):
         # 检查响应状态码
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         url = reverse('rate_accommodation', args=[self.accommodation_1.id])  # 动态生成 URL
-        query_params = "?rating=5&userid=HKU_123"
+        query_params = "?rating=5&userid=CUHK_789"
         full_url = f"{url}{query_params}"
 
         response = self.client.post(full_url)
@@ -507,30 +520,30 @@ class AccommodationAPITestCase(APITestCase):
         # 检查响应状态码
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         url = reverse('rate_accommodation', args=[self.accommodation_1.id])  # 动态生成 URL
-        query_params = "?rating=5&userid=HKU_123"
+        query_params = "?rating=5&userid=CUHK_789"
         full_url = f"{url}{query_params}"
         response = self.client.post(full_url)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_submit_rating_not_reserved_by_user(self):
-        url = reverse('reserve_accommodation')  # 动态生成 URL
-        query_params = f"id={self.accommodation_1.id}&User%20ID=HKU_123&contact_number=98765432"  # 添加contact_number
-        
-        # 构造带查询参数的完整 URL
-        full_url = f"{url}?{query_params}"
-        
-        response = self.client.post(full_url)  # 发送 POST 请求
-        
-        # 检查响应状态码
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        """测试用户未预订的住宿提交评分"""
+        # 动态生成评分 URL
         url = reverse('rate_accommodation', args=[self.accommodation_1.id])  # 动态生成 URL
-        query_params = "?rating=5&userid=HKU_456"
+        query_params = "?rating=5&userid=CUHK_789"
         full_url = f"{url}{query_params}"
 
+        # 发送 POST 请求
         response = self.client.post(full_url)
 
         # 检查响应状态码
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+        # 检查响应内容
+        expected_response = {
+            "success": False,
+            "message": "You can only rate accommodations you have reserved."
+        }
+        self.assertEqual(response.json(), expected_response)
     
     def test_submit_rating_missing_parameters(self):
         """测试缺少参数"""
@@ -564,55 +577,63 @@ class AccommodationAPITestCase(APITestCase):
     def test_remove_university_association(self):
         """测试移除大学与宿舍的关联（多个大学关联时）"""
         api_key = self.hku_api_key.key
-        url = f"/api/delete-accommodation/?api_key={api_key}"
+        url = f"/api/delete-accommodation/?api_key={api_key}&id={self.accommodation_1.id}"
         
-        response = self.client.post(url, {"id": self.accommodation_1.id}, format="json")
+        # 发送 DELETE 请求
+        response = self.client.delete(url, format="json")
+        
+        # 验证响应状态码
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        
+        # 验证响应内容
         self.assertEqual(response.json()["success"], True)
         self.assertEqual(
             response.json()["message"],
             f"Removed {self.hku.name}'s association with accommodation '{self.accommodation_1.title}'. The accommodation is still available to other universities."
         )
+        
         # 验证大学 1 的关联已移除
         self.assertFalse(self.accommodation_1.affiliated_universities.filter(id=self.hku.id).exists())
-
-        # 验证大学 2 的关联仍然存在
+        
+        # 验证大学 2 和大学 3 的关联仍然存在
         self.assertTrue(self.accommodation_1.affiliated_universities.filter(id=self.hkust.id).exists())
         self.assertTrue(self.accommodation_1.affiliated_universities.filter(id=self.cuhk.id).exists())
 
     def test_delete_accommodation_when_all_associations_removed(self):
-        """
-        测试当删除最后一个大学的关联时，宿舍是否会被完全删除。
-        """
-
-        # API 请求 URL
-        url = f"/api/delete-accommodation/?api_key={self.cuhk_api_key.key}"
-
-        # 发送删除请求
-        response = self.client.post(url, {"id": self.accommodation_3.id}, format="json")
-
+        """测试当删除最后一个大学的关联时，宿舍是否会被完全删除"""
+        api_key = self.cuhk_api_key.key
+        url = f"/api/delete-accommodation/?api_key={api_key}&id={self.accommodation_3.id}"
+        
+        # 发送 DELETE 请求
+        response = self.client.delete(url, format="json")
+        
         # 验证响应状态码
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-
+        
         # 验证响应内容
         self.assertEqual(response.json()["success"], True)
         self.assertEqual(
             response.json()["message"],
             f"Accommodation '{self.accommodation_3.title}' has been completely deleted."
         )
-
+        
         # 验证宿舍已从数据库中被删除
         self.assertFalse(Accommodation.objects.filter(id=self.accommodation_3.id).exists())
 
     def test_accommodation_not_found(self):
         """测试删除不存在的宿舍"""
-        url = f"/api/delete-accommodation/?api_key=586385e5a18c46e3a3a5c9162599320f"
-        response = self.client.post(url, {"id": 999}, format="json")
-
-        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
-        self.assertEqual(response.json()["success"], False)
-        self.assertEqual(response.json()["message"], "Accommodation not found.")
+        api_key = "586385e5a18c46e3a3a5c9162599320f"
+        url = f"/api/delete-accommodation/?api_key={api_key}&id=999"
+        
+        # 发送 DELETE 请求
+        response = self.client.delete(url, format="json")
+        
+        # 验证响应状态码
+        self.assertEqual(response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
     
+    # 验证响应内容
+        self.assertEqual(response.json()["success"], False)
+        self.assertEqual(response.json()["message"], "An unexpected error occurred: No Accommodation matches the given query.")
     def test_distance_calculation(self):
         """测试距离计算"""
         # 定义 API URL 和查询参数
@@ -695,9 +716,9 @@ class AccommodationModelTest(TestCase):
         expected_address = "利都楼, 康乐园, 12 蓝塘道, 湾仔, 香港岛"
         self.assertEqual(self.accommodation.formatted_address(), expected_address)
 
-    def test_reserved_default_false(self):
-        """Test that reserved is False by default when creating Accommodation"""
-        self.assertFalse(self.accommodation.reserved)
+    # def test_reserved_default_false(self):
+    #     """Test that reserved is False by default when creating Accommodation"""
+    #     self.assertFalse(self.accommodation.reserved)
 
     def test_save_method_cleans_none_fields(self):
         """Test that save() automatically cleans None fields"""

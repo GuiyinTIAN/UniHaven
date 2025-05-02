@@ -396,9 +396,14 @@ def add_accommodation(request):
 
 @extend_schema(
     summary="Delete Accommodation",
-    description="Delete an accommodation by ID using POST method or remove university association if multiple universities are linked.",
-    request=DeleteAccommodationRequestSerializer,
-    parameters=API_KEY_PARAMETER,
+    description=(
+        "Delete an accommodation by ID using DELETE method. If the accommodation is associated with multiple universities, "
+        "this will remove the current university's association instead of deleting the accommodation completely."
+    ),
+    parameters=[
+        OpenApiParameter(name="id", location=OpenApiParameter.QUERY, description="Accommodation ID to delete", type=int, required=True),
+        OpenApiParameter(name="X-API-Key", location=OpenApiParameter.HEADER, description="API key for authentication", type=str, required=True)
+    ],
     responses={
         200: SuccessResponseSerializer,
         400: ErrorResponseSerializer,
@@ -407,7 +412,7 @@ def add_accommodation(request):
         404: ErrorResponseSerializer
     }
 )
-@api_view(['POST'])
+@api_view(['DELETE'])
 @parser_classes([JSONParser])
 @renderer_classes([JSONRenderer])
 @authentication_classes([UniversityAPIKeyAuthentication])
@@ -416,87 +421,71 @@ def delete_accommodation(request):
     """
     Delete an accommodation by ID or remove university association.
 
-    If the accommodation is only associated with the current university, it will be completely deleted.
-    If the accommodation is associated with multiple universities, only the association with the current university will be removed.
+    - If the accommodation is only associated with the current university, it will be completely deleted.
+    - If the accommodation is associated with multiple universities, only the association with the current university will be removed.
 
     Args:
-        request: HTTP POST request with JSON containing "id"
+        request: HTTP DELETE request with query parameter "id"
 
     Returns:
         - JSON confirmation message on success
         - JSON error message on failure
     """
-    if not hasattr(request, 'auth') or not request.auth:
-        api_key = request.META.get('HTTP_X_API_KEY') or request.query_params.get('api_key')
-        
-        print(f"[DEBUG-Backend] Received API key: {api_key}")
-        
-        if not api_key:
-            return Response(
-                {"success": False, "message": "API key is required for delete accommodations"},
-                status=status.HTTP_401_UNAUTHORIZED
-            )
-        
-        try:
-            api_key_obj = UniversityAPIKey.objects.get(key=api_key, is_active=True)
-            print(f"[DEBUG-Backend] Found API key object: {api_key_obj}, University: {api_key_obj.university.name}")
-            
-            request.user = api_key_obj.university
-            request.auth = api_key_obj
-            
-        except UniversityAPIKey.DoesNotExist:
-            print(f"[DEBUG-Backend] API key not found in database or inactive: {api_key}")
-            return Response(
-                {"success": False, "message": "Invalid API key"},
-                status=status.HTTP_401_UNAUTHORIZED
-            )
-    
+    # 获取 API Key 和验证大学身份
     university = request.user
-    print(f"[DEBUG-Backend] Authentication successful: University {university.name} ({university.code})")
-    
-    serializer = DeleteAccommodationRequestSerializer(data=request.data)
-    if serializer.is_valid():
-        accommodation_id = serializer.validated_data['id']
-        try:
-            accommodation = Accommodation.objects.get(id=accommodation_id)
-            
-            # check if the accommodation is associated with the current university
-            if not accommodation.affiliated_universities.filter(id=university.id).exists():
-                return Response(
-                    {"success": False, "message": f"{university.name} is not associated with this accommodation."},
-                    status=status.HTTP_403_FORBIDDEN
-                )
-            
-            # check the number of universities associated with the accommodation
-            affiliated_count = accommodation.affiliated_universities.count()
-            title = accommodation.title
-            
-            if affiliated_count > 1:
-                # if multiple universities are associated, just remove the current university
-                accommodation.affiliated_universities.remove(university)
-                print(f"[DEBUG-Backend] Removed {university.name}'s association with accommodation {title} (ID: {accommodation_id})")
-                return Response(
-                    {"success": True, "message": f"Removed {university.name}'s association with accommodation '{title}'. The accommodation is still available to other universities."},
-                    status=status.HTTP_200_OK
-                )
-            else:
-                # if only one university is associated, delete the accommodation
-                accommodation.delete()
-                print(f"[DEBUG-Backend] Completely deleted accommodation {title} (ID: {accommodation_id})")
-                return Response(
-                    {"success": True, "message": f"Accommodation '{title}' has been completely deleted."},
-                    status=status.HTTP_200_OK
-                )
-                
-        except Accommodation.DoesNotExist:
-            return Response(
-                {"success": False, "message": "Accommodation not found."},
-                status=status.HTTP_404_NOT_FOUND
-            )
-    else:
+    if not university or not hasattr(university, 'id'):
         return Response(
-            {"success": False, "errors": serializer.errors},
+            {"success": False, "message": "Authentication failed. Valid API key is required."},
+            status=status.HTTP_401_UNAUTHORIZED
+        )
+
+    # 获取宿舍 ID
+    accommodation_id = request.query_params.get('id')
+    if not accommodation_id:
+        return Response(
+            {"success": False, "message": "'id' query parameter is required."},
             status=status.HTTP_400_BAD_REQUEST
+        )
+
+    try:
+        # 获取宿舍对象
+        accommodation = get_object_or_404(Accommodation, id=accommodation_id)
+
+        # 检查是否与当前大学关联
+        if not accommodation.affiliated_universities.filter(id=university.id).exists():
+            return Response(
+                {"success": False, "message": f"{university.name} is not associated with this accommodation."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        # 检查关联大学的数量
+        affiliated_count = accommodation.affiliated_universities.count()
+        title = accommodation.title
+
+        if affiliated_count > 1:
+            # 如果有多个大学关联，只移除当前大学的关联
+            accommodation.affiliated_universities.remove(university)
+            return Response(
+                {"success": True, "message": f"Removed {university.name}'s association with accommodation '{title}'. The accommodation is still available to other universities."},
+                status=status.HTTP_200_OK
+            )
+        else:
+            # 如果只有一个大学关联，删除宿舍
+            accommodation.delete()
+            return Response(
+                {"success": True, "message": f"Accommodation '{title}' has been completely deleted."},
+                status=status.HTTP_200_OK
+            )
+
+    except Accommodation.DoesNotExist:
+        return Response(
+            {"success": False, "message": "Accommodation not found."},
+            status=status.HTTP_404_NOT_FOUND
+        )
+    except Exception as e:
+        return Response(
+            {"success": False, "message": f"An unexpected error occurred: {str(e)}"},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
 
 @extend_schema(
@@ -534,8 +523,8 @@ def delete_accommodation(request):
             type=OpenApiTypes.STR,
             required=False,
         ),
-        OpenApiParameter(name="reservation_start", description="Reservation start date (yyyy-MM-DD)", type=OpenApiTypes.DATE, required=False),
-        OpenApiParameter(name="reservation_end", description="Reservation end date (yyyy-MM-DD)", type=OpenApiTypes.DATE, required=False),
+        OpenApiParameter(name="reservation_start", description="Reservation start date (yyyy-MM-DD)", type=OpenApiTypes.DATE, required=True),
+        OpenApiParameter(name="reservation_end", description="Reservation end date (yyyy-MM-DD)", type=OpenApiTypes.DATE, required=True),
     ] + API_KEY_PARAMETER,
     responses={
         200: AccommodationListResponseSerializer,
@@ -1233,6 +1222,11 @@ class RatingView(GenericAPIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
         accommodation = get_object_or_404(Accommodation, id=accommodation_id)
+        if not ReservationPeriod.objects.filter(accommodation=accommodation, user_id=user_id).exists():
+            return Response(
+                {"success": False, "message": "You can only rate accommodations you have reserved."},
+                status=status.HTTP_403_FORBIDDEN
+            )
         if AccommodationRating.objects.filter(
             accommodation=accommodation, user_identifier=user_id
         ).exists():
