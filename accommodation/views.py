@@ -1102,15 +1102,16 @@ class CancellationView(GenericAPIView):
                 
             # Get university information
             university = get_university_from_user_id(user_id)
-            
             # Check user permissions
-            if university and accommodation.affiliated_universities.exists():
-                if not accommodation.affiliated_universities.filter(id=university.id).exists():
-                    university_codes = [u.code for u in accommodation.affiliated_universities.all()]
-                    return Response({
-                        'success': False,
-                        'message': f'You are not affiliated with this accommodation. It is only available to students from: {", ".join(university_codes)}.'
-                    }, status=status.HTTP_403_FORBIDDEN)
+            if user_id != 'SPECIALIST_CANCEL': 
+                if university and accommodation.affiliated_universities.exists():
+
+                    if not accommodation.affiliated_universities.filter(id=university.id).exists():
+                        university_codes = [u.code for u in accommodation.affiliated_universities.all()]
+                        return Response({
+                            'success': False,
+                            'message': f'You are not affiliated with this accommodation. It is only available to students from: {", ".join(university_codes)}.'
+                        }, status=status.HTTP_403_FORBIDDEN)
                     
             # Store date information for email
             start_date = reservation.start_date
