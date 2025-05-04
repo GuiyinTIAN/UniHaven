@@ -14,9 +14,9 @@
         top: 0;
         width: 100%;
         height: 100%;
-        background-color: rgba(0,0,0,0.5);
+        background-color: rgba(0, 0, 0, 0.5);
     }
-    
+
     .modal-content {
         background-color: white;
         margin: 15% auto;
@@ -24,21 +24,21 @@
         width: 80%;
         max-width: 500px;
         border-radius: 5px;
-        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
     }
-    
+
     .admin-section {
         margin-top: 20px;
         padding-top: 15px;
         border-top: 1px solid #eee;
         display: none;
     }
-    
+
     .delete-btn {
         background-color: #dc3545;
         color: white;
     }
-    
+
     .delete-btn:hover {
         background-color: #bd2130;
     }
@@ -49,37 +49,37 @@
         margin-bottom: 20px;
         justify-content: center;
     }
-    
+
     .average-rating {
         text-align: center;
     }
-    
+
     .rating-value {
         font-size: 2em;
         font-weight: bold;
         color: var(--primary-color);
     }
-    
+
     .stars {
         font-size: 1.5em;
         color: #ccc;
         margin: 5px 0;
     }
-    
+
     .star {
         cursor: pointer;
     }
-    
+
     .star.filled {
         color: #ffcc00;
     }
-    
+
     .star.half-filled {
         position: relative;
         display: inline-block;
         color: #ccc;
     }
-    
+
     .star.half-filled:before {
         content: "★";
         position: absolute;
@@ -89,7 +89,7 @@
         overflow: hidden;
         color: #ffcc00;
     }
-    
+
     .rating-count {
         color: #666;
         font-size: 0.9em;
@@ -102,21 +102,21 @@
         font-size: 0.8em;
         font-weight: 500;
     }
-    
+
     .status-badge.status-reserved {
         background-color: #f8d7da;
         color: #721c24;
     }
-    
+
     .status-badge.status-available {
         background-color: #d4edda;
         color: #155724;
     }
-    
+
     .api-status {
         display: flex;
         align-items: center;
-        gap: 10px; 
+        gap: 10px;
     }
 
     .availability-periods {
@@ -125,18 +125,18 @@
         background-color: #f8f9fa;
         border-radius: 8px;
     }
-    
+
     .availability-periods h3 {
         font-size: 1.2em;
         margin-bottom: 15px;
         color: var(--primary-color);
     }
-    
+
     .period-list {
         list-style: none;
         padding: 0;
     }
-    
+
     .period-list li {
         border-bottom: 1px solid #dee2e6;
         padding: 10px 5px;
@@ -144,31 +144,31 @@
         justify-content: space-between;
         align-items: center;
     }
-    
+
     .period-list li:last-child {
         border-bottom: none;
     }
-    
+
     .period-dates {
         font-weight: 600;
     }
-    
+
     .reservation-form {
         margin-top: 20px;
         padding: 20px;
         background-color: #f8f9fa;
         border-radius: 8px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     }
-    
+
     .reservation-form h3 {
         margin-bottom: 15px;
     }
-    
+
     .form-group {
         margin-bottom: 15px;
     }
-    
+
     .form-group label {
         font-weight: 600;
         display: block;
@@ -181,25 +181,25 @@
         border-radius: 8px;
         padding: 20px;
         margin-top: 25px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
     }
-    
+
     .custom-date-section h4 {
         color: var(--primary-color);
         margin-bottom: 15px;
         font-weight: 600;
     }
-    
+
     .date-inputs {
         display: flex;
         gap: 15px;
         margin-bottom: 15px;
     }
-    
+
     .date-inputs .form-group {
         flex: 1;
     }
-    
+
     .btn-check-dates {
         background-color: var(--primary-color);
         color: white;
@@ -209,7 +209,7 @@
         cursor: pointer;
         transition: background-color 0.3s;
     }
-    
+
     .btn-check-dates:hover {
         background-color: var(--primary-color-dark);
     }
@@ -221,7 +221,7 @@
     <div class="detail-header">
         <h1>{{ accommodation.title }}</h1>
     </div>
-    
+
     <div class="detail-content">
         <div class="detail-section">
             <h2>Basic Information</h2>
@@ -238,7 +238,7 @@
                 <div class="detail-value">${{ accommodation.price }}</div>
             </div>
         </div>
-        
+
         <div class="detail-section">
             <h2>Features</h2>
             <div class="detail-item">
@@ -250,26 +250,28 @@
                 <div class="detail-value">{{ accommodation.bedrooms }}</div>
             </div>
         </div>
-        
+
         <div class="detail-section">
             <h2>Location</h2>
             <div class="detail-item">
                 <div class="detail-label">Address:</div>
                 <div class="detail-value">{{ accommodation.formatted_address }}</div>
             </div>
-            
+
             {% if accommodation.floor_number or accommodation.flat_number or accommodation.room_number %}
             <div class="detail-item">
                 <div class="detail-label">Unit Details:</div>
                 <div class="detail-value">
                     {% if accommodation.flat_number %}Flat: {{ accommodation.flat_number }}{% endif %}
-                    {% if accommodation.floor_number %}{% if accommodation.flat_number %}, {% endif %}Floor: {{ accommodation.floor_number }}{% endif %}
-                    {% if accommodation.room_number %}{% if accommodation.flat_number or accommodation.floor_number %}, {% endif %}Room: {{ accommodation.room_number }}{% endif %}
+                    {% if accommodation.floor_number %}{% if accommodation.flat_number %}, {% endif %}Floor: {{
+                    accommodation.floor_number }}{% endif %}
+                    {% if accommodation.room_number %}{% if accommodation.flat_number or accommodation.floor_number %},
+                    {% endif %}Room: {{ accommodation.room_number }}{% endif %}
                 </div>
             </div>
             {% endif %}
         </div>
-        
+
         <div class="detail-section">
             <h2>Availability</h2>
             <div class="detail-item">
@@ -280,94 +282,96 @@
                 <div class="detail-label">Available To:</div>
                 <div class="detail-value">{{ accommodation.available_to }}</div>
             </div>
-            
+
             {% if accommodation.affiliated_universities.exists %}
             <div class="detail-item">
                 <div class="detail-label">Affiliated Universities:</div>
                 <div class="detail-value">
                     {% for uni in accommodation.affiliated_universities.all %}
-                        {{ uni.name }}{% if not forloop.last %}, {% endif %}
+                    {{ uni.name }}{% if not forloop.last %}, {% endif %}
                     {% endfor %}
                 </div>
             </div>
             <div class="detail-item info-note">
-                <p><i>This accommodation is specifically available to students from the above-listed universities.</i></p>
+                <p><i>This accommodation is specifically available to students from the above-listed universities.</i>
+                </p>
             </div>
             {% endif %}
-            
+
             <div class="availability-periods">
                 <h3>Available Periods</h3>
                 {% if accommodation.get_available_periods %}
-                    <ul class="period-list">
-                        {% for start_date, end_date in accommodation.get_available_periods %}
-                            <li>
-                                <span class="period-dates">{{ start_date|date:"Y-m-d" }} to {{ end_date|date:"Y-m-d" }}</span>
-                                <button class="btn btn-sm btn-primary reserve-period-btn" 
-                                        data-start="{{ start_date|date:"Y-m-d" }}" 
-                                        data-end="{{ end_date|date:"Y-m-d" }}"
-                                        onclick="selectPeriod(this.getAttribute('data-start'), this.getAttribute('data-end'))">
-                                    Reserve This Period
-                                </button>
-                            </li>
-                        {% endfor %}
-                    </ul>
-                    
-                    <div class="custom-date-section">
-                        <h4>Custom Date Selection</h4>
-                        <p class="text-muted small">If you don't see your preferred dates above, select your own dates:</p>
-                        
-                        <div class="date-inputs">
-                            <div class="form-group">
-                                <label for="customStartDate">Start Date:</label>
-                                <input type="date" id="customStartDate" class="form-control" 
-                                       min="{{ accommodation.available_from|date:"Y-m-d" }}" 
-                                       max="{{ accommodation.available_to|date:"Y-m-d" }}">
-                            </div>
-                            <div class="form-group">
-                                <label for="customEndDate">End Date:</label>
-                                <input type="date" id="customEndDate" class="form-control" 
-                                       min="{{ accommodation.available_from|date:"Y-m-d" }}" 
-                                       max="{{ accommodation.available_to|date:"Y-m-d" }}">
-                            </div>
+                <ul class="period-list">
+                    {% for start_date, end_date in accommodation.get_available_periods %}
+                    <li>
+                        <span class="period-dates">{{ start_date|date:"Y-m-d" }} to {{ end_date|date:"Y-m-d" }}</span>
+                        <button class="btn btn-sm btn-primary reserve-period-btn" data-start="{{ start_date|date:"
+                            Y-m-d" }}" data-end="{{ end_date|date:" Y-m-d" }}"
+                            onclick="selectPeriod(this.getAttribute('data-start'), this.getAttribute('data-end'))">
+                            Reserve This Period
+                        </button>
+                    </li>
+                    {% endfor %}
+                </ul>
+
+                <div class="custom-date-section">
+                    <h4>Custom Date Selection</h4>
+                    <p class="text-muted small">If you don't see your preferred dates above, select your own dates:</p>
+
+                    <div class="date-inputs">
+                        <div class="form-group">
+                            <label for="customStartDate">Start Date:</label>
+                            <input type="date" id="customStartDate" class="form-control"
+                                min="{{ accommodation.available_from|date:" Y-m-d" }}"
+                                max="{{ accommodation.available_to|date:" Y-m-d" }}">
                         </div>
-                        
-                        <button class="btn btn-primary" onclick="checkCustomPeriod()">Check & Reserve</button>
-                        <div id="customDateMessage" class="mt-3 alert alert-danger" style="display: none;"></div>
+                        <div class="form-group">
+                            <label for="customEndDate">End Date:</label>
+                            <input type="date" id="customEndDate" class="form-control"
+                                min="{{ accommodation.available_from|date:" Y-m-d" }}"
+                                max="{{ accommodation.available_to|date:" Y-m-d" }}">
+                        </div>
                     </div>
+
+                    <button class="btn btn-primary" onclick="checkCustomPeriod()">Check & Reserve</button>
+                    <div id="customDateMessage" class="mt-3 alert alert-danger" style="display: none;"></div>
+                </div>
                 {% else %}
-                    <p>This accommodation is fully booked.</p>
+                <p>This accommodation is fully booked.</p>
                 {% endif %}
             </div>
         </div>
 
         <div class="detail-section">
             <h2>Ratings and Availability</h2>
-            <div style="display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 25px; margin-bottom: 20px;">
+            <div
+                style="display: flex; flex-direction: row; align-items: center; justify-content: center; gap: 25px; margin-bottom: 20px;">
                 <div class="rating-summary">
                     <div class="average-rating">
                         <span class="rating-value">{{ accommodation.rating }}</span>
                         <div class="stars">
                             {% for i in "12345" %}
-                                {% if forloop.counter <= accommodation.rating %}
-                                    <span class="star filled">★</span>
-                                {% elif forloop.counter <= accommodation.rating|add:0.5 %}
-                                    <span class="star half-filled">★</span>
-                                {% else %}
+                            {% if forloop.counter <= accommodation.rating %} <span class="star filled">★</span>
+                                {% elif forloop.counter <= accommodation.rating|add:0.5 %} <span
+                                    class="star half-filled">★</span>
+                                    {% else %}
                                     <span class="star">☆</span>
-                                {% endif %}
-                            {% endfor %}
+                                    {% endif %}
+                                    {% endfor %}
                         </div>
                         <div class="rating-count">{{ accommodation.rating_count }} ratings</div>
                     </div>
                 </div>
-                
-                <span class="status-badge {% if accommodation.get_available_periods %}status-available{% else %}status-reserved{% endif %}">
-                    <i class="fas {% if accommodation.get_available_periods %}fa-calendar-check{% else %}fa-calendar-times{% endif %}"></i>
+
+                <span
+                    class="status-badge {% if accommodation.get_available_periods %}status-available{% else %}status-reserved{% endif %}">
+                    <i
+                        class="fas {% if accommodation.get_available_periods %}fa-calendar-check{% else %}fa-calendar-times{% endif %}"></i>
                     {% if accommodation.get_available_periods %}Available{% else %}Fully Booked{% endif %}
                 </span>
             </div>
         </div>
-        
+
         <div id="studentActionsSection" style="margin-top: 30px;">
             <div id="reservationForm" class="reservation-form" style="display: none;">
                 <h3>Reserve Accommodation</h3>
@@ -384,33 +388,36 @@
                     <p id="selectedPeriod" class="form-control-static">No period selected</p>
                 </div>
                 <div class="button-group" style="display: flex; gap: 10px; justify-content: center;">
-                    <button id="submitReservationBtn" class="btn btn-primary" onclick="submitReservation()">Confirm Reservation</button>
+                    <button id="submitReservationBtn" class="btn btn-primary" onclick="submitReservation()">Confirm
+                        Reservation</button>
                     <button class="btn btn-secondary" onclick="hideReservationForm()">Cancel</button>
                 </div>
             </div>
-            
+
             <div style="display: flex; justify-content: center; gap: 10px; margin-top: 15px;"></div>
-                <a href="{% url 'view_reservations' %}" class="btn btn-secondary back-button">View My Reservations</a>
-            </div>
+            <a href="{% url 'view_reservations' %}" class="btn btn-secondary back-button">View My Reservations</a>
         </div>
-        
-        <div id="studentButtonGroup" class="button-group" style="display: flex; gap: 10px; justify-content: center; margin-top: 15px;">
-            <a href="{% url 'list_accommodation' %}?{{ query_string }}" class="btn btn-primary back-button">Back to Listings</a>
-            <a href="{% url 'search_accommodation' %}" class="btn btn-secondary back-button">Back to Search</a>
-        </div>
-        
-        <div id="adminSection" class="admin-section">
-            <h3>Specialist</h3>
-            <div style="display: flex; justify-content: center; gap: 10px; margin-top: 10px;">
-                <a href="{% url 'add_accommodation' %}" class="btn btn-primary">Add Accommodation</a>
-                <button onclick="showDeleteModal()" class="btn btn-primary" style="background-color: #dc3545; border-color: #dc3545;">Delete Accommodation</button>
-                <a href="{% url 'manage_accommodations' %}" class="btn btn-secondary">Manage Accommodations</a>
-            </div>
+    </div>
+
+    <div id="studentButtonGroup" class="button-group"
+        style="display: flex; gap: 10px; justify-content: center; margin-top: 15px;">
+        <a href="{% url 'list_accommodation' %}?{{ query_string }}" class="btn btn-primary back-button">Back to
+            Listings</a>
+        <a href="{% url 'search_accommodation' %}" class="btn btn-secondary back-button">Back to Search</a>
+    </div>
+
+    <div id="adminSection" class="admin-section">
+        <h3>Specialist</h3>
+        <div style="display: flex; justify-content: center; gap: 10px; margin-top: 10px;">
+            <a href="{% url 'add_accommodation' %}" class="btn btn-primary">Add Accommodation</a>
+            <!-- <button onclick="showDeleteModal()" class="btn btn-primary" style="background-color: #dc3545; border-color: #dc3545;">Delete Accommodation</button> -->
+            <a href="{% url 'manage_accommodations' %}" class="btn btn-secondary">Manage Accommodations</a>
         </div>
     </div>
 </div>
+</div>
 
-<div id="deleteModal" class="modal">
+<!-- <div id="deleteModal" class="modal">
     <div class="modal-content">
         <h3 style="text-align: center;">Confirm deletion</h3>
         <p style="text-align: center;">Are you sure you want to delete "{{ accommodation.title }}"？</p>
@@ -420,7 +427,7 @@
             <button onclick="deleteAccommodation('{{ accommodation.id }}')" class="btn btn-danger">Confirm Delete</button>
         </div>
     </div>
-</div>
+</div> -->
 {% endblock %}
 
 {% block extra_js %}
@@ -432,17 +439,17 @@
         return results === null ? '' : decodeURIComponent(results[1].replace(/\+/g, ' '));
     }
 
-    document.addEventListener('DOMContentLoaded', function() {
+    document.addEventListener('DOMContentLoaded', function () {
         const apiKey = localStorage.getItem('unihaven_api_key');
         if (apiKey) {
             document.getElementById('adminSection').style.display = 'block';
             document.getElementById('studentActionsSection').style.display = 'none';
             document.getElementById('studentButtonGroup').style.display = 'none';
         }
-        
+
         const urlUserId = getUrlParameter('user_id');
         if (urlUserId) {
-    
+
             const userIdInput = document.getElementById('userId');
             if (userIdInput) {
                 userIdInput.value = urlUserId;
@@ -450,10 +457,10 @@
             }
         }
     });
-    
+
     let selectedStartDate = null;
     let selectedEndDate = null;
-    
+
     function selectPeriod(startDate, endDate) {
         selectedStartDate = startDate;
         selectedEndDate = endDate;
@@ -461,27 +468,27 @@
         document.getElementById('reservationForm').style.display = 'block';
         document.getElementById('reservationForm').scrollIntoView({ behavior: 'smooth' });
     }
-    
+
     async function checkCustomPeriod() {
         const startDate = document.getElementById('customStartDate').value;
         const endDate = document.getElementById('customEndDate').value;
         const messageEl = document.getElementById('customDateMessage');
-        
+
         messageEl.style.display = 'none';
         messageEl.textContent = '';
-        
+
         if (!startDate || !endDate) {
             messageEl.textContent = 'Please select both start and end dates.';
             messageEl.style.display = 'block';
             return;
         }
-        
+
         if (new Date(startDate) >= new Date(endDate)) {
             messageEl.textContent = 'End date must be after start date.';
             messageEl.style.display = 'block';
             return;
         }
-        
+
         const diffTime = Math.abs(new Date(endDate) - new Date(startDate));
         const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
         if (diffDays < 1) {
@@ -489,16 +496,16 @@
             messageEl.style.display = 'block';
             return;
         }
-        
+
         const availableFrom = new Date("{{ accommodation.available_from|date:'Y-m-d' }}");
         const availableTo = new Date("{{ accommodation.available_to|date:'Y-m-d' }}");
-        
+
         if (new Date(startDate) < availableFrom || new Date(endDate) > availableTo) {
             messageEl.textContent = `Dates must be within available range: {{ accommodation.available_from|date:"Y-m-d" }} to {{ accommodation.available_to|date:"Y-m-d" }}`;
             messageEl.style.display = 'block';
             return;
         }
-        
+
         try {
             const csrfToken = getCSRFToken();
             const response = await fetch(`/api/check_availability/?id={{ accommodation.id }}&start_date=${startDate}&end_date=${endDate}`, {
@@ -510,7 +517,7 @@
             });
 
             const data = await response.json();
-            
+
             if (response.ok && data.available) {
                 selectPeriod(startDate, endDate);
             } else {
@@ -523,35 +530,35 @@
             messageEl.style.display = 'block';
         }
     }
-    
+
     function hideReservationForm() {
         document.getElementById('reservationForm').style.display = 'none';
         selectedStartDate = null;
         selectedEndDate = null;
     }
-    
+
     function submitReservation() {
         let userId = getUrlParameter('user_id') || document.getElementById('userId').value;
         const contactNumber = document.getElementById('contactNumber').value;
-        
+
         if (!userId) {
             alert("User ID is required");
             return;
         }
-        
+
         if (!contactNumber) {
             alert("Contact number is required");
             return;
         }
-        
+
         if (!selectedStartDate || !selectedEndDate) {
             alert("Please select an available period");
             return;
         }
-        
+
         reserveAccommodation('{{ accommodation.id }}', userId, contactNumber, selectedStartDate, selectedEndDate);
     }
-    
+
     async function reserveAccommodation(accommodationId, userId, contactNumber, startDate, endDate) {
         const csrfToken = getCSRFToken();
         try {
@@ -564,25 +571,25 @@
             });
 
             const data = await response.json();
-            
+
             if (response.ok) {
                 alert(data.message);
                 const form = document.createElement('form');
                 form.method = 'POST';
                 form.action = "{% url 'view_reservations' %}";
-                
+
                 const csrfInput = document.createElement('input');
                 csrfInput.type = 'hidden';
                 csrfInput.name = 'csrfmiddlewaretoken';
                 csrfInput.value = csrfToken;
                 form.appendChild(csrfInput);
-                
+
                 const userIdInput = document.createElement('input');
                 userIdInput.type = 'hidden';
                 userIdInput.name = 'user_id';
                 userIdInput.value = userId;
                 form.appendChild(userIdInput);
-                
+
                 document.body.appendChild(form);
                 form.submit();
             } else {
@@ -598,36 +605,36 @@
         if (action === 'cancel') {
             let userId = prompt("Please enter your User ID to view your reservations:");
             if (!userId) return;
-            
+
             const form = document.createElement('form');
             form.method = 'POST';
             form.action = "{% url 'view_reservations' %}";
-            
+
             const csrfInput = document.createElement('input');
             csrfInput.type = 'hidden';
             csrfInput.name = 'csrfmiddlewaretoken';
             csrfInput.value = getCSRFToken();
             form.appendChild(csrfInput);
-            
+
             const userIdInput = document.createElement('input');
             userIdInput.type = 'hidden';
             userIdInput.name = 'user_id';
             userIdInput.value = userId;
             form.appendChild(userIdInput);
-            
+
             document.body.appendChild(form);
             form.submit();
         }
     }
-    
+
     function showDeleteModal() {
         document.getElementById('deleteModal').style.display = 'block';
     }
-    
+
     function hideDeleteModal() {
         document.getElementById('deleteModal').style.display = 'none';
     }
-    
+
     async function deleteAccommodation(accommodationId) {
         const apiKey = localStorage.getItem('unihaven_api_key');
         if (!apiKey) {
@@ -635,7 +642,7 @@
             hideDeleteModal();
             return;
         }
-        
+
         try {
             const response = await fetch('/api/delete-accommodation/', {
                 method: 'POST',
@@ -648,9 +655,9 @@
                     id: accommodationId
                 })
             });
-            
+
             const data = await response.json();
-            
+
             if (response.ok) {
                 alert('The accommodation has been successfully deleted！');
                 window.location.href = "{% url 'manage_accommodations' %}";
