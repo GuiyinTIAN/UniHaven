@@ -700,8 +700,8 @@
         }
 
         try {
-            const response = await fetch('/api/delete-accommodation/', {
-                method: 'POST',
+            const response = await fetch(`/api/delete-accommodation/?id=${selectedAccommodationId}`, {
+                method: 'DELETE',
                 headers: {
                     'Content-Type': 'application/json',
                     'X-API-Key': apiKey,
