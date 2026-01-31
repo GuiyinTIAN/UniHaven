@@ -25,14 +25,25 @@
 
 ---
 
-## Table of Contents
-1. [Features](#features)
-2. [Quick Start](#quick-start)
-3. [API Reference](#api-reference)
-4. [Contributing](#contributing)
-5. [Deployment](#deployment)
-6. [Contact](#contact)
 
+## Table of Contents
+
+- [Project Overview](#project-overview)
+- [Tech Stack](#tech-stack)
+- [Table of Contents](#table-of-contents)
+- [Features](#features)
+- [Quick Start](#quick-start)
+- [Home](#home)
+- [Address Lookup API](#address-lookup-api)
+- [Add Accommodation](#add-accommodation)
+- [View Accommodation List](#view-accommodation-list)
+- [Search Accommodation](#search-accommodation)
+- [View Accommodation Details](#view-accommodation-details)
+- [Reserve Accommodation](#reserve-accommodation)
+- [Cancel Reservation](#cancel-reservation)
+- [Delete Accommodation](#delete-accommodation)
+- [Rate Accommodation](#rate-accommodation)
+- [Notes](#notes)
 ---
 
 ## Features
@@ -66,40 +77,7 @@
     python manage.py runserver
     ```
 
----
-
-## API Reference
-
-See below for detailed API usage and examples.
-
----
-
-...existing code...
-
----
-
-## Contributing
-
-We welcome all contributions! Please read [CONTRIBUTING.md] or contact the maintainer before submitting a PR, reporting a bug, or suggesting a feature.
-
----
-
-## Deployment
-
-1. For local development, follow the Quick Start steps.
-2. For production, we recommend Gunicorn + Nginx, or deploying to cloud platforms (Heroku, Vercel, Alibaba Cloud, etc.).
-3. Configure database, cache, and email services as needed.
-
----
-
-## Contact
-
-- Email: [your-email@example.com]
-- Issues: Please use GitHub Issues for questions and suggestions.
-
----
-
-### Home
+## Home
 
 **URL**: `/api/`  
 **Method**: `GET`  
@@ -117,7 +95,7 @@ curl -X GET "http://127.0.0.1:8000/api/" -H "Accept: application/json"
 ```
 ---
 
-### Address Lookup API
+## Address Lookup API
 
 **URL**: `/api/lookup-address/`  
 **Method**: `GET`  
@@ -162,7 +140,7 @@ curl -X GET "http://127.0.0.1:8000/api/lookup-address/?address=HKU"
 
 ---
 
-### Add Accommodation
+## Add Accommodation
 
 **URL**: `/api/add-accommodation/`  
 **Method**: `POST`  
@@ -214,7 +192,7 @@ curl -X POST "http://127.0.0.1:8000/api/add-accommodation/" \
 
 ---
 
-### View Accommodation List
+## View Accommodation List
 
 **URL**: `/api/list-accommodation/`  
 **Method**: `GET`  
@@ -266,7 +244,7 @@ curl -X GET "http://127.0.0.1:8000/api/list-accommodation/?type=APARTMENT&max_pr
 
 ---
 
-### Search Accommodation
+## Search Accommodation
 
 **URL**: `/api/search-accommodation/`  
 **Method**: `GET`  
@@ -286,7 +264,7 @@ curl -X GET "http://127.0.0.1:8000/api/search-accommodation/?type=HOUSE&region=H
 
 ---
 
-### View Accommodation Details
+## View Accommodation Details
 
 **URL**: `/api/accommodation_detail/<id>/`  
 **Method**: `GET`  
@@ -322,7 +300,7 @@ curl -X GET "http://127.0.0.1:8000/api/accommodation_detail/1/" -H "Accept: appl
 
 ---
 
-### Reserve Accommodation
+## Reserve Accommodation
 
 **URL**: `/api/reserve_accommodation/`  
 **Method**: `POST`  
@@ -363,7 +341,7 @@ curl -X POST "http://127.0.0.1:8000/api/reserve_accommodation/?id=1" \
 
 ---
 
-### Cancel Reservation
+## Cancel Reservation
 
 **URL**: `/api/cancel_reservation/`  
 **Method**: `POST`  
@@ -404,7 +382,7 @@ curl -X POST "http://127.0.0.1:8000/api/cancel_reservation/?id=1" \
 
 ---
 
-### Delete Accommodation
+## Delete Accommodation
 
 **URL**: `/api/delete-accommodation/`  
 **Method**: `POST`  
@@ -427,7 +405,7 @@ curl -X POST "http://127.0.0.1:8000/api/delete-accommodation/?id=1" \
 
 ---
 
-### Rate Accommodation
+## Rate Accommodation
 
 **URL**: `/api/rate/<accommodation_id>/`  
 **Method**: `POST`  
@@ -457,6 +435,8 @@ curl -X POST "http://127.0.0.1:8000/api/rate/1/" \
     "message": "Thank you for rating this accommodation!"
 }
 ```
+
+---
 
 ---
 
