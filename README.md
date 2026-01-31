@@ -1,20 +1,101 @@
-# UniHaven - Student Accommodation Solutions
+<h1 align="center">UniHaven - Student Accommodation Solutions</h1>
 
-UniHaven is a Django-based project designed to provide off-campus accommodation solutions for non-local students. Below is the documentation for all APIs and pages.
+<div align="center">
+  <img src="https://img.shields.io/badge/Django-4.x-green?style=flat-square&logo=django" alt="Django">
+  <img src="https://img.shields.io/badge/Python-3.10+-blue?style=flat-square&logo=python" alt="Python">
+  <img src="https://img.shields.io/badge/License-MIT-yellow?style=flat-square" alt="License">
+</div>
+
+> A professional Django-based platform for off-campus accommodation, tailored for non-local students in Hong Kong.
+
+---
+
+## Project Overview
+
+**UniHaven** is an open-source Django project designed to help non-local students find, book, and manage off-campus accommodation in Hong Kong. The platform supports multi-criteria search, address lookup, online booking, reviews, and admin management.
+
+---
+
+## Tech Stack
+
+- **Backend**: Django 4.x, SQLite3
+- **Frontend**: HTML5, CSS3, Bootstrap (optional)
+- **API**: RESTful, supports JSON/HTML
+- **Deployment**: Local & Cloud supported
 
 ---
 
 ## Table of Contents
-1. [Home](#home)
-2. [Address Lookup API](#address-lookup-api)
-3. [Add Accommodation](#add-accommodation)
-4. [View Accommodation List](#view-accommodation-list)
-5. [Search Accommodation](#search-accommodation)
-6. [View Accommodation Details](#view-accommodation-details)
-7. [Reserve Accommodation](#reserve-accommodation)
-8. [Cancel Reservation](#cancel-reservation)
-9. [Delete Accommodation](#delete-accommodation)
-10. [Rate Accommodation](#rate-accommodation)
+1. [Features](#features)
+2. [Quick Start](#quick-start)
+3. [API Reference](#api-reference)
+4. [Contributing](#contributing)
+5. [Deployment](#deployment)
+6. [Contact](#contact)
+
+---
+
+## Features
+
+- Multi-criteria accommodation search & filter
+- Smart address lookup & map location
+- Accommodation details & online booking
+- Booking management & cancellation
+- Accommodation reviews & ratings
+- Admin backend management
+
+---
+
+## Quick Start
+
+1. **Clone the repo**
+    ```bash
+    git clone <your-repo-url>
+    cd UniHaven
+    ```
+2. **Install dependencies**
+    ```bash
+    pip install -r requirements.txt
+    ```
+3. **Migrate database**
+    ```bash
+    python manage.py migrate
+    ```
+4. **Run server**
+    ```bash
+    python manage.py runserver
+    ```
+
+---
+
+## API Reference
+
+See below for detailed API usage and examples.
+
+---
+
+...existing code...
+
+---
+
+## Contributing
+
+We welcome all contributions! Please read [CONTRIBUTING.md] or contact the maintainer before submitting a PR, reporting a bug, or suggesting a feature.
+
+---
+
+## Deployment
+
+1. For local development, follow the Quick Start steps.
+2. For production, we recommend Gunicorn + Nginx, or deploying to cloud platforms (Heroku, Vercel, Alibaba Cloud, etc.).
+3. Configure database, cache, and email services as needed.
+
+---
+
+## Contact
+
+- Email: [your-email@example.com]
+- Issues: Please use GitHub Issues for questions and suggestions.
 
 ---
 

@@ -1,6 +1,101 @@
-# UniHaven - 学生住宿解决方案
+<h1 align="center">UniHaven - 学生住宿解决方案</h1>
 
-UniHaven 是一个基于 Django 的项目，旨在为非本地学生提供校外住宿解决方案。以下是所有 API 和页面的调用方法文档。
+<div align="center">
+  <img src="https://img.shields.io/badge/Django-4.x-green?style=flat-square&logo=django" alt="Django">
+  <img src="https://img.shields.io/badge/Python-3.10+-blue?style=flat-square&logo=python" alt="Python">
+  <img src="https://img.shields.io/badge/License-MIT-yellow?style=flat-square" alt="License">
+</div>
+
+> 专为香港高校非本地学生打造的专业校外住宿信息与预订平台
+
+---
+
+## 项目简介
+
+**UniHaven** 是一个基于 Django 的开源平台，旨在为非本地学生提供便捷的校外住宿信息查询、预订与管理服务。平台支持多条件筛选、地址查找、在线预订、评价、后台管理等功能，助力学生高效、安全地找到理想住宿。
+
+---
+
+## 技术栈
+
+- **后端**：Django 4.x, SQLite3
+- **前端**：HTML5, CSS3, Bootstrap（可选）
+- **API**：RESTful，支持 JSON/HTML
+- **部署**：支持本地与云端
+
+---
+
+## 目录
+1. [功能概览](#功能概览)
+2. [快速开始](#快速开始)
+3. [API 文档](#api-文档)
+4. [贡献指南](#贡献指南)
+5. [部署说明](#部署说明)
+6. [联系方式](#联系方式)
+
+---
+
+## 功能概览
+
+- 多条件住宿搜索与筛选
+- 地址智能查找与地图定位
+- 住宿详情展示与在线预订
+- 预订管理与取消
+- 住宿评价与评分
+- 管理员后台管理
+
+---
+
+## 快速开始
+
+1. **克隆项目**
+    ```bash
+    git clone <your-repo-url>
+    cd UniHaven
+    ```
+2. **安装依赖**
+    ```bash
+    pip install -r requirements.txt
+    ```
+3. **初始化数据库**
+    ```bash
+    python manage.py migrate
+    ```
+4. **运行服务**
+    ```bash
+    python manage.py runserver
+    ```
+
+---
+
+## API 文档
+
+详见下方接口说明与示例。
+
+---
+
+...existing code...
+
+---
+
+## 贡献指南
+
+欢迎各类贡献！如需提交 PR、报告 Bug 或建议新功能，请先阅读 [CONTRIBUTING.md] 或直接联系维护者。
+
+---
+
+## 部署说明
+
+1. 本地开发：参考“快速开始”步骤。
+2. 生产部署建议使用 Gunicorn + Nginx，或部署至云平台（如 Heroku、Vercel、阿里云等）。
+3. 可根据实际需求配置数据库、缓存、邮件等服务。
+
+---
+
+## 联系方式
+
+- 邮箱：[your-email@example.com]
+- 问题建议：欢迎在 GitHub Issue 区留言
 
 ---
 
